@@ -1,0 +1,39 @@
+name: Pull Request Build and Deploy
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+
+env:
+  PR_NUMBER: pr-${{ github.event.number }}
+  SERVICE_NAME: ig
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build
+    steps:
+      - uses: actions/checkout@v4
+
+      # set java and cache
+      - name: Set Java and Maven Cache
+        uses: actions/setup-java@v4
+        id: set_java_maven
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          architecture: x64
+          cache: 'maven'
+          server-id: forgerock-private-releases # protected release repo
+          server-username: FR_ARTIFACTORY_USER # env variable for username to authentication protected repo
+          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable encrypted password to authentication protected repo
+
+      - name: Build Java
+        run: |
+          make clean build-java
+        env:
+          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
+          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
