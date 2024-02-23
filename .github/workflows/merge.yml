@@ -1,0 +1,70 @@
+name: merge-main
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - README.md
+
+env:
+  SERVICE_NAME: ig
+  GIT_SHA_SHORT: $(echo ${{ github.sha }} | cut -c1-7)
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # Java version and maven settings with protected repository id
+      - uses: actions/setup-java@v4
+        name: Set Java and Maven Cache with Protected Repository
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          architecture: x64
+          cache: 'maven'
+          server-id: forgerock-private-releases # protected repo id to get the protected dependencies
+          server-username: FR_ARTIFACTORY_USER # env variable for username in deploy
+          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable for token in deploy
+
+      - name: Get Version
+        id: get_version
+        run: |
+          echo "VERSION=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_ENV
+          echo "MAVEN_SERVER_COMMUNITY=maven.forgerock.org-community" >> $GITHUB_ENV
+        env:
+          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
+          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
+
+      - name: Context Forgerock Maven Community Repository
+        if: contains( env.VERSION, 'SNAPSHOT')
+        run: |
+          echo "MAVEN_SERVER_COMMUNITY=maven.forgerock.org-community-snapshots" >> $GITHUB_ENV
+
+      - name: Build Java
+        run: |
+          make clean build-java
+        env:
+          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
+          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
+
+      # Overwrite maven settings with the creds for the maven server to deploy to
+      - uses: actions/setup-java@v4
+        name: Set Java and Maven Cache with Community Repository
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+          architecture: x64
+          cache: 'maven'
+          server-id: ${{ env.MAVEN_SERVER_COMMUNITY }} # community repo to publish the java artifact
+          server-username: FR_ARTIFACTORY_USER # env variable for username in deploy
+          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable for token in deploy
+
+      - name: Deploy Maven Artifact Package
+        run: mvn -B deploy -DskipTests
+        env:
+          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
+          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
