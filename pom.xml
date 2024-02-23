@@ -36,6 +36,7 @@
 
     <modules>
         <module>secure-api-gateway-ig-extensions</module>
+        <module>secure-api-gateway-core-docker</module>
     </modules>
 
     <parent>
@@ -57,7 +58,6 @@
             <dependency>
                 <groupId>org.forgerock.openig</groupId>
                 <artifactId>openig-bom</artifactId>
-                <!-- This version should be consistent with versions at other places -->
                 <version>${openig.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
@@ -67,7 +67,6 @@
                 <groupId>com.nimbusds</groupId>
                 <artifactId>nimbus-jose-jwt</artifactId>
                 <version>${nimbus-jose.version}</version>
-                <scope>provided</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

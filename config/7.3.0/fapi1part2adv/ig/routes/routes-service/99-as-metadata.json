@@ -1,0 +1,42 @@
+{
+  "comment": "OIDC well known config",
+  "name" : "99 - AS well known metadata",
+  "baseURI" : "https://&{identity.platform.fqdn}",
+  "condition" : "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/.well-known/openid-configuration')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Update AS well-known config returned by AM",
+          "name": "ASWellKnownFilter",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ASWellKnownFilter.groovy",
+            "args": {
+              "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
+              "mtlsEndpoints": ["registration_endpoint", "token_endpoint"],
+              "igHost": "&{ig.fqdn}",
+              "mtlsHost": "&{mtls.fqdn}"
+            }
+          }
+        },
+        {
+          "comment": "Set downstream Host header",
+          "name" : "HeaderFilter-ChangeHostToIAM",
+          "type" : "HeaderFilter",
+          "config" : {
+            "messageType" : "REQUEST",
+            "remove" : [ "host", "X-Forwarded-Host" ],
+            "add" : {
+              "X-Forwarded-Host" : [ "&{ig.fqdn}" ]
+            }
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandler"
+    }
+  }
+} 

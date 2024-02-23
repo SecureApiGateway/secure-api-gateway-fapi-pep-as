@@ -31,9 +31,26 @@ jobs:
           server-username: FR_ARTIFACTORY_USER # env variable for username to authentication protected repo
           server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable encrypted password to authentication protected repo
 
-      - name: Build Java
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.DEV_GAR_KEY }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2.1.0
+
+        # Configure docker to use the gcloud command-line tool as a credential helper
+      - name: Auth Docker
         run: |
-          make clean build-java
+          gcloud auth configure-docker europe-west4-docker.pkg.dev
+
+      - name: Build Code + Test + Create Docker Image
+        run: |
+          make clean
+          # Create development mode docker image
+          make docker tag=$PR_NUMBER env="dev"
+          # Create production mode docker image
+          make docker tag="$PR_NUMBER-prod"
         env:
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}

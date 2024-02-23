@@ -1,12 +1,3 @@
-build-java:
-	mvn -U install
-
-copy-java-dependencies:
-	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
-
-clean:
-	mvn clean
-
 repo := europe-west4-docker.pkg.dev/sbat-gcr-develop/sapig-docker-artifact
 service := sapig-core
 
@@ -30,3 +21,14 @@ endif
   	fi; \
 	echo "init config for env: ${env}, igmode: $$IG_MODE\n"; \
 	./bin/config.sh init --env ${env} --igmode $${IG_MODE}
+
+build-java:
+	mvn -U install
+
+copy-java-dependencies:
+	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
+
+clean:
+	mvn clean
+	./bin/config.sh clean
+	rm -rf secure-api-gateway-core-docker/7.3.0/ig/lib
