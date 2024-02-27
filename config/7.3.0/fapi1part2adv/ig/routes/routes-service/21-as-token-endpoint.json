@@ -1,0 +1,82 @@
+{
+  "name": "21 - Authorization Server OAuth2 token endpoint",
+  "comment": "Ensure FAPI compliant access_token endpoint requests",
+  "baseURI": "https://&{identity.platform.fqdn}",
+  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/access_token')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "name": "RouteMetricsFilter",
+          "type": "RouteMetricsFilter",
+          "config": {
+            "metricsContextSupplier": {
+              "name": "TokenEndpointMetricsContextSupplier",
+              "type": "TokenEndpointMetricsContextSupplier"
+            }
+          }
+        },
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Add host to downstream request",
+          "name": "HeaderFilter-ChangeHostToIAM",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "host",
+              "X-Forwarded-Host"
+            ],
+            "add": {
+              "X-Forwarded-Host": [
+                "&{ig.fqdn}"
+              ]
+            }
+          }
+        },
+        {
+          "comment": "Add gateway access token to request (custom AT modification script checks access token to enforce route via IG)",
+          "type": "ClientCredentialsOAuth2ClientFilter",
+          "config": {
+            "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
+            "scopes": [
+              "trusted_gateway"
+            ],
+            "endpointHandler": {
+              "name": "ClientCredentialsOAuth2ClientFilterHandler",
+              "type": "Chain",
+              "config": {
+                "handler": "ForgeRockClientHandler",
+                "filters": [
+                  {
+                    "type": "ClientSecretBasicAuthenticationFilter",
+                    "config": {
+                      "clientId": "&{ig.client.id}",
+                      "clientSecretId": "ig.client.secret",
+                      "secretsProvider": "SystemAndEnvSecretStore-IAM"
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
+          "name": "TokenEndpointTransportCertValidationFilter",
+          "type": "TokenEndpointTransportCertValidationFilter",
+          "config": {
+            "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}",
+            "idmClientHandler": "IDMClientHandler",
+            "trustedDirectoryService": "TrustedDirectoriesService",
+            "jwkSetService": "JwkSetService",
+            "certificateRetriever": "HeaderCertificateRetriever",
+            "transportCertValidator": "TransportCertValidator"
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandler"
+    }
+  }
+}

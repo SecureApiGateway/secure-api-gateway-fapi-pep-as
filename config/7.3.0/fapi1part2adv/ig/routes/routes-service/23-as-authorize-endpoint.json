@@ -1,0 +1,51 @@
+{
+  "name": "23 - Authorize endpoint",
+  "comment": "Ensure FAPI compliant authorize requests",
+  "baseURI": "https://&{identity.platform.fqdn}",
+  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/authorize')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "name": "RouteMetricsFilter",
+          "type": "RouteMetricsFilter"
+        },
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Add host to downstream request",
+          "name": "HeaderFilter-ChangeHostToIAM",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "host",
+              "X-Forwarded-Host",
+              "origin",
+              "referer"
+            ],
+            "add": {
+              "X-Forwarded-Host": [
+                "&{ig.fqdn}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "FapiAuthorizeRequestValidationFilter",
+          "type": "FapiAuthorizeRequestValidationFilter",
+          "comment": "Ensure authorize request object is FAPI compliant"
+        },
+        {
+          "name": "AuthorizeResponseFetchApiClientFilter",
+          "type": "AuthorizeResponseFetchApiClientFilter",
+          "comment": "Add ApiClient data to the context attributes",
+          "config": {
+            "apiClientService": "IdmApiClientService"
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandler"
+    }
+  }
+}

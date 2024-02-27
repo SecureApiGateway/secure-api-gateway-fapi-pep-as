@@ -1,0 +1,152 @@
+{
+  "name": "20 - DCR - Dynamic Client Registration",
+  "comment": "Ensure FAPI compliant registration requests",
+  "baseURI": "https://&{identity.platform.fqdn}",
+  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/register')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "name": "RouteMetricsFilter",
+          "type": "RouteMetricsFilter"
+        },
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Enforce response content type as application/json",
+          "name": "HeaderFilter-AddResponseHeaders",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "Content-Type",
+              "X-Request-ID"
+            ],
+            "add": {
+              "Content-Type": [
+                "application/json"
+              ]
+            }
+          }
+        },
+        {
+          "comment": "Add the client's MTLS transport cert to the attributes context",
+          "name": "AddCertificateToAttributesContextFilter",
+          "type": "AddCertificateToAttributesContextFilter",
+          "config": {
+            "certificateRetriever": "HeaderCertificateRetriever"
+          }
+        },
+        {
+          "comment": "Pull the registration request from the entity and create a RegistrationRequest object context attribute",
+          "name": "RegistrationRequestEntityValidationFilter",
+          "type": "RegistrationRequestEntityValidatorFilter",
+          "config": {
+            "trustedDirectoryService": "TrustedDirectoriesService"
+          }
+        },
+        {
+          "comment": "Validate the signature of the request Jwt and it's embedded SSA",
+          "name": "RegistrationRequestJwtSignatureValidationFilter",
+          "type": "RegistrationRequestJwtSignatureValidationFilter",
+          "config": {
+            "clientHandler": "ClientHandler",
+            "jwkSetService": "JwkSetService",
+            "jwtSignatureValidator": "RsaJwtSignatureValidator"
+          }
+        },
+        {
+          "comment": "Validate that the request will result in an OAuth2 client that is FAPI compliant",
+          "name": "FAPIAdvancedDCRValidationFilter",
+          "type": "FAPIAdvancedDCRValidationFilter",
+          "config": {
+            "certificateRetriever": "ContextCertificateRetriever",
+            "supportedSigningAlgorithms": ["PS256"],
+            "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}"
+          }
+        },
+        {
+          "comment": "Pre process registration request",
+          "name": "ProcessRegistration",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ProcessRegistration.groovy",
+            "args": {
+              "routeArgProxyBaseUrl": "https://&{ig.fqdn}/jwkms/jwksproxy",
+              "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
+              "jwtSignatureValidator": "${heap['RsaJwtSignatureValidator']}",
+              "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
+              "trustedDirectoryService": "${heap['TrustedDirectoriesService']}"
+            }
+          }
+        },
+        {
+          "name": "ManageApiClientFilter",
+          "type": "ManageApiClientFilter",
+          "config": {
+            "apiClientService": "IdmApiClientService",
+            "apiClientOrgService": "IdmApiClientOrganisationService",
+            "clientIdRequestParameterLocator": {
+              "name": "QueryParamClientIdRequestParameterLocator",
+              "type": "QueryParamClientIdRequestParameterLocator"
+            }
+          }
+        },
+        {
+          "comment": "Set Host header for downstream",
+          "name": "HeaderFilter-ChangeHostToIAM",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "host",
+              "X-Forwarded-Host"
+            ],
+            "add": {
+              "X-Forwarded-Host": [
+                "&{identity.platform.fqdn}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "AddIgAccessTokenForNewRegistrations",
+          "comment": "When creating a new registration we need to obtain credentials to allow IG to talk to AM. For flows which operate on an existing registration, the TPP must supply the registration_access_token returned in the DCR response",
+          "type": "ConditionalFilter",
+          "config": {
+            "condition": "${request.method == 'POST'}",
+            "delegate": {
+              "comment": "Fetch access token for dynamic client registration - IG credentials to talk to AM",
+              "type": "ClientCredentialsOAuth2ClientFilter",
+              "config": {
+                "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
+                "scopes": [
+                  "dynamic_client_registration"
+                ],
+                "endpointHandler": {
+                  "name": "ClientCredentialsOAuth2ClientFilterHandler",
+                  "type": "Chain",
+                  "config": {
+                    "handler": "ForgeRockClientHandler",
+                    "filters": [
+                      {
+                        "type": "ClientSecretBasicAuthenticationFilter",
+                        "config": {
+                          "clientId": "&{ig.client.id}",
+                          "clientSecretId": "ig.client.secret",
+                          "secretsProvider": "SystemAndEnvSecretStore-IAM"
+                        }
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandler"
+    }
+  }
+}

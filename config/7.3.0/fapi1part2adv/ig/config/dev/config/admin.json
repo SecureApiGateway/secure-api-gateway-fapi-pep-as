@@ -6,14 +6,6 @@
       "capture": "all"
     },
     {
-      "name": "ApiProtectionFilter",
-      "type": "ScriptableFilter",
-      "config": {
-        "type": "application/x-groovy",
-        "file": "ApiProtection.groovy"
-      }
-    },
-    {
       "name": "MetricsProtectionFilter",
       "type": "ScriptableFilter",
       "config": {

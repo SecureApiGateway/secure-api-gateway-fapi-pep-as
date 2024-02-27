@@ -1,0 +1,16 @@
+{
+  "name" : "74 - API Client Onboarding - Extract TLS Cert",
+  "comment": "Convert incoming JWK set to PEM encoded TLS client cert and key",
+  "condition" : "${security.enableTestTrustedDirectory && find(request.uri.path, '^/jwkms/apiclient/gettlscert')}",
+  "handler":     {
+    "name": "JwkmsIssueCert",
+    "type": "ScriptableHandler",
+    "config": {
+      "type": "application/x-groovy",
+      "file": "JwkmsGetTlsCert.groovy",
+      "args": {
+        "keyType": "tls"
+      }
+    }
+  }
+}

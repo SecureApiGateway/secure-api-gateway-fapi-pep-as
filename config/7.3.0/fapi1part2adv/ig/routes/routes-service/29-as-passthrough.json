@@ -1,0 +1,32 @@
+{
+  "name": "29 - AS pass-through",
+  "comment": "Passthrough for any unprotected AM endpoints (such as the XUI)",
+  "baseURI": "https://&{identity.platform.fqdn}",
+  "condition": "${find(request.uri.path, '^/am')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Add host header to downstream request",
+          "name": "HeaderFilter-ChangeHostToIAM",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "host",
+              "X-Forwarded-Host"
+            ],
+            "add": {
+              "X-Forwarded-Host": [
+                "&{ig.fqdn}"
+              ]
+            }
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandlerNoCapture"
+    }
+  }
+}
