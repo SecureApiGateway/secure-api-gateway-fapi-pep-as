@@ -178,7 +178,6 @@ clean_config()
     elif [ "$1" == "ig" ]; then
         rm -rf "$DOCKER_ROOT/$1/config"
         rm -rf "$DOCKER_ROOT/$1/scripts"
-        rm -rf "$DOCKER_ROOT/$1/audit-schemas"
     fi
 }
 
@@ -189,8 +188,6 @@ init_config()
     echo "*********************************************************************************************"
     echo "Initialisation of 'docker/$_arg_version/$1' for [$_arg_environment] environment in [$_arg_ig_mode] mode"
     echo "*********************************************************************************************"
-    echo "copy ${PROFILE_ROOT}/$1/audit-schemas to $DOCKER_ROOT/$1/"
-    cp -r "${PROFILE_ROOT}/$1/audit-schemas" "$DOCKER_ROOT/$1/"
     echo "copy ${PROFILE_ROOT}/$1/scripts to $DOCKER_ROOT/$1/"
     cp -r "${PROFILE_ROOT}/$1/scripts" "$DOCKER_ROOT/$1/"
     echo "copy ${PROFILE_ROOT}/$1/config/$_arg_environment/config to $DOCKER_ROOT/$1/"

@@ -22,7 +22,6 @@ RUN mkdir /var/ig/secrets
 COPY --chown=forgerock:root 7.3.0/ig/bin/import-pem-certs.sh /home/forgerock
 
 # Copy all config files into the docker image.
-COPY --chown=forgerock:root 7.3.0/ig/audit-schemas /var/ig/audit-schemas/
 COPY --chown=forgerock:root 7.3.0/ig/lib /opt/ig/lib
 COPY --chown=forgerock:root 7.3.0/ig/scripts /var/ig/scripts/
 COPY --chown=forgerock:root 7.3.0/ig/config /var/ig/config/
