@@ -8,7 +8,7 @@ on:
       - README.md
 
 env:
-  SERVICE_NAME: ig
+  SERVICE_NAME: sapig-core
   GIT_SHA_SHORT: $(echo ${{ github.sha }} | cut -c1-7)
 
 jobs:
@@ -43,10 +43,25 @@ jobs:
         if: contains( env.VERSION, 'SNAPSHOT')
         run: |
           echo "MAVEN_SERVER_COMMUNITY=maven.forgerock.org-community-snapshots" >> $GITHUB_ENV
+          
+      - name: Auth to GCP
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.DEV_GAR_KEY }}
 
-      - name: Build Java
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2.1.0
+
+      # Configure docker to use the gcloud command-line tool as a credential helper
+      - name: Auth Docker
         run: |
-          make clean build-java
+          gcloud auth configure-docker europe-west4-docker.pkg.dev
+
+      - name: Build Code + Test + Create Docker Image
+        run: |
+          make clean docker tag=${{ env.GIT_SHA_SHORT }}
+          docker tag ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }}:${{ env.GIT_SHA_SHORT }} ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }}:latest
+          docker push ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }} --all-tags
         env:
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
