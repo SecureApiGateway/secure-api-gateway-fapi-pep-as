@@ -219,30 +219,6 @@
       }
     },
     {
-      "name": "SecretsProvider-ASPSP",
-      "type": "SecretsProvider",
-      "config": {
-        "stores": [
-          {
-            "name":"KeyStoreSecretStore-ASPSP",
-            "type": "KeyStoreSecretStore",
-            "config": {
-              "file": "&{ig.instance.dir}&{ig.ob.aspsp.signing.keystore.path}",
-              "storeType": "&{ig.ob.aspsp.signing.keystore.type}",
-              "storePassword": "ig.ob.aspsp.signing.keystore.storepass",
-              "keyEntryPassword": "ig.ob.aspsp.signing.keystore.keypass",
-              "secretsProvider": "SystemAndEnvSecretStore-IAM",
-              "mappings": [{
-                "secretId": "jwt.signer",
-                "aliases": [ "&{ig.ob.aspsp.signing.keystore.alias}" ]
-              }]
-            }
-          }
-        ]
-      }
-    },
-
-    {
       "name": "IDMClientHandler",
       "type": "Chain",
       "config": {
@@ -336,17 +312,6 @@
     {
       "name": "ContextCertificateRetriever",
       "type": "ContextCertificateRetriever"
-    },
-    {
-      "name": "ObJwtReSigner",
-      "type": "JwtReSigner",
-      "config": {
-        "verificationSecretsProvider": "SecretsProvider-AmJWK",
-        "verificationSecretId": "any.value.in.regex.format",
-        "signingKeyId": "&{ig.ob.aspsp.signing.kid}",
-        "signingSecretsProvider": "SecretsProvider-ASPSP",
-        "signingKeySecretId": "jwt.signer"
-      }
     },
     {
       "name": "IdmApiClientService",

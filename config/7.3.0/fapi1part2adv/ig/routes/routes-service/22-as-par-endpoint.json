@@ -1,0 +1,51 @@
+{
+  "name": "22 - AS Pushed Authorize Request endpoint",
+  "comment": "Ensure FAPI compliant pushed authorize requests",
+  "baseURI": "https://&{identity.platform.fqdn}",
+  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/par')}",
+  "handler": {
+    "type": "Chain",
+    "config": {
+      "filters": [
+        {
+          "name": "RouteMetricsFilter",
+          "type": "RouteMetricsFilter"
+        },
+        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "Add host to downstream request",
+          "name": "HeaderFilter-ChangeHostToIAM",
+          "type": "HeaderFilter",
+          "config": {
+            "messageType": "REQUEST",
+            "remove": [
+              "host",
+              "X-Forwarded-Host",
+              "origin",
+              "referer"
+            ],
+            "add": {
+              "X-Forwarded-Host": [
+                "&{ig.fqdn}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "FapiParRequestValidationFilter",
+          "type": "FapiParRequestValidationFilter",
+          "comment": "Ensure authorize request object is FAPI compliant"
+        },
+        {
+          "name": "ParResponseFetchApiClientFilter",
+          "type": "ParResponseFetchApiClientFilter",
+          "comment": "Add ApiClient data to the context attributes",
+          "config": {
+            "apiClientService": "IdmApiClientService"
+          }
+        }
+      ],
+      "handler": "FRReverseProxyHandler"
+    }
+  }
+}

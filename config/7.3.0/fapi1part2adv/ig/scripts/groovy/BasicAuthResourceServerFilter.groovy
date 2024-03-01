@@ -14,9 +14,7 @@ import java.nio.charset.Charset;
 import org.forgerock.util.encode.Base64;
 
 
-def fapiInteractionId = request.getHeaders().getFirst("x-fapi-interaction-id");
-if(fapiInteractionId == null) fapiInteractionId = "No x-fapi-interaction-id"
-SCRIPT_NAME = "[BasicAuthResourceServerFilter] (" + fapiInteractionId + ") - "
+SCRIPT_NAME = "[BasicAuthResourceServerFilter] - "
 
 logger.debug(SCRIPT_NAME + "Running...")
 
