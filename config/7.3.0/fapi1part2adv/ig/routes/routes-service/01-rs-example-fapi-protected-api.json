@@ -67,11 +67,12 @@
           }
         }
       ],
-      "handler": {
-        "type": "StaticResponseHandler",
-        "comment": "Return 204 No Content - simulating a response from an upstream protected resource server",
+      "handler":     {
+        "name": "ExampleRsApiResponseHandler",
+        "type": "ScriptableHandler",
         "config": {
-          "status": 204
+          "type": "application/x-groovy",
+          "file": "ExampleRsApiResponseHandler.groovy"
         }
       }
     }
