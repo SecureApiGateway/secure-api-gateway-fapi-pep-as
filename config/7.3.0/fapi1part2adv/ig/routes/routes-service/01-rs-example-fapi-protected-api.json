@@ -1,7 +1,7 @@
 {
-  "name": "01 - RS Test API",
-  "comment": "Route simulating a Resource Server API endpoint",
-  "condition": "${find(request.uri.path, '^/rs/test/api')}",
+  "name": "01 - RS Example FAPI Protected API",
+  "comment": "Route simulating a Resource Server API protected using FAPI",
+  "condition": "${find(request.uri.path, '^/rs/fapi/api')}",
   "handler": {
     "type": "Chain",
     "config": {
