@@ -83,3 +83,18 @@ jobs:
         env:
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
+
+  deploy:
+    runs-on: ubuntu-latest
+    name: Deploy
+    needs: build
+    steps:
+      - name: 'Update Environment'
+        uses: codefresh-io/codefresh-pipeline-runner@master
+        with:
+          args: '-v SERVICE_NAME=${{ env.SERVICE_NAME }}'
+        env:
+          PIPELINE_NAME: 'ForgeCloud/sbat-infra/dev-core-service-build'
+          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+          TRIGGER_NAME: github-actions-trigger-core
+        id: run-pipeline
