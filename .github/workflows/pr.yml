@@ -55,21 +55,21 @@ jobs:
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
 
-  deploy:
-    runs-on: ubuntu-latest
-    name: Deploy
-    needs: build
-    steps:
-      - name: Create lowercase Github Username
-        id: toLowerCase
-        run: echo "GITHUB_USER=$(echo ${{github.actor}} | tr '[:upper:]' '[:lower:]')" >> ${GITHUB_ENV}
-            
-      - name: 'Update Environment'
-        uses: codefresh-io/codefresh-pipeline-runner@master
-        if: github.actor != 'dependabot[bot]'
-        with:
-          args: '-v TAG=${{ env.PR_NUMBER }} -v SERVICE_NAME=${{ env.SERVICE_NAME }} -v ENVIRONMENT=${{ env.GITHUB_USER }}-core'
-        env:
-          PIPELINE_NAME: 'ForgeCloud/sbat-infra/dev-core-service-build'
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          TRIGGER_NAME: github-actions-trigger-core
+#  deploy:
+#    runs-on: ubuntu-latest
+#    name: Deploy
+#    needs: build
+#    steps:
+#      - name: Create lowercase Github Username
+#        id: toLowerCase
+#        run: echo "GITHUB_USER=$(echo ${{github.actor}} | tr '[:upper:]' '[:lower:]')" >> ${GITHUB_ENV}
+#            
+#      - name: 'Update Environment'
+#        uses: codefresh-io/codefresh-pipeline-runner@master
+#        if: github.actor != 'dependabot[bot]'
+#        with:
+#          args: '-v TAG=${{ env.PR_NUMBER }} -v SERVICE_NAME=${{ env.SERVICE_NAME }} -v ENVIRONMENT=${{ env.GITHUB_USER }}-core'
+#        env:
+#          PIPELINE_NAME: 'ForgeCloud/sbat-infra/dev-core-service-build'
+#          CF_API_KEY: ${{ secrets.CF_API_KEY }}
+#          TRIGGER_NAME: github-actions-trigger-core
