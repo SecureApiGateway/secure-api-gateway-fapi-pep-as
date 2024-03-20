@@ -87,7 +87,7 @@ public class AccessTokenResponseIdTokenReSignFilter implements Filter {
 
     private Promise<Response, NeverThrowsException> reSignIdTokenInResponse(Response response, JsonValue responseJson, String idToken) {
         return jwtReSigner.reSignJwt(idToken).then(reSignedIdToken -> {
-            logger.debug("Successfully re-signed id_token: {}", reSignedIdToken);
+            logger.debug("Successfully re-signed id_token:{} -> {}", idToken, reSignedIdToken);
             responseJson.put(ID_TOKEN_FIELD_NAME, reSignedIdToken);
             response.getEntity().setJson(responseJson);
             return response;
