@@ -84,6 +84,11 @@ jobs:
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
 
+      # We want an up to date dev tag to run in individual envs, image does not get pushed to any maven repository 
+      - name: Build Code + Test + Create Dev Docker Image
+        run: |
+          make clean docker tag=dev env="dev" 
+
   deploy:
     runs-on: ubuntu-latest
     name: Deploy
