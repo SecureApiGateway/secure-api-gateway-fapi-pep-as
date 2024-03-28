@@ -70,6 +70,6 @@ jobs:
 #        with:
 #          args: '-v TAG=${{ env.PR_NUMBER }} -v SERVICE_NAME=${{ env.SERVICE_NAME }} -v ENVIRONMENT=${{ env.GITHUB_USER }}-core'
 #        env:
-#          PIPELINE_NAME: 'ForgeCloud/sbat-infra/dev-core-service-build'
+#          PIPELINE_NAME: 'SAPIG-devenv/dev-core-service-build'
 #          CF_API_KEY: ${{ secrets.CF_API_KEY }}
 #          TRIGGER_NAME: github-actions-trigger-core

@@ -99,7 +99,7 @@ jobs:
         with:
           args: '-v SERVICE_NAME=${{ env.SERVICE_NAME }}'
         env:
-          PIPELINE_NAME: 'ForgeCloud/sbat-infra/dev-core-service-build'
+          PIPELINE_NAME: 'SAPIG-devenv/dev-core-service-build'
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
           TRIGGER_NAME: github-actions-trigger-core
         id: run-pipeline
