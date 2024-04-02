@@ -99,9 +99,9 @@
             </snapshots>
         </repository>
         <repository>
-            <id>forgerock-private-releases</id>
+            <id>forgerock-internal-releases</id>
             <name>ForgeRock Private Releases Repository</name>
-            <url>https://maven.forgerock.org/artifactory/private-releases</url>
+            <url>https://maven.forgerock.org/artifactory/internal-releases</url>
             <snapshots>
                 <enabled>false</enabled>
             </snapshots>

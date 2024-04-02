@@ -26,7 +26,7 @@ jobs:
           java-version: '17'
           architecture: x64
           cache: 'maven'
-          server-id: forgerock-private-releases # protected repo id to get the protected dependencies
+          server-id: forgerock-internal-releases # protected repo id to get the protected dependencies
           server-username: FR_ARTIFACTORY_USER # env variable for username in deploy
           server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable for token in deploy
 
