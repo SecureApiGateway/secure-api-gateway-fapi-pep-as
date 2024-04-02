@@ -8,7 +8,8 @@ on:
       - README.md
 
 env:
-  SERVICE_NAME: ig
+  ARGO_SERVICE_NAME: ig
+  SERVICE_NAME: sapig-core
   GIT_SHA_SHORT: $(echo ${{ github.sha }} | cut -c1-7)
 
 jobs:
@@ -97,7 +98,7 @@ jobs:
       - name: 'Update Environment'
         uses: codefresh-io/codefresh-pipeline-runner@master
         with:
-          args: '-v SERVICE_NAME=${{ env.SERVICE_NAME }}'
+          args: '-v SERVICE_NAME=${{ env.ARGO_SERVICE_NAME }}'
         env:
           PIPELINE_NAME: 'SAPIG-devenv/dev-core-service-build'
           CF_API_KEY: ${{ secrets.CF_API_KEY }}
