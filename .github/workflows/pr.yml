@@ -9,7 +9,7 @@ on:
 
 env:
   PR_NUMBER: pr-${{ github.event.number }}
-  SERVICE_NAME: ig
+  SERVICE_NAME: sapig-core
 
 jobs:
   build:
