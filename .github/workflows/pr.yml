@@ -27,7 +27,7 @@ jobs:
           java-version: '17'
           architecture: x64
           cache: 'maven'
-          server-id: forgerock-private-releases # protected release repo
+          server-id: forgerock-internal-releases # protected release repo
           server-username: FR_ARTIFACTORY_USER # env variable for username to authentication protected repo
           server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable encrypted password to authentication protected repo
 
