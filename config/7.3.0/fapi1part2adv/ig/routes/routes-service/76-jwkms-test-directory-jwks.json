@@ -26,7 +26,7 @@
       "secretsProvider": "TestDirectorySigningKeyStore",
       "purposes": [{
         "secretId": "jwt.signer",
-        "keyUsage": "SIGN"
+        "keyUsage": "VERIFY"
       }]
     }
   }
