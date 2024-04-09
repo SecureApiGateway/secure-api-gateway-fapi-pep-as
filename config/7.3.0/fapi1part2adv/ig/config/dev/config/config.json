@@ -286,10 +286,38 @@
       }
     },
     {
+      "name": "TrustManager-OB",
+      "type": "TrustManager",
+      "config": {
+        "keystore": {
+          "type": "KeyStore",
+          "config": {
+            "url": "file://&{ig.instance.dir}&{ig.truststore.path}",
+            "type": "PKCS12",
+            "passwordSecretId": "ig.truststore.password",
+            "secretsProvider": "SystemAndEnvSecretStore-IAM"
+          }
+        }
+      }
+    },
+    {
+      "name": "OBClientHandler",
+      "type": "ClientHandler",
+      "capture": "all",
+      "config": {
+        "tls": {
+          "type": "ClientTlsOptions",
+          "config": {
+            "trustManager": "TrustManager-OB"
+          }
+        }
+      }
+    },
+    {
       "name": "JwkSetService",
       "type": "CaffeineCachingJwkSetService",
       "config": {
-        "handler": "ClientHandler",
+        "handler": "OBClientHandler",
         "maxCacheEntries": 500,
         "expireAfterWriteDuration": "24 hours"
       }
