@@ -50,7 +50,7 @@
           "name": "RegistrationRequestJwtSignatureValidationFilter",
           "type": "RegistrationRequestJwtSignatureValidationFilter",
           "config": {
-            "clientHandler": "ClientHandler",
+            "clientHandler": "OBClientHandler",
             "jwkSetService": "JwkSetService",
             "jwtSignatureValidator": "RsaJwtSignatureValidator"
           }
@@ -73,7 +73,7 @@
             "type": "application/x-groovy",
             "file": "ProcessRegistration.groovy",
             "args": {
-              "routeArgProxyBaseUrl": "https://&{ig.fqdn}/jwkms/jwksproxy",
+              "jwkSetService": "${heap['JwkSetService']}",
               "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
               "jwtSignatureValidator": "${heap['RsaJwtSignatureValidator']}",
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
