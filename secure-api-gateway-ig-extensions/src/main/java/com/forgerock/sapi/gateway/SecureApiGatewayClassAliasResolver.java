@@ -36,7 +36,7 @@ import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientOrganisationServic
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientService;
 import com.forgerock.sapi.gateway.dcr.sigvalidation.RegistrationRequestJwtSignatureValidationFilter;
 import com.forgerock.sapi.gateway.fapi.FapiInteractionIdTracingFilter;
-import com.forgerock.sapi.gateway.fapi.v1.FAPIAdvancedDCRValidationFilter;
+import com.forgerock.sapi.gateway.fapi.v1.FapiAdvancedDCRValidationFilter;
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiAuthorizeRequestValidationFilter;
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiParRequestValidationFilter;
 import com.forgerock.sapi.gateway.jwks.FetchApiClientJwksFilter;
@@ -59,7 +59,7 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
     private static final Map<String, Class<?>> ALIASES = new HashMap<>();
 
     static {
-        ALIASES.put("FAPIAdvancedDCRValidationFilter", FAPIAdvancedDCRValidationFilter.class);
+        ALIASES.put("FapiAdvancedDCRValidationFilter", FapiAdvancedDCRValidationFilter.class);
         ALIASES.put("CaffeineCachingJwkSetService", CaffeineCachingJwkSetService.class);
         ALIASES.put("RestJwkSetService", RestJwkSetService.class);
         ALIASES.put("RsaJwtSignatureValidator", RsaJwtSignatureValidator.class);

@@ -122,7 +122,7 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  * IG Config required to create this filter:
  * <pre>
  *     {@code {
- *         "type": "FAPIAdvancedDCRValidationFilter",
+ *         "type": "FapiAdvancedDCRValidationFilter",
  *         "config": {
  *             "certificateRetriever"                   : CertificateRetriever [OPTIONAL]
  *             "clientTlsCertHeader"                    : String               [OPTIONAL] [DEPRECATED]
@@ -153,9 +153,9 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  * registrationObjectSigningFieldNames configures which fields inside the registration request object should be validated
  * against the supportedSigningAlgorithms
  */
-public class FAPIAdvancedDCRValidationFilter implements Filter {
+public class FapiAdvancedDCRValidationFilter implements Filter {
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(FAPIAdvancedDCRValidationFilter.class);
+    private static final Logger LOGGER = LoggerFactory.getLogger(FapiAdvancedDCRValidationFilter.class);
 
     /**
      * The HTTP methods to apply FAPI validation to.
@@ -233,7 +233,7 @@ public class FAPIAdvancedDCRValidationFilter implements Filter {
      * The filter should be constructed using the {@link Heaplet}.
      * This object is complex to create, the Heaplet follows the builder pattern to produce a coherent object.
      */
-    private FAPIAdvancedDCRValidationFilter() {
+    private FapiAdvancedDCRValidationFilter() {
         errorResponseFactory = new ErrorResponseFactory();
     }
 
@@ -487,14 +487,14 @@ public class FAPIAdvancedDCRValidationFilter implements Filter {
         }
     }
 
-    /** Creates and initializes a FAPIAdvancedDCRValidationFilter */
+    /** Creates and initializes a FapiAdvancedDCRValidationFilter */
     public static class Heaplet extends GenericHeaplet {
 
         private final Logger logger = LoggerFactory.getLogger(getClass());
 
         @Override
         public Object create() throws HeapException {
-            final FAPIAdvancedDCRValidationFilter filter = new FAPIAdvancedDCRValidationFilter();
+            final FapiAdvancedDCRValidationFilter filter = new FapiAdvancedDCRValidationFilter();
 
             final List<String> supportedSigningAlgorithms = config.get("supportedSigningAlgorithms")
                                                                    .as(evaluatedWithHeapProperties())
@@ -531,7 +531,7 @@ public class FAPIAdvancedDCRValidationFilter implements Filter {
                 final String clientCertHeaderName = config.get("clientTlsCertHeader").required().asString();
                 logger.warn("{} config option clientTlsCertHeader is deprecated, use certificateRetriever instead. " +
                             "This option needs to contain a value which is a reference to a {} object on the heap",
-                            FAPIAdvancedDCRValidationFilter.class.getSimpleName(), CertificateRetriever.class);
+                            FapiAdvancedDCRValidationFilter.class.getSimpleName(), CertificateRetriever.class);
                 filter.setClientCertificateRetriever(new HeaderCertificateRetriever(clientCertHeaderName));
             }
 

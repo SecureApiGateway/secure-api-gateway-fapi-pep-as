@@ -20,7 +20,7 @@ import java.util.Optional;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.util.Reject;
 
-public class FAPIUtils {
+public class FapiUtils {
 
     public static final String X_FAPI_INTERACTION_ID = "x-fapi-interaction-id";
 
