@@ -66,7 +66,7 @@ import org.junit.jupiter.api.Test;
 import com.forgerock.sapi.gateway.dcr.common.exceptions.ValidationException;
 import com.forgerock.sapi.gateway.dcr.common.Validator;
 import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
-import com.forgerock.sapi.gateway.fapi.v1.FAPIAdvancedDCRValidationFilter.Heaplet;
+import com.forgerock.sapi.gateway.fapi.v1.FapiAdvancedDCRValidationFilter.Heaplet;
 import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 import com.nimbusds.jose.JOSEException;
@@ -76,7 +76,7 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
-class FAPIAdvancedDCRValidationFilterTest {
+class FapiAdvancedDCRValidationFilterTest {
 
     private static final String CERT_HEADER_NAME = "x-cert";
 
@@ -88,7 +88,7 @@ class FAPIAdvancedDCRValidationFilterTest {
 
     private TestSuccessResponseHandler successHandler;
 
-    private FAPIAdvancedDCRValidationFilter fapiValidationFilter;
+    private FapiAdvancedDCRValidationFilter fapiValidationFilter;
 
     @BeforeAll
     public static void beforeAll() throws NoSuchAlgorithmException {
@@ -119,11 +119,11 @@ class FAPIAdvancedDCRValidationFilterTest {
     }
 
     /**
-     * Uses the Heaplet to create a FAPIAdvancedDCRValidationFilter with the default configuration.
+     * Uses the Heaplet to create a FapiAdvancedDCRValidationFilter with the default configuration.
      */
-    private static FAPIAdvancedDCRValidationFilter createDefaultFapiFilter() throws HeapException {
+    private static FapiAdvancedDCRValidationFilter createDefaultFapiFilter() throws HeapException {
         final JsonValue filterConfig = json(object(field("clientTlsCertHeader", CERT_HEADER_NAME)));
-        return (FAPIAdvancedDCRValidationFilter) new FAPIAdvancedDCRValidationFilter.Heaplet()
+        return (FapiAdvancedDCRValidationFilter) new FapiAdvancedDCRValidationFilter.Heaplet()
                                                                                     .create(Name.of("fapiTest"),
                                                                                             filterConfig, EMPTY_HEAP);
     }
@@ -155,7 +155,7 @@ class FAPIAdvancedDCRValidationFilterTest {
     }
 
     private void submitRequestAndValidateSuccessful(String httpMethod, Map<String, Object> validRegRequestObj,
-            String testCertPem, FAPIAdvancedDCRValidationFilter filter) throws Exception {
+            String testCertPem, FapiAdvancedDCRValidationFilter filter) throws Exception {
         final TransactionIdContext context = new TransactionIdContext(null, new TransactionId("1234"));
         final Request request = new Request().setMethod(httpMethod);
         request.addHeaders(new GenericHeader(CERT_HEADER_NAME, URLEncoder.encode(testCertPem, StandardCharsets.UTF_8)));
@@ -522,7 +522,7 @@ class FAPIAdvancedDCRValidationFilterTest {
                                                                      "request_object_signing_alg",
                                                                      "additional_signing_field_to_validate"))));
 
-            final FAPIAdvancedDCRValidationFilter filter = (FAPIAdvancedDCRValidationFilter) new Heaplet().create(Name.of("fapiTest"), filterConfig, EMPTY_HEAP);
+            final FapiAdvancedDCRValidationFilter filter = (FapiAdvancedDCRValidationFilter) new Heaplet().create(Name.of("fapiTest"), filterConfig, EMPTY_HEAP);
 
             final Map<String, Object> validRegRequestObj = new HashMap<>(VALID_REG_REQUEST_OBJ);
             validRegRequestObj.put("additional_signing_field_to_validate", "PS256"); // Add a value for the extra signing field that was configured via conf
@@ -545,7 +545,7 @@ class FAPIAdvancedDCRValidationFilterTest {
                                     "request_object_signing_alg",
                                     "additional_signing_field_to_validate"))));
 
-            final FAPIAdvancedDCRValidationFilter filter = (FAPIAdvancedDCRValidationFilter) new Heaplet().create(Name.of("fapiTest"), filterConfig, heap);
+            final FapiAdvancedDCRValidationFilter filter = (FapiAdvancedDCRValidationFilter) new Heaplet().create(Name.of("fapiTest"), filterConfig, heap);
 
             final Map<String, Object> validRegRequestObj = new HashMap<>(VALID_REG_REQUEST_OBJ);
             validRegRequestObj.put("additional_signing_field_to_validate", "PS256"); // Add a value for the extra signing field that was configured via conf

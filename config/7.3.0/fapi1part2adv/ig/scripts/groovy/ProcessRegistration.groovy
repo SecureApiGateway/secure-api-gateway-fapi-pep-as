@@ -22,7 +22,7 @@ import static org.forgerock.util.promise.Promises.newResultPromise
  * https://openid.net/specs/openid-connect-registration-1_0.html
  * https://datatracker.ietf.org/doc/html/rfc7591
  *
- * NOTE: This filter should be used AFTER the FAPIAdvancedDCRValidationFilter. That filter will check that the request
+ * NOTE: This filter should be used AFTER the FapiAdvancedDCRValidationFilter. That filter will check that the request
  * is fapi compliant:
  * - validateRedirectUris
  *   - request object must contain redirect_uris field

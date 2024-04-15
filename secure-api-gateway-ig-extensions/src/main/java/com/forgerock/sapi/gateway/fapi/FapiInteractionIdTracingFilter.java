@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.fapi;
 
-import static com.forgerock.sapi.gateway.fapi.FAPIUtils.X_FAPI_INTERACTION_ID;
+import static com.forgerock.sapi.gateway.fapi.FapiUtils.X_FAPI_INTERACTION_ID;
 
 import java.util.Optional;
 
@@ -57,7 +57,7 @@ public class FapiInteractionIdTracingFilter implements Filter {
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
-        final Optional<String> optionalInteractionId = FAPIUtils.getFapiInteractionId(request);
+        final Optional<String> optionalInteractionId = FapiUtils.getFapiInteractionId(request);
         if (optionalInteractionId.isPresent()) {
             // Add the x-fapi-interaction-id to the MDC context for logging purposes, ensure the previously set value is restored
             final String previousMdcFapiInteractionId = MDC.get(X_FAPI_INTERACTION_ID);
