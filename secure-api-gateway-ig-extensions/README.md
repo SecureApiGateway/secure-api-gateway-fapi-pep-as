@@ -11,14 +11,55 @@ https://github.com/SecureApiGateway/SecureApiGateway/wiki/IG-Extensions-Java-Mod
 ## JWKS Caching Support
 Support for fetching (and optionally caching) JSON Web Key Set (JWKS) data.
 
-## Key classes
-The JwkSetService interface is used to control the behaviour when fetching JWKS, the default implementation: [RestJwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/RestJwkSetService.java) will always fetch data using a HTTP call to a REST API.
+### Key classes
+The [JwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/JwkSetService.java) interface is used to control the behaviour when fetching JWKS values. 
+Code which needs to retrieve JWKS values should depend on a JwkSetService and allow the concrete implementation to be
+plugged in via IG config.
 
-The [CachingJwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/cache/CachingJwkSetService.java) provides caching support via a pluggable Cache interface. The service will first check its cache and return the cached JWKS if there is one, otherwise it will delegate to the RestJwkSetService to get the data and cache it.
+The default implementation: [RestJwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/RestJwkSetService.java) will always fetch data using a HTTP call to a REST API.
+
+The [CachingJwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/cache/CachingJwkSetService.java) implementation
+provides caching support via a pluggable Cache interface. 
+The service will first check its cache and return the cached JWKS if there is one, otherwise it will delegate to the RestJwkSetService to get the data (via HTTP) and cache it.
 
 [CaffeineCachingJwkSetService](src/main/java/com/forgerock/sapi/gateway/jwks/cache/caffeine/CaffeineCachingJwkSetService.java) provides a concrete implementation which uses the [caffeine](https://github.com/ben-manes/caffeine) library (this lib is already used within IG).
 
-## Extensions
-Clients can use an alternative caching library by writing an adaptor class which implements the [com.forgerock.sapi.gateway.jwks.cache.Cache](src/main/java/com/forgerock/sapi/gateway/jwks/cache/Cache.java) interface. 
+### Example config
 
-The contents of package [com.forgerock.sapi.gateway.jwks.cache.caffeine](src/main/java/com/forgerock/sapi/gateway/jwks/cache/caffeine/) demonstrate how this can be done. In this package there is: a CaffeineCache adaptor class, CaffeineCachingJwkSetService (which extends CachingJwkSetService) and a heaplet object which is used to construct and configure the caffeine caching. 
+#### RestJwkSetService (No Caching)
+```json
+{
+  "name": "JwkSetService",
+  "type": "RestJwkSetService",
+  "config": {
+    "handler": "ClientHandler"
+  }
+}
+```
+Config:
+- handler: Reference to a ClientHandler implementation to use to make the HTTP class to the jwks_uri
+
+#### CaffeineCachingJwkSetService (Caching enabled)
+```json
+{
+  "name": "JwkSetService",
+  "type": "CaffeineCachingJwkSetService",
+  "config": {
+    "handler": "OBClientHandler",
+    "maxCacheEntries": 500,
+    "expireAfterWriteDuration": "24 hours"
+  }
+}
+```
+Config:
+- handler: Reference to a ClientHandler implementation to use to make the HTTP class to the jwks_uri
+- maxCacheEntries: int - max size of the cache
+- expireAfterWriteDuration: duration - automatically remove a value when this amount of time has passed since it was written into the cache
+
+### Extensions
+Clients can use an alternative caching library by writing an adaptor class which implements the [Cache](src/main/java/com/forgerock/sapi/gateway/jwks/cache/Cache.java) interface.
+This can then be plugged into the CachingJwkSetService.
+
+The contents of package [com.forgerock.sapi.gateway.jwks.cache.caffeine](src/main/java/com/forgerock/sapi/gateway/jwks/cache/caffeine/) demonstrate how this can be done. 
+In this package there is: a [CaffeineCache](src/main/java/com/forgerock/sapi/gateway/jwks/cache/caffeine/CaffeineCache.java) adaptor class, CaffeineCachingJwkSetService (which extends CachingJwkSetService) 
+and a heaplet object which is used to construct and configure the caffeine caching. 
