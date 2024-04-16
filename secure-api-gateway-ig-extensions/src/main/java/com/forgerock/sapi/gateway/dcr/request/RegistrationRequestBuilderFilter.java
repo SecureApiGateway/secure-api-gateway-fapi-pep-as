@@ -52,9 +52,9 @@ import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
  * the body of a request to the /registration endpoint. If the {@code RegistationRequest} can successfully be built
  * then it is placed on the attributes context for use by subsequent filters
  */
-public class RegistrationRequestEntityValidatorFilter implements Filter {
+public class RegistrationRequestBuilderFilter implements Filter {
 
-    private static final Logger log = LoggerFactory.getLogger(RegistrationRequestEntityValidatorFilter.class);
+    private static final Logger log = LoggerFactory.getLogger(RegistrationRequestBuilderFilter.class);
     private final RegistrationRequestEntitySupplier registrationEntitySupplier;
     private final RegistrationRequest.Builder registrationRequestBuilder;
     private final ResponseFactory responseFactory;
@@ -70,7 +70,7 @@ public class RegistrationRequestEntityValidatorFilter implements Filter {
      * @param responseFactory used to create a suitably formatted response should an error occur while processing the
      *                        registration request
      */
-    public RegistrationRequestEntityValidatorFilter(RegistrationRequestEntitySupplier registrationEntitySupplier,
+    public RegistrationRequestBuilderFilter(RegistrationRequestEntitySupplier registrationEntitySupplier,
             RegistrationRequest.Builder registrationRequestBuilder, ResponseFactory responseFactory) {
         Reject.ifNull(registrationEntitySupplier, "registrationEntitySupplier must be provided");
         Reject.ifNull(registrationRequestBuilder, "registrationRequestBuilder must be provided");
@@ -106,7 +106,7 @@ public class RegistrationRequestEntityValidatorFilter implements Filter {
     }
 
     /**
-     * Heaplet used to create {@link RegistrationRequestEntityValidatorFilter} objects
+     * Heaplet used to create {@link RegistrationRequestBuilderFilter} objects
      *
      * Mandatory fields:
      *  - trustedDirectoryService: the name of the service used to provide the trusted directory config
@@ -143,7 +143,7 @@ public class RegistrationRequestEntityValidatorFilter implements Filter {
             final ResponseFactory responseFactory = new ResponseFactory(contentTypeNegotiator,
                     contentTypeFormatterFactory);
 
-            return new RegistrationRequestEntityValidatorFilter( registrationEntitySupplier,
+            return new RegistrationRequestBuilderFilter( registrationEntitySupplier,
                     registrationRequestBuilder, responseFactory);
         }
     }
