@@ -51,9 +51,9 @@ import com.forgerock.sapi.gateway.jws.JwtDecoder;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryTestFactory;
 
-class RegistrationRequestEntityValidatorFilterTest {
+class RegistrationRequestBuilderFilterTest {
 
-    private RegistrationRequestEntityValidatorFilter filter;
+    private RegistrationRequestBuilderFilter filter;
     private final RegistrationRequestEntitySupplier reqRequestSupplier = mock(RegistrationRequestEntitySupplier.class);
     private static RegistrationRequest.Builder registrationRequestBuilder ;
     private static final JwtDecoder jwtDecoder = new JwtDecoder();
@@ -71,7 +71,7 @@ class RegistrationRequestEntityValidatorFilterTest {
     void setUp() {
         when(handler.handle(any(Context.class), any(Request.class)))
                 .thenReturn(Promises.newResultPromise(new Response(Status.OK)));
-        filter = new RegistrationRequestEntityValidatorFilter(reqRequestSupplier, registrationRequestBuilder,
+        filter = new RegistrationRequestBuilderFilter(reqRequestSupplier, registrationRequestBuilder,
                 responseFactory);
     }
 
