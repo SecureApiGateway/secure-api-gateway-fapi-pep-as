@@ -26,9 +26,9 @@ This build takes the core and adds support for Open Banking UK API endpoints, pr
 ## secure-api-gateway-core-docker
 This module manages creating docker images for the gateway builds supported.
 
-See [README.MD](secure-api-gateway-core-docker/README.MD) for more details.
+See [README.md](secure-api-gateway-core-docker/README.md) for more details.
 
 ## secure-api-gateway-ig-extensions module
 This module contains Java code which extends the functionality of the ForgeRock Identity Gateway (IG) product.
 
-See [README.MD](secure-api-gateway-ig-extensions/README.md) for more details.
+See [README.md](secure-api-gateway-ig-extensions/README.md) for more details.
