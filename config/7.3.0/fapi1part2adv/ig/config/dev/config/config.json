@@ -195,7 +195,6 @@
       "config" : {
         "url" : "https://&{identity.platform.fqdn}/am",
         "realm" : "/&{am.realm}",
-        "version" : "7.3.0",
         "agent" : {
           "username" : "ig-agent",
           "passwordSecretId" : "ig.agent.password"
