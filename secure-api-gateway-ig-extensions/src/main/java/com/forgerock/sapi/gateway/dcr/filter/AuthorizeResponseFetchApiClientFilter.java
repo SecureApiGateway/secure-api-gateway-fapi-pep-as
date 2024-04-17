@@ -26,6 +26,8 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.json.jose.common.JwtReconstruction;
+import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
@@ -81,9 +83,10 @@ public class AuthorizeResponseFetchApiClientFilter implements Filter {
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         return clientIdRetriever.apply(request).thenAsync(clientId -> {
             if (clientId == null) {
-                LOGGER.error("Authorize request missing mandatory client_id param");
+                LOGGER.error("Authorize request invalid - unable to locate client_id");
                 return Promises.newResultPromise(
-                        errorResponseFactory.invalidRequestErrorResponse(request.getHeaders().get(HttpHeaderNames.ACCEPT), "'client_id' is missing in the request."));
+                        errorResponseFactory.invalidRequestErrorResponse(request.getHeaders().get(HttpHeaderNames.ACCEPT),
+                                                          "'client_id' is missing in the request."));
             }
             return next.handle(context, request).thenAsync(response -> {
                 if (response.getStatus().isServerError() || response.getStatus().isClientError()) {
@@ -131,13 +134,29 @@ public class AuthorizeResponseFetchApiClientFilter implements Filter {
     }
 
     /**
-     * Helper function capable of retrieving the client_id parameter from the Request's Form entity.
+     * Helper function capable of retrieving the client_id parameter from the request JWT in the {@link Request}'s
+     * Form entity.
      *
      * @return Promise<String, NeverThrowsException> which returns the client_id or null if it does not exist
      */
-    static Function<Request, Promise<String, NeverThrowsException>> formClientIdRetriever() {
+    static Function<Request, Promise<String, NeverThrowsException>> formRequestJwtClientIdRetriever() {
         return request -> request.getEntity().getFormAsync()
-                .then(form -> form.getFirst("client_id"))
+                .then(form -> {
+                    final String requestJwt = form.getFirst("request");
+                    if (requestJwt == null) {
+                        LOGGER.debug("Failed to extract client_id from /par request, no request JWT param found");
+                        return null;
+                    }
+                    else {
+                        try {
+                            final SignedJwt signedJwt = new JwtReconstruction().reconstructJwt(requestJwt, SignedJwt.class);
+                            return signedJwt.getClaimsSet().getClaim("client_id", String.class);
+                        } catch (RuntimeException e) {
+                            LOGGER.warn("Failed to extract client_id from /par request due to exception", e);
+                            return null;
+                        }
+                    }
+                })
                 .thenCatch(ioe -> {
                     LOGGER.warn("Failed to extract client_id from /par request due to exception", ioe);
                     return null;

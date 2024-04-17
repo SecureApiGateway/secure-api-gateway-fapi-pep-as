@@ -15,19 +15,28 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
+import static org.assertj.core.api.Assertions.*;
+
 import java.net.URISyntaxException;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.function.Function;
 
+import org.assertj.core.api.Assertions;
 import org.forgerock.http.protocol.Form;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.junit.jupiter.api.Test;
+
+import com.forgerock.sapi.gateway.util.CryptoUtils;
+import com.nimbusds.jose.JWSAlgorithm;
 
 public class ParResponseFetchApiClientFilterTest extends BaseAuthorizeResponseFetchApiClientFilterTest {
 
     @Override
     protected Function<Request, Promise<String, NeverThrowsException>> createClientIdRetriever() {
-        return AuthorizeResponseFetchApiClientFilter.formClientIdRetriever();
+        return AuthorizeResponseFetchApiClientFilter.formRequestJwtClientIdRetriever();
     }
 
     @Override
@@ -40,8 +49,45 @@ public class ParResponseFetchApiClientFilterTest extends BaseAuthorizeResponseFe
             throw new RuntimeException(e);
         }
         final Form form = new Form();
-        form.putSingle("client_id", clientId);
+        form.putSingle("request", CryptoUtils.createEncodedJwtString(Map.of("client_id", clientId), JWSAlgorithm.PS256));
         request.setEntity(form);
         return request;
+    }
+
+    @Test
+    public void failsToRetreiveClientIdWhenRequestJwtIsMissing() throws Exception {
+        Request request = new Request();
+        request.setEntity(new Form());
+        final Promise<String, NeverThrowsException> clientIdPromise =
+                AuthorizeResponseFetchApiClientFilter.formRequestJwtClientIdRetriever().apply(request);
+
+        final String clientId = clientIdPromise.getOrThrow(1, TimeUnit.MILLISECONDS);
+        assertThat(clientId).isNull();
+    }
+
+    @Test
+    public void failsToRetrieveClientIdWhenRequestJwtIsInvalid() throws Exception {
+        Request request = new Request();
+        final Form form = new Form();
+        form.putSingle("request", "this is not a jwt");
+        request.setEntity(form);
+        final Promise<String, NeverThrowsException> clientIdPromise =
+                AuthorizeResponseFetchApiClientFilter.formRequestJwtClientIdRetriever().apply(request);
+
+        final String clientId = clientIdPromise.getOrThrow(1, TimeUnit.MILLISECONDS);
+        assertThat(clientId).isNull();
+    }
+
+    @Test
+    public void failsToRetrieveClientIdWhenRequestJwtDoesNotIncludeClientIdClaim() throws Exception {
+        Request request = new Request();
+        final Form form = new Form();
+        form.putSingle("request", CryptoUtils.createEncodedJwtString(Map.of("claim1", "value1"), JWSAlgorithm.PS256));
+        request.setEntity(form);
+        final Promise<String, NeverThrowsException> clientIdPromise =
+                AuthorizeResponseFetchApiClientFilter.formRequestJwtClientIdRetriever().apply(request);
+
+        final String clientId = clientIdPromise.getOrThrow(1, TimeUnit.MILLISECONDS);
+        assertThat(clientId).isNull();
     }
 }
