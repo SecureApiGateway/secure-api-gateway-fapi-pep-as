@@ -18,6 +18,7 @@ package com.forgerock.sapi.gateway.dcr.filter;
 import static com.forgerock.sapi.gateway.dcr.filter.AuthorizeResponseFetchApiClientFilter.*;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
+import org.forgerock.http.protocol.Request;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 
@@ -26,7 +27,7 @@ import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 
 /**
  * Heaplet for creating a ParResponseFetchApiClientFilter, this is an alias for the AuthorizeResponseFetchApiClientFilter
- * that has been configured to retrieve the client_id from the HTTP Request's Form.
+ * that has been configured to retrieve the client_id from the request JWT in the {@link Request}'s Form entity.
  * <p>
  * Mandatory config:
  * - apiClientService: reference to an {@link ApiClientService} implementation heap object to use to retrieve the {@link ApiClient}
@@ -48,6 +49,6 @@ public class ParResponseFetchApiClientFilterHeaplet extends GenericHeaplet {
     @Override
     public Object create() throws HeapException {
         final ApiClientService apiClientService = config.get("apiClientService").as(requiredHeapObject(heap, ApiClientService.class));
-        return new AuthorizeResponseFetchApiClientFilter(apiClientService, formClientIdRetriever());
+        return new AuthorizeResponseFetchApiClientFilter(apiClientService, formRequestJwtClientIdRetriever());
     }
 }
