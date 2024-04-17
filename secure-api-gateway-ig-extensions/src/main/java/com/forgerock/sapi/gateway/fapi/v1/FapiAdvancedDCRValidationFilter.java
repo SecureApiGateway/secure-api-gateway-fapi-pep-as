@@ -58,20 +58,17 @@ import com.forgerock.sapi.gateway.mtls.ContextCertificateRetriever;
 import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
 
 /**
- * Filter which rejects Dynamic Client Registration (DCR) request that would result in OAuth2 clients that would not
- * meet the following FAPI specifications:
+ * Filter that validates Dynamic Client Registration (DCR) requests to make sure that they will produce OAuth2.0 clients
+ * that are compliant with the following FAPI specifications:
  * <p>
  * <a href="https://openid.net/specs/openid-financial-api-part-1-1_0.html#authorization-server">
  * Financial-grade API Security Profile 1.0 - Part 1: Baseline</a>
- * </p>
  * <p>
  * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html">
  * Financial-grade API Security Profile 1.0 - Part 2: Advanced</a>
- * </p>
- *
+ * <p>
  * This filter ensures that when subsequent filters are called the following conditions of the FAPI spec have been
  * met:
- *
  * <ul>
  *   <li>5.2.2 2: shall require:</li>
  *   <ul>
@@ -83,7 +80,8 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">
  *     Financial-grade API Security Profile 1.0 - Part 2: Advanced </a>  section 8.6 states:
  *
- * <p>For JWS, both clients and authorization servers
+ * <p>
+ * For JWS, both clients and authorization servers
  * <ol>
  *     <li>shall use PS256 or ES256 algorithms; </li>
  *     <li>should not use algorithms that use RSASSA-PKCS1-v1_5 (e.g. RS256); and </li>
@@ -93,14 +91,12 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  * <p>
  * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">
  *  Financial-grade API Security Profile 1.0 - Part 2: Advanced</a>, in section 5.2.2-14 states:
- *  </p>
- *  <p>>
- *  shall authenticate the confidential client using one of the following methods (this overrides FAPI Security Profile 1.0 - Part 1: Baseline clause 5.2.2-4):
- *  <ol>
- *     <li>tls_client_auth or self_signed_tls_client_auth as specified in section 2 of <a href="https://tools.ietf.org/html/rfc8705">MTLS</a>, or</li>
- *     <li>private_key_jwt as specified in section 9 of <a href="http://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;</li>
- *  </ol>
- *  </p>
+ * <p>
+ * shall authenticate the confidential client using one of the following methods (this overrides FAPI Security Profile 1.0 - Part 1: Baseline clause 5.2.2-4):
+ * <ol>
+ *   <li>tls_client_auth or self_signed_tls_client_auth as specified in section 2 of <a href="https://tools.ietf.org/html/rfc8705">MTLS</a>, or</li>
+ *   <li>private_key_jwt as specified in section 9 of <a href="http://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;</li>
+ * </ol>
  *
  * From the <a href="https://openid.net/specs/openid-financial-api-part-1-1_0.html#authorization-server">
  * Financial-grade API Security Profile 1.0 - Part 1: Baseline</a>:
@@ -110,9 +106,7 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  *     <li>5.2.2 20: shall require redirect URIs to use the https scheme; </li>
  * </ul>
  *
-*  Note, we also check that the redirect_uri does not contain localhost as we don't want redirects to URIs on the
- * </p>
- *
+ * Note, we also check that the redirect_uri does not contain localhost as we don't want redirects to URIs on the
  * <p>
  * This filter should sit in front of filter(s) which implement DCR for a particular API.
  * <p>
@@ -181,26 +175,26 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
                                                                                     "id_token_signed_response_alg",
                                                                                     "request_object_signing_alg");
     /**
-     * The JWS signing algorithm's supported by FAPI.
-     *
+     * The JWS signing algorithms supported by FAPI.
+     * <p>
      * This is used to validate the registration JWT (if the registration is in JWT format) alg header and fields in
      * the registration request object which configure the signing algorithms to use for the OAuth2 client,
      * see {@link #registrationObjectSigningFieldNames}.
-     *
+     * <p>
      * This is configurable, for the default set of signing algorithms see {@link #DEFAULT_SUPPORTED_JWS_ALGORITHMS}
      */
     private Set<String> supportedSigningAlgorithms;
 
     /**
      * The registration request object's token_endpoint_auth_method values which are allowed by FAPI.
-     *
+     * <p>
      * This is configurable, for the default set of auth methods see {@link #DEFAULT_SUPPORTED_TOKEN_ENDPOINT_AUTH_METHODS}
      */
     private Set<String> supportedTokenEndpointAuthMethods;
 
     /**
      * The fields within the registration request object to validate against the {@link #supportedSigningAlgorithms}
-     *
+     * <p>
      * This is configurable, for the default set of fields see {@link #DEFAULT_REG_OBJ_SIGNING_FIELD_NAMES}
      */
     private Collection<String> registrationObjectSigningFieldNames;
@@ -212,7 +206,7 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
 
     /**
      * Function which returns the DCR Registration Request json object.
-     *
+     * <p>
      * NOTE: If a JWT is submitted which contains the DCR Registration Request as claims, then those claims should
      * be extracted from the JWT and returned. This function provides flexibility, allowing the registration request
      * to be sourced directly or unwrapped from within a JWT.
@@ -237,20 +231,6 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
         errorResponseFactory = new ErrorResponseFactory();
     }
 
-    /**
-     * Checks the request conforms to the
-     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">
-     *    Financial-grade API Security Profile 1.0 - Part 2: Advanced</a> specs.
-     *
-     *
-     * @param context
-     *            The request context.
-     * @param request
-     *            The request.
-     * @param next
-     *            The next filter or handler in the chain to handle the request.
-     * @return
-     */
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         if (!VALIDATABLE_HTTP_REQUEST_METHODS.contains(request.getMethod())) {
@@ -304,10 +284,11 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      *     <li>5.2.2 9: shall require the redirect_uri in the authorization request; </li>
      *     <li>5.2.2 20: shall require redirect URIs to use the https scheme; </li>
      * </ul>
-     *
+     * <p>
      * Note, we also check that the redirect_uri does not contain localhost as we don't want redirects to URIs on the
      * server
-     * @param registrationObject
+     *
+     * @param registrationObject the DCR Registration Request json object to validate
      */
     void validateRedirectUris(JsonValue registrationObject) {
         final List<String> redirectUris = registrationObject.get("redirect_uris").asList(String.class);
@@ -338,12 +319,14 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      * Validates that the response_types field contains only FAPI compliant response_type values, namely
      * "code" or "code id_token".
      * <p>
-     * https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server specifies:
-     * the authorization server shall require
+     * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#authorization-server">
+     *     Financial-grade API Security Profile 1.0 - Part 2: Advanced</a> specifies: the authorization server shall require
+     * <ol>
+     *   <li>the response_type value code id_token, or</li>
+     *   <li>the response_type value code in conjunction with the response_mode value jwt</li>
+     * </ol>
      *
-     *    1. the response_type value code id_token, or
-     *    2. the response_type value code in conjunction with the response_mode value jwt
-     * @param registrationObject
+     * @param registrationObject the DCR Registration Request json object to validate
      */
     void validateResponseTypes(JsonValue registrationObject) {
         final List<String> responseTypesList = registrationObject.get("response_types").asList(String.class);
@@ -365,16 +348,15 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
     /**
      * <p>
      * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">
-     *  Financial-grade API Security Profile 1.0 - Part 2: Advanced</a>, in section 5.2.2-14 states:
-     *  </p>
-     *  <p>>
-     *  shall authenticate the confidential client using one of the following methods (this overrides FAPI Security Profile 1.0 - Part 1: Baseline clause 5.2.2-4):
-     *  <ol>
-     *     <li>tls_client_auth or self_signed_tls_client_auth as specified in section 2 of <a href="https://tools.ietf.org/html/rfc8705">MTLS</a>, or</li>
-     *     <li>private_key_jwt as specified in section 9 of <a href="http://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;</li>
-     *  </ol>
-     *  </p>
-     * @param registrationObject
+     * Financial-grade API Security Profile 1.0 - Part 2: Advanced</a>, in section 5.2.2-14 states:
+     * <p>
+     * shall authenticate the confidential client using one of the following methods (this overrides FAPI Security Profile 1.0 - Part 1: Baseline clause 5.2.2-4):
+     * <ol>
+     *    <li>tls_client_auth or self_signed_tls_client_auth as specified in section 2 of <a href="https://tools.ietf.org/html/rfc8705">MTLS</a>, or</li>
+     *    <li>private_key_jwt as specified in section 9 of <a href="http://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;</li>
+     * </ol>
+     *
+     * @param registrationObject the DCR Registration Request json object to validate
      */
     void validateTokenEndpointAuthMethods(JsonValue registrationObject) {
         final String tokenEndpointAuthMethod = registrationObject.get("token_endpoint_auth_method").asString();
@@ -383,27 +365,29 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
         }
         if (!supportedTokenEndpointAuthMethods.contains(tokenEndpointAuthMethod)) {
             throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "token_endpoint_auth_method not supported, must be one of: "
-                    + supportedTokenEndpointAuthMethods.stream().sorted().collect(Collectors.toList()));
+                    + supportedTokenEndpointAuthMethods.stream().sorted().toList());
         }
     }
 
     /**
      * Validate that values for signing fields are a supported signing algorithm.
-     *
+     * <p>
      * Some fields may be optional for certain types of request, therefore if a field in the
      * registrationObjectSigningFieldNames collection is not found in the registration request then it is skipped rather
      * than throwing an error. It is the job of the filter that implements the registration logic to reject requests
      * with missing fields.
-     *
+     * <p>
      * <a href="https://openid.net/specs/openid-financial-api-part-2-1_0.html#algorithm-considerations">
-     *     Financial-grade API Security Profile 1.0 - Part 2: Advanced </a>  section 8.6 states:
-     *
+     * Financial-grade API Security Profile 1.0 - Part 2: Advanced </a>  section 8.6 states:
+     * <p>
      * For JWS, both clients and authorization servers
      * <ol>
      *     <li>shall use PS256 or ES256 algorithms; </li>
      *     <li>should not use algorithms that use RSASSA-PKCS1-v1_5 (e.g. RS256); and </li>
      *     <li>shall not use none</li>
      * </ol>
+     *
+     * @param registrationObject the DCR Registration Request json object to validate
      */
     void validateSigningAlgorithmUsed(JsonValue registrationObject) {
         for (String signingFieldName : registrationObjectSigningFieldNames) {
@@ -452,7 +436,7 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
 
     /**
      * Supplies the Registration Request json object from a JWT contained within the Request.entity
-     *
+     * <p>
      * The JWT signing algo in the header is validated against the supported set of signing algorithms for FAPI.
      * No other validation is done at this point, it is assumed that Filters later in the chain will validate the sig etc
      */
