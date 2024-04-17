@@ -40,7 +40,8 @@ import org.slf4j.MDC;
  * Functionality provided:
  * <ul>
  *     <li>
- *         Sets the {@link org.forgerock.services.context.TransactionIdContext} to the x-fapi-interaction-id.
+ *         Sets the {@link org.forgerock.services.context.TransactionIdContext} to the x-fapi-interaction-id header value.
+ *         <br>
  *         This means that the X-ForgeRock-TransactionID header sent to the ForgeRock platform will be set to the same
  *         value as the x-fapi-interaction-id header, which allows requests to be traced in these systems by searching
  *         logs for the x-fapi-interaction-id header value.
@@ -64,7 +65,7 @@ public class FapiInteractionIdTracingFilter implements Filter {
             final String interactionId = optionalInteractionId.get();
             MDC.put(X_FAPI_INTERACTION_ID, interactionId);
             try {
-                logger.debug("Found x-fapi-interaction-id: {}, mapping to TransactionId", optionalInteractionId);
+                logger.debug("Found x-fapi-interaction-id: {}, mapping to TransactionIdContext", interactionId);
                 return next.handle(new TransactionIdContext(context, new TransactionId(interactionId)), request)
                            .thenAlways(() -> removeFapiInteractionIdFromMdc(previousMdcFapiInteractionId));
             } finally {
