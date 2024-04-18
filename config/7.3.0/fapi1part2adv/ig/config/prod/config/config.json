@@ -90,9 +90,9 @@
       "capture" : [ "response", "request" ]
     },
     {
-      "name": "FetchApiClientResourcesChain",
+      "name": "ValidateApiClientMtlsCertChain",
       "type": "ChainOfFilters",
-      "comment": "This filter chain will set the apiClient, apiClientJwkSet and trustedDirectory attributes in the context based on the client_id of the access_token",
+      "comment": "This filter chain validates the ApiClient's MTLS cert using the Trusted Directory, it first fetches all of the resources it needs to perform the validation",
       "config" : {
         "filters": [
           {
