@@ -45,6 +45,11 @@ jobs:
     name: Deploy
     needs: build
     steps:
+      - name: Checkout CI Code 
+        uses: actions/checkout@v4
+        with: 
+          repository: SecureApiGateway/secure-api-gateway-ci
+          ref: 1389-standard-steps-for-workflows # To be removed after testing
       - name: Call deploy-to-env
         uses: ./.github/actions/deploy-to-env
         with: 
