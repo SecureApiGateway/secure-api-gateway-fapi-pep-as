@@ -12,7 +12,7 @@ env:
   PR_NUMBER: pr-${{ github.event.number }}
   SERVICE_NAME: ig
   CF_TRIGGER_NAME: github-actions-trigger-gateway
-  CF_PIPELINE_NAME: SAPIG-devenv/dev-ob-service-build
+  CF_PIPELINE_NAME: SAPIG-devenv/dev-core-service-build
   CF_PIPELINE_BRANCH: main
 
 jobs:
@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/build-image
         with:
           setMavenConfig: ${{ env.SET_MAVEN_CONFIG }}
-          repositoryName: ${{ env.GITHUB_REPOSITORY }}
+          repositoryName: "secure-api-gateway-core"
           dockerBuildCommands: "make clean && make docker tag=$PR_NUMBER env=dev && make docker tag=$PR_NUMBER-prod"
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
