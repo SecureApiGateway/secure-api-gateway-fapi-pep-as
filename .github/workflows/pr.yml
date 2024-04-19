@@ -11,7 +11,7 @@ env:
   SET_MAVEN_CONFIG: true
   PR_NUMBER: pr-${{ github.event.number }}
   SERVICE_NAME: ig
-  CF_TRIGGER_NAME: github-actions-trigger-gateway
+  CF_TRIGGER_NAME: github-actions-trigger-core
   CF_PIPELINE_NAME: SAPIG-devenv/dev-core-service-build
   CF_PIPELINE_BRANCH: main
 
