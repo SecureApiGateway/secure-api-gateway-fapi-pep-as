@@ -30,7 +30,7 @@ jobs:
         uses: ./.github/actions/authentication
         with: 
           garKey: ${{ secrets.DEV_GAR_KEY }}
-          garURL: ${{ vars.GAR_LOCATION }}      
+          garLocation: ${{ vars.GAR_LOCATION }}      
       - name: Call build-image
         uses: ./.github/actions/build-image
         with:
