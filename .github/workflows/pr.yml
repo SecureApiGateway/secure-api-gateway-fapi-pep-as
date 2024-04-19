@@ -11,5 +11,6 @@ jobs:
   run_pr-template:
     name: PR Workflow
     uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/pr-template.yml@1389-standard-steps-for-workflows
+    secrets: inherit
     with:
       componentName: secure-api-gateway-core
