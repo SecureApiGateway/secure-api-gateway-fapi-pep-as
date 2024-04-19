@@ -9,17 +9,28 @@ on:
 
 env:
   PR_NUMBER: pr-${{ github.event.number }}
-  SERVICE_NAME: sapig-core
-  ARGO_SERVICE_NAME: ig
+  SERVICE_NAME: ig
+  CF_TRIGGER_NAME: github-actions-trigger-gateway
+  CF_PIPELINE_NAME: SAPIG-devenv/dev-ob-service-build
+  CF_PIPELINE_BRANCH: main
 
 jobs:
   build:
     runs-on: ubuntu-latest
     name: Build
     steps:
-      - uses: actions/checkout@v4
-
-      # set java and cache
+      - name: Checkout CI Code 
+        uses: actions/checkout@v4
+        with: 
+          repository: SecureApiGateway/secure-api-gateway-ci
+          path: secure-api-gateway-ci
+      # Auth GCP, SDK & Artifact Registry
+      - name: Call Authentication
+        uses: ./.github/actions/authentication
+        with: 
+          garKey: ${{ secrets.DEV_GAR_KEY }}
+          garURL: ${{ vars.GAR_LOCATION }}      
+      # Set Java and Cache
       - name: Set Java and Maven Cache
         uses: actions/setup-java@v4
         id: set_java_maven
@@ -31,28 +42,11 @@ jobs:
           server-id: forgerock-internal-releases # protected release repo
           server-username: FR_ARTIFACTORY_USER # env variable for username to authentication protected repo
           server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable encrypted password to authentication protected repo
-
-      - name: Auth to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.DEV_GAR_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2.1.0
-
-        # Configure docker to use the gcloud command-line tool as a credential helper
-      - name: Auth Docker
-        run: |
-          gcloud auth configure-docker europe-west4-docker.pkg.dev
-
-      - name: Build Code + Test + Create Docker Image
-        run: |
-          make clean
-          # Create development mode docker image
-          make docker tag=$PR_NUMBER env="dev"
-          # Create production mode docker image
-          make docker tag="$PR_NUMBER-prod"
-        env:
+      - name: Call build-image
+        uses: ./.github/actions/build-image
+        with: 
+          repositoryName: ${{ env.GITHUB_ACTION_REPOSITORY }}
+          dockerBuildCommands: "make clean && make docker tag=$PR_NUMBER env=dev && make docker tag=$PR_NUMBER-prod"
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
 
@@ -61,17 +55,11 @@ jobs:
     name: Deploy
     needs: build
     steps:
-      - name: Create lowercase Github Username
-        id: toLowerCase
-        run: echo "GITHUB_USER=$(echo ${{github.actor}} | tr '[:upper:]' '[:lower:]')" >> ${GITHUB_ENV}
-            
-      - name: 'Update Environment'
-        uses: codefresh-io/codefresh-pipeline-runner@master
-        if: github.actor != 'dependabot[bot]'
-        with:
-          args: '-v TAG=${{ env.PR_NUMBER }} -v SERVICE_NAME=${{ env.ARGO_SERVICE_NAME }} -v ENVIRONMENT=${{ env.GITHUB_USER }}-core'
-        env:
-          PIPELINE_NAME: 'SAPIG-devenv/dev-core-service-build'
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          TRIGGER_NAME: github-actions-trigger-core
-          CF_BRANCH: main
+      - name: Call deploy-to-env
+        uses: ./.github/actions/deploy-to-env
+        with: 
+          prNumber: ${{ env.PR_NUMBER }}
+          serviceName: ${{ env.SERVICE_NAME }}
+          cfTriggerName: ${{ env.CF_TRIGGER_NAME }}
+          cfPipelineName: ${{ env.CF_PIPELINE_NAME }}
+          cfPipelineBranch: ${{ env.CF_PIPELINE_BRANCH }}
