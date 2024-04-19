@@ -8,6 +8,7 @@ on:
       - '**/README.md'
 
 env:
+  SET_MAVEN_CONFIG: true
   PR_NUMBER: pr-${{ github.event.number }}
   SERVICE_NAME: ig
   CF_TRIGGER_NAME: github-actions-trigger-gateway
@@ -30,21 +31,10 @@ jobs:
         with: 
           garKey: ${{ secrets.DEV_GAR_KEY }}
           garURL: ${{ vars.GAR_LOCATION }}      
-      # Set Java and Cache
-      - name: Set Java and Maven Cache
-        uses: actions/setup-java@v4
-        id: set_java_maven
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          architecture: x64
-          cache: 'maven'
-          server-id: forgerock-internal-releases # protected release repo
-          server-username: FR_ARTIFACTORY_USER # env variable for username to authentication protected repo
-          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable encrypted password to authentication protected repo
       - name: Call build-image
         uses: ./.github/actions/build-image
-        with: 
+        with:
+          setMavenConfig: ${{ env.SET_MAVEN_CONFIG }}
           repositoryName: ${{ env.GITHUB_ACTION_REPOSITORY }}
           dockerBuildCommands: "make clean && make docker tag=$PR_NUMBER env=dev && make docker tag=$PR_NUMBER-prod"
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
