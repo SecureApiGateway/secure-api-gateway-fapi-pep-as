@@ -55,6 +55,7 @@ jobs:
         with: 
           prNumber: ${{ env.PR_NUMBER }}
           serviceName: ${{ env.SERVICE_NAME }}
+          cfAPIKey: ${{ secrets.CF_API_KEY }}
           cfTriggerName: ${{ env.CF_TRIGGER_NAME }}
           cfPipelineName: ${{ env.CF_PIPELINE_NAME }}
           cfPipelineBranch: ${{ env.CF_PIPELINE_BRANCH }}
