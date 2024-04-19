@@ -35,7 +35,7 @@ jobs:
         uses: ./.github/actions/build-image
         with:
           setMavenConfig: ${{ env.SET_MAVEN_CONFIG }}
-          repositoryName: $GITHUB_REPOSITORY
+          repositoryName: ${{ github.repository }}
           dockerBuildCommands: "make clean && make docker tag=$PR_NUMBER env=dev && make docker tag=$PR_NUMBER-prod"
           FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
           FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
