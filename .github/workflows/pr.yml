@@ -11,6 +11,6 @@ jobs:
   run_pr-template:
     runs-on: ubuntu-latest
     name: PR Workflow
-    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/pr-template.yml
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/pr-template.yml@1389-standard-steps-for-workflows
     with:
       componentName: secure-api-gateway-core
