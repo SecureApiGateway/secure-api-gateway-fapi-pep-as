@@ -23,7 +23,7 @@ jobs:
         uses: actions/checkout@v4
         with: 
           repository: SecureApiGateway/secure-api-gateway-ci
-          path: secure-api-gateway-ci
+          ref: 1389-standard-steps-for-workflows # To be removed after testing
       # Auth GCP, SDK & Artifact Registry
       - name: Call Authentication
         uses: ./.github/actions/authentication
