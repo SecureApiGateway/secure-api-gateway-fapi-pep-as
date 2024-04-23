@@ -188,7 +188,7 @@ switch (method.toUpperCase()) {
 
         // Verify that the tls transport cert is registered for the TPP's software statement
         if ( softwareStatement.hasJwksUri() ) {
-            URL softwareStatementJwksUri = softwareStatement.getJwksUri();
+            URI softwareStatementJwksUri = softwareStatement.getJwksUri();
             regRequestClaimsSet.setClaim("jwks_uri", softwareStatementJwksUri.toString());
 
             // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it on
@@ -200,7 +200,7 @@ switch (method.toUpperCase()) {
             logger.debug(SCRIPT_NAME + "Checking cert against remote jwks: " + softwareStatementJwksUri)
             return jwkSetService.getJwkSet(softwareStatementJwksUri)
                     .thenCatchAsync(e -> {
-                        String errorDescription = "Unable to get jwks from url: " + softwareStatementJwksUri
+                        String errorDescription = "Unable to get jwks from uri: " + softwareStatementJwksUri
                         logger.warn(SCRIPT_NAME + "Failed to get jwks due to exception: " + errorDescription, e)
                         return newResultPromise(errorResponseFactory.invalidClientMetadataErrorResponse(errorDescription))
                     })
@@ -271,13 +271,12 @@ switch (method.toUpperCase()) {
  * https://openbankinguk.github.io/dcr-docs-pub/v3.2/dynamic-client-registration.html
  */
 private void validateRegistrationRedirectUris(RegistrationRequest registrationRequest) {
-    List<URL> regRedirectUris = registrationRequest.getRedirectUris()
+    List<URI> regRedirectUris = registrationRequest.getRedirectUris()
     SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement()
-    List<URL> ssaRedirectUris = softwareStatement.getRedirectUris()
+    List<URI> ssaRedirectUris = softwareStatement.getRedirectUris()
 
-    for(URL regRequestRedirectUri : regRedirectUris){
-        if(!"https".equals(regRequestRedirectUri.getProtocol())){
-
+    for(URI regRequestRedirectUri : regRedirectUris){
+        if(!"https".equals(regRequestRedirectUri.getScheme())){
             throw new IllegalStateException("invalid registration request redirect_uris value: " + regRedirect + " must use https")
         }
 

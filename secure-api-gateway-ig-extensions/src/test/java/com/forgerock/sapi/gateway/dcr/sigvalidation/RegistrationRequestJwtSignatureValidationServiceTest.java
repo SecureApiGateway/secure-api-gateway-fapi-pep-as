@@ -27,8 +27,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.security.SignatureException;
 import java.util.concurrent.ExecutionException;
 
@@ -93,12 +92,12 @@ class RegistrationRequestJwtSignatureValidationServiceTest {
     }
 
     @Test
-    void failsToLoadJwksFromJwksUri_withJwksUri_validateJwtSignature() throws SignatureException, MalformedURLException {
+    void failsToLoadJwksFromJwksUri_withJwksUri_validateJwtSignature() throws SignatureException {
         // Given
         JWKSet jwkSet = new JWKSet();
         SignedJwt signedJwt = mock(SignedJwt.class);
         when(softwareStatement.hasJwksUri()).thenReturn(true);
-        when(softwareStatement.getJwksUri()).thenReturn(new URL("https://jwks.com"));
+        when(softwareStatement.getJwksUri()).thenReturn(URI.create("https://jwks.com"));
         when(jwksFromJwksUriSupplier.getJWKSet(eq(registrationRequest))).thenReturn(Promises.newExceptionPromise(
                         new FailedToLoadJWKException("Failed to load jwks")));
         doThrow(new SignatureException("invalid jwt signature")).when(jwtSignatureValidator).validateSignature(signedJwt, jwkSet);
@@ -114,12 +113,12 @@ class RegistrationRequestJwtSignatureValidationServiceTest {
     }
 
     @Test
-    void failsInvalidJwtSignature_withJwksUri_validateJwtSignature() throws SignatureException, MalformedURLException {
+    void failsInvalidJwtSignature_withJwksUri_validateJwtSignature() throws SignatureException {
         // Given
         JWKSet jwkSet = new JWKSet();
         SignedJwt signedJwt = mock(SignedJwt.class);
         when(softwareStatement.hasJwksUri()).thenReturn(true);
-        when(softwareStatement.getJwksUri()).thenReturn(new URL("https://jwks.com"));
+        when(softwareStatement.getJwksUri()).thenReturn(URI.create("https://jwks.com"));
         when(jwksFromJwksUriSupplier.getJWKSet(eq(registrationRequest)))
                 .thenReturn(Promises.newResultPromise(jwkSet));
         when(registrationRequest.getSignedJwt()).thenReturn(signedJwt);

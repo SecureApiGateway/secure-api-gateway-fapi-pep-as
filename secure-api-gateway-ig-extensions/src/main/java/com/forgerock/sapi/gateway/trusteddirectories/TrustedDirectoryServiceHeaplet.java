@@ -15,18 +15,13 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import static org.forgerock.openig.util.JsonValues.javaDuration;
-
 import java.net.MalformedURLException;
-import java.net.URL;
-import java.time.Duration;
+import java.net.URI;
 
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.forgerock.sapi.gateway.jwks.cache.caffeine.CaffeineCache;
 
 public class TrustedDirectoryServiceHeaplet extends GenericHeaplet {
 
@@ -53,10 +48,8 @@ public class TrustedDirectoryServiceHeaplet extends GenericHeaplet {
                 .defaultTo(null)
                 .asString();
 
-
         logger.debug("Creating Trusted Directory Service with enableIGTestTrustedDirectory: {}, secureApiGatewayJwksUri: {}",
                 enableIGTestTrustedDirectory, secureApiGatewayJwksUri);
-        URL secureApiGatewayJwksUrl = new URL(secureApiGatewayJwksUri);
-        return new TrustedDirectoryServiceStatic(enableIGTestTrustedDirectory, secureApiGatewayJwksUrl);
+        return new TrustedDirectoryServiceStatic(enableIGTestTrustedDirectory, URI.create(secureApiGatewayJwksUri));
     }
 }

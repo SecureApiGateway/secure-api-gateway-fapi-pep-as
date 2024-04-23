@@ -33,7 +33,6 @@ import static org.mockito.Mockito.mock;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
@@ -60,10 +59,10 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
+import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientServiceTest.MockGetApiClientIdmHandler;
 import com.forgerock.sapi.gateway.jwks.ApiClientJwkSetService;
 import com.forgerock.sapi.gateway.jwks.mocks.MockJwkSetService;
@@ -292,7 +291,7 @@ class TokenEndpointTransportCertValidationFilterTest {
             final Heaplet transportCertValidationFilterHeaplet = new Heaplet();
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
 
-            final URL apiClientJwksUrl = new URL("https://localhost/apiClient.jwks");
+            final URI apiClientJwksUrl = URI.create("https://localhost/apiClient.jwks");
             final JsonValue idmClientData = createIdmApiClientWithJwksUri(testClientId, apiClientJwksUrl.toString());
 
             final String idmBaseUri = "https://localhost/idm/getApiClient";
@@ -334,7 +333,7 @@ class TokenEndpointTransportCertValidationFilterTest {
             final Heaplet transportCertValidationFilterHeaplet = new Heaplet();
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
 
-            final URL apiClientJwksUrl = new URL("https://localhost/apiClient.jwks");
+            final URI apiClientJwksUrl = URI.create("https://localhost/apiClient.jwks");
             final JsonValue idmClientData = createIdmApiClientWithJwksUri(testClientId, apiClientJwksUrl.toString());
 
             final String idmBaseUri = "https://localhost/idm/getApiClient";

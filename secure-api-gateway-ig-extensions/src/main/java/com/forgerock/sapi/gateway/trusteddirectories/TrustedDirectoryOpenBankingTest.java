@@ -15,8 +15,7 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 public class TrustedDirectoryOpenBankingTest implements TrustedDirectory {
 
@@ -30,10 +29,10 @@ public class TrustedDirectoryOpenBankingTest implements TrustedDirectory {
     final static boolean softwareStatementHoldsJwksUri = true;
 
     /*
-     * The URL at which the Open Banking Test Directory JWKS are held, containing public certificates that may be used
+     * The URI at which the Open Banking Test Directory JWKS are held, containing public certificates that may be used
      * to validate Open Banking Test directory issues Software Statements.
      */
-    final static URL jwksUri;
+    final static URI jwksUri = URI.create("https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks");
 
     /*
      * The name of the claim in the Open Banking Test Directory issued software statement that holds the jwks_uri
@@ -62,21 +61,13 @@ public class TrustedDirectoryOpenBankingTest implements TrustedDirectory {
 
     static final String softwareStatementClientNameClaimName = "software_client_name";
 
-    static {
-        try {
-            jwksUri = new URL("https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks");
-        } catch (MalformedURLException e) {
-            throw new IllegalArgumentException(e);
-        }
-    }
-
     @Override
     public String getIssuer() {
         return issuer;
     }
 
     @Override
-    public URL getDirectoryJwksUri() {
+    public URI getDirectoryJwksUri() {
         return jwksUri;
     }
 

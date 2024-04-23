@@ -15,23 +15,14 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 public class TrustedDirectoryTestFactory {
 
-    private static URL jwks_uri;
+    private static URI jwks_uri = URI.create("https://jwks_uri.com");
 
     public static String JWKS_BASED_DIRECTORY_ISSUER = "JwksBasedTrustedDirectory";
     public static String JWKS_URI_BASED_DIRECTORY_ISSUER = "JwksUriBasedTrustedDirectory";
-
-    static {
-        try {
-            jwks_uri = new URL("https://jwks_uri.com");
-        } catch (MalformedURLException e) {
-            throw new RuntimeException(e);
-        }
-    }
 
     private static TrustedDirectory jwksUriBasedTrustedDirectory = new TrustedDirectory() {
         @Override
@@ -40,7 +31,7 @@ public class TrustedDirectoryTestFactory {
         }
 
         @Override
-        public URL getDirectoryJwksUri() {
+        public URI getDirectoryJwksUri() {
             return jwks_uri;
         }
 
@@ -97,7 +88,7 @@ public class TrustedDirectoryTestFactory {
         }
 
         @Override
-        public URL getDirectoryJwksUri() {
+        public URI getDirectoryJwksUri() {
             return jwks_uri;
         }
 

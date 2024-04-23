@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.jwks.cache.caffeine;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.jwk.JWKSet;
 
@@ -27,7 +27,7 @@ import com.forgerock.sapi.gateway.jwks.cache.CachingJwkSetService;
  * This class is required in order to be able to create an instance via IG config.
  */
 public class CaffeineCachingJwkSetService extends CachingJwkSetService {
-    public CaffeineCachingJwkSetService(JwkSetService underlyingStore, CaffeineCache<URL, JWKSet> jwkSetCache) {
+    public CaffeineCachingJwkSetService(JwkSetService underlyingStore, CaffeineCache<URI, JWKSet> jwkSetCache) {
         super(underlyingStore, jwkSetCache);
     }
 }

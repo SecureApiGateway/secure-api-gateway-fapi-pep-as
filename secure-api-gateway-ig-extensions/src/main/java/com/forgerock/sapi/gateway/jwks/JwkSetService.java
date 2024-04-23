@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.jwks;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWK;
@@ -47,20 +47,20 @@ public interface JwkSetService {
     }
 
     /**
-     * Retrieves a JWKSet for the specified url
+     * Retrieves a JWKSet for the specified uri
      *
-     * @param jwkStoreUrl - url of the JWKSet store
+     * @param jwkSetUri uri used to locate the JWKSet
      * @return Promise which either returns a non-null JWKSet or fails with a FailedToLoadJWKException
      */
-    Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URL jwkStoreUrl);
+    Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URI jwkSetUri);
 
     /**
-     * Retrieves a JWK with the specified keyId from the JWKSet at the specified url.
+     * Retrieves a JWK with the specified keyId from the JWKSet at the specified uri.
      *
-     * @param jwkStoreUrl - url of the JWKSet store
-     * @param keyId - the id (kid) of the JWK within the store to return
+     * @param jwkSetUri uri used to locate the JWKSet
+     * @param keyId the id (kid) of the JWK within the store to return
      * @return Promise which either returns a non-null JWK or fails with a FailedToLoadJWKException
      */
-    Promise<JWK, FailedToLoadJWKException> getJwk(URL jwkStoreUrl, String keyId);
+    Promise<JWK, FailedToLoadJWKException> getJwk(URI jwkSetUri, String keyId);
 
 }

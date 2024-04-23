@@ -21,8 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
@@ -56,12 +55,11 @@ class JwksSupplierJwksUriTest {
     }
 
     @Test
-    void failsCantGetJwksSetFromUri_getJwks() throws MalformedURLException {
+    void failsCantGetJwksSetFromUri_getJwks() {
         // Given
-        final String JWKS_URI = "https://jwks_uri.com";
-        final URL JWKS_URL = new URL(JWKS_URI);
-        when(softwareStatement.getJwksUri()).thenReturn(JWKS_URL);
-        when(jwkSetService.getJwkSet(JWKS_URL)).thenReturn(
+        final URI jwksUri = URI.create("https://jwks_uri.com");
+        when(softwareStatement.getJwksUri()).thenReturn(jwksUri);
+        when(jwkSetService.getJwkSet(jwksUri)).thenReturn(
                 Promises.newExceptionPromise(new FailedToLoadJWKException("Couldn't load JWKS")));
 
         // When
@@ -77,13 +75,12 @@ class JwksSupplierJwksUriTest {
 
 
     @Test
-    void success_getJWKSet() throws InterruptedException, MalformedURLException, FailedToLoadJWKException {
+    void success_getJWKSet() throws InterruptedException, FailedToLoadJWKException {
         // Given
-        final String JWKS_URI = "https://jwks_uri.com";
-        final URL JWKS_URL = new URL(JWKS_URI);
-        when(softwareStatement.getJwksUri()).thenReturn(JWKS_URL);
+        final URI jwksUri = URI.create("https://jwks_uri.com");
+        when(softwareStatement.getJwksUri()).thenReturn(jwksUri);
         JWKSet jwks = new JWKSet();
-        when(jwkSetService.getJwkSet(JWKS_URL)).thenReturn(Promises.newResultPromise(jwks));
+        when(jwkSetService.getJwkSet(jwksUri)).thenReturn(Promises.newResultPromise(jwks));
 
         // When
         Promise<JWKSet, FailedToLoadJWKException> promise =

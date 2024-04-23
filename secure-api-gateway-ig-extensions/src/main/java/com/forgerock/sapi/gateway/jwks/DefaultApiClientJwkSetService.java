@@ -15,8 +15,6 @@
  */
 package com.forgerock.sapi.gateway.jwks;
 
-import java.net.MalformedURLException;
-
 import org.forgerock.json.JsonException;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
@@ -30,7 +28,7 @@ import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
 
 /**
  * Service which retrieves the JWKSet for an ApiClient.
- *
+ * <p>
  * Determines where to get the JWKSet from based on the TrustedDirectory configuration.
  * - If the directory is configured to contain the JWKS in the SSA then it is fetched from here
  * - Otherwise we expect a jwks_uri to be configured, in which case a {@link JwkSetService} is used to obtain the JWKSet
@@ -38,7 +36,7 @@ import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
 public class DefaultApiClientJwkSetService implements ApiClientJwkSetService {
 
     /**
-     * The service to delegate to when looking up remote JWKSets by URL
+     * The service to delegate to when looking up remote JWKSets by URI
      */
     private final JwkSetService jwkSetService;
 
@@ -48,7 +46,7 @@ public class DefaultApiClientJwkSetService implements ApiClientJwkSetService {
     }
 
     /**
-     * The JWKSet for an ApiClient can either be looked up via a URL or it is embedded into the software statement,
+     * The JWKSet for an ApiClient can either be looked up via a URI or it is embedded into the software statement,
      * use the TrustedDirectory configuration to determine the location of the JWKSet.
      */
     public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(ApiClient apiClient, TrustedDirectory trustedDirectory) {
@@ -65,15 +63,11 @@ public class DefaultApiClientJwkSetService implements ApiClientJwkSetService {
      * Use the jwkSetService to fetch the JWKSet using the ApiClient.jwksUri
      */
     private Promise<JWKSet, FailedToLoadJWKException> getJwkSetUsingJwksUri(ApiClient apiClient) {
-        try {
-            if (apiClient.getJwksUri() == null) {
-                return Promises.newExceptionPromise(new FailedToLoadJWKException("TrustedDirectory configuration " +
-                        "requires the jwksUri to be set for the apiClient"));
-            }
-            return jwkSetService.getJwkSet(apiClient.getJwksUri().toURL());
-        } catch (MalformedURLException e) {
-            return Promises.newExceptionPromise(new FailedToLoadJWKException("Malformed jwksUri", e));
+        if (apiClient.getJwksUri() == null) {
+            return Promises.newExceptionPromise(new FailedToLoadJWKException("TrustedDirectory configuration " +
+                    "requires the jwksUri to be set for the apiClient"));
         }
+        return jwkSetService.getJwkSet(apiClient.getJwksUri());
     }
 
     /**

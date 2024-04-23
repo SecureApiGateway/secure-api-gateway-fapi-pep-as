@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import java.net.URL;
+import java.net.URI;
 
 /**
  * Holds static configuration information for the Trusted Directory provided by the Secure API Gateway itself. For
@@ -31,10 +31,10 @@ public class TrustedDirectorySecureApiGateway implements TrustedDirectory {
     final static String issuer = "test-publisher";
 
     /*
-     * The URL at which the Open Banking Test Directory JWKS are held, containing public certificates that may be used
+     * The URI at which the Open Banking Test Directory JWKS are held, containing public certificates that may be used
      * to validate Open Banking Test directory issues Software Statements.
      */
-    URL secureApiGatewayJwksUri = null;
+    URI secureApiGatewayJwksUri = null;
 
     final static boolean softwareStatementHoldsJwksUri = false;
 
@@ -68,7 +68,7 @@ public class TrustedDirectorySecureApiGateway implements TrustedDirectory {
      * @param secureApiGatewayJwksUri The jwks_uri against which SSAs issued by the Secure API Gateway can be
      *                                validated
      */
-    public TrustedDirectorySecureApiGateway(URL secureApiGatewayJwksUri){
+    public TrustedDirectorySecureApiGateway(URI secureApiGatewayJwksUri){
         this.secureApiGatewayJwksUri = secureApiGatewayJwksUri;
     }
 
@@ -78,7 +78,7 @@ public class TrustedDirectorySecureApiGateway implements TrustedDirectory {
     }
 
     @Override
-    public URL getDirectoryJwksUri() {
+    public URI getDirectoryJwksUri() {
         return this.secureApiGatewayJwksUri;
     }
 
