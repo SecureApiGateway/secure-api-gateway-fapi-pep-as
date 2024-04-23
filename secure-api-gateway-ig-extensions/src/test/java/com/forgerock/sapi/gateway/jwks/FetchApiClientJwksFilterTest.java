@@ -25,7 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -49,9 +49,9 @@ import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.jwks.FetchApiClientJwksFilter.Heaplet;
 import com.forgerock.sapi.gateway.jwks.mocks.MockJwkSetService;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter;
@@ -134,8 +134,8 @@ class FetchApiClientJwksFilterTest {
         @Test
         void successfullyCreatesFilter() throws Exception {
             final JWKSet jwkSet = createJwkSet();
-            final URL jwksUri = new URL("https://directory.com/jwks/12345");
-            final MockJwkSetService jwkSetService = new MockJwkSetService(Map.of(jwksUri, jwkSet));
+            final URI jwkSetUri = URI.create("https://directory.com/jwks/12345");
+            final MockJwkSetService jwkSetService = new MockJwkSetService(Map.of(jwkSetUri, jwkSet));
 
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
             heap.put("JwkSetService", jwkSetService);
@@ -144,7 +144,7 @@ class FetchApiClientJwksFilterTest {
             final FetchApiClientJwksFilter filter = (FetchApiClientJwksFilter) new Heaplet().create(Name.of("test"), config, heap);
 
             final Context context = new AttributesContext(new RootContext());
-            addApiClientToContext(context, createApiClientWithJwksUri(jwksUri.toURI()));
+            addApiClientToContext(context, createApiClientWithJwksUri(jwkSetUri));
             addTrustedDirectoryToContext(context, new TrustedDirectoryOpenBankingTest());
             final TestSuccessResponseHandler responseHandler = new TestSuccessResponseHandler();
             final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), responseHandler);

@@ -15,8 +15,7 @@
  */
 package com.forgerock.sapi.gateway.jwks.mocks;
 
-import java.net.URL;
-import java.util.Collection;
+import java.net.URI;
 import java.util.Map;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
@@ -31,18 +30,19 @@ import com.forgerock.sapi.gateway.jwks.cache.BaseCachingJwkSetServiceTest;
  * Returns an error if getJwkSet is called with a different url, or i getJwk is called.
  */
 public class MockJwkSetService extends BaseCachingJwkSetServiceTest.BaseCachingTestJwkSetService {
-    private final Map<URL, JWKSet> jwkSetsByUrl;
+    private final Map<URI, JWKSet> jwkSetsByUri;
 
-    public MockJwkSetService(Map<URL, JWKSet> jwkSetsByURL) {
-        this.jwkSetsByUrl = jwkSetsByURL;
+    public MockJwkSetService(Map<URI, JWKSet> jwkSetsByURL) {
+        this.jwkSetsByUri = jwkSetsByURL;
     }
 
     @Override
-    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URL jwkStoreUrl) {
-        if (jwkSetsByUrl.containsKey(jwkStoreUrl)) {
-            return Promises.newResultPromise(jwkSetsByUrl.get(jwkStoreUrl));
+    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URI jwkStoreUri) {
+        if (jwkSetsByUri.containsKey(jwkStoreUri)) {
+            return Promises.newResultPromise(jwkSetsByUri.get(jwkStoreUri));
         }
-        return Promises.newExceptionPromise(new FailedToLoadJWKException("actual jwkStoreUrl: " + jwkStoreUrl
-                + ", does not match expected: " + jwkSetsByUrl.keySet()));
+        return Promises.newExceptionPromise(new FailedToLoadJWKException("actual jwkStoreUrl: " + jwkStoreUri
+                + ", does not match expected: " + jwkSetsByUri.keySet()));
+
     }
 }

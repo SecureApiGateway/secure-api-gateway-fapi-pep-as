@@ -17,8 +17,7 @@ package com.forgerock.sapi.gateway.jwks.cache.caffeine;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.IntFunction;
@@ -38,7 +37,7 @@ import com.forgerock.sapi.gateway.jwks.cache.Cache;
 
 class CaffeineCachingJwkSetServiceTest extends BaseCachingJwkSetServiceTest {
     @Override
-    protected Cache<URL, JWKSet> createSimpleCache() {
+    protected Cache<URI, JWKSet> createSimpleCache() {
         // Cache won't evict anything when the base test cases are run.
         return CaffeineCacheTest.createCacheNoTimeExpiry(1_000_000L);
     }
@@ -46,24 +45,18 @@ class CaffeineCachingJwkSetServiceTest extends BaseCachingJwkSetServiceTest {
     @Test
     void shouldLimitCacheSize() throws Exception {
         final int cacheSize = 75;
-        final CaffeineCache<URL, JWKSet> cache = CaffeineCacheTest.createCacheNoTimeExpiry(cacheSize);
+        final CaffeineCache<URI, JWKSet> cache = CaffeineCacheTest.createCacheNoTimeExpiry(cacheSize);
 
         // jwks urls of the form: "http://jwks/$jwksId", each store contains one JWK with keyId of the form: "kid$jwksId"
         final IntFunction<String> jwksIdToKid = jwksId -> "kid" + jwksId;
-        final IntFunction<Pair<URL, String>> jwksIdToUrlAndKid = jwksId -> {
-            try {
-                return Pair.of(new URL("http://jwks/" + jwksId), jwksIdToKid.apply(jwksId));
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
-        };
+        final IntFunction<Pair<URI, String>> jwksIdToUrlAndKid = jwksId -> Pair.of(URI.create("http://jwks/" + jwksId), jwksIdToKid.apply(jwksId));
 
         final AtomicInteger underlyingJwkSetGetJwkSetCount = new AtomicInteger();
         final CaffeineCachingJwkSetService jwkSetService = new CaffeineCachingJwkSetService(new BaseCachingTestJwkSetService() {
             @Override
-            public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URL jwkStoreUrl) {
+            public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URI jwkSetUri) {
                 underlyingJwkSetGetJwkSetCount.incrementAndGet();
-                final String url = jwkStoreUrl.toString();
+                final String url = jwkSetUri.toString();
                 final int lastSlashIndex = url.lastIndexOf('/');
                 final String jwksId = url.substring(lastSlashIndex + 1);
                 final String keyId = jwksIdToKid.apply(Integer.parseInt(jwksId));
@@ -77,9 +70,9 @@ class CaffeineCachingJwkSetServiceTest extends BaseCachingJwkSetServiceTest {
         final Random random = new Random();
         for (int request = 0; request < numRequestsToMake; request++) {
             final int jwksId = random.nextInt(numUniqueJwks);
-            final Pair<URL, String> urlAndKid = jwksIdToUrlAndKid.apply(jwksId);
-            final Promise<JWK, FailedToLoadJWKException> jwk = jwkSetService.getJwk(urlAndKid.getFirst(), urlAndKid.getSecond());
-            assertEquals(urlAndKid.getSecond(), jwk.get().getKeyId());
+            final Pair<URI, String> uriAndKid = jwksIdToUrlAndKid.apply(jwksId);
+            final Promise<JWK, FailedToLoadJWKException> jwk = jwkSetService.getJwk(uriAndKid.getFirst(), uriAndKid.getSecond());
+            assertEquals(uriAndKid.getSecond(), jwk.get().getKeyId());
         }
 
         // the underlying calls represent the cache misses, we will have at least the number of unique items

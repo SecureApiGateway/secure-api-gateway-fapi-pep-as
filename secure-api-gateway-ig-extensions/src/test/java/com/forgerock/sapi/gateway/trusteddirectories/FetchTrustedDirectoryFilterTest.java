@@ -19,10 +19,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.json.JsonValue;
@@ -39,9 +41,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
+import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter.Heaplet;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
@@ -50,10 +52,9 @@ public class FetchTrustedDirectoryFilterTest {
     private TrustedDirectoryService trustedDirectoryService;
 
     @BeforeEach
-    void setUp() throws MalformedURLException {
-        String secureApiGatewayJwksUri = "https://test-bank.com";
-        URL secureApiGatewayJwksUrl = new URL(secureApiGatewayJwksUri);
-        trustedDirectoryService = new TrustedDirectoryServiceStatic(true, secureApiGatewayJwksUrl);
+    void setUp() {
+        URI secureApiGatewayJwksUri = URI.create("https://test-bank.com");
+        trustedDirectoryService = new TrustedDirectoryServiceStatic(true, secureApiGatewayJwksUri);
     }
 
     public static ApiClient createApiClient(String issuer) {

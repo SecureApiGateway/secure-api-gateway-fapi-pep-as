@@ -17,8 +17,7 @@ package com.forgerock.sapi.gateway.trusteddirectories;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -27,11 +26,11 @@ import org.junit.jupiter.api.Test;
 
 class TrustedDirectoryServiceStaticTest {
 
-    private static URL testDirectoryFQDN;
+    private static URI testDirectoryFQDN;
 
     @BeforeAll
-    static void setupAll() throws MalformedURLException {
-        testDirectoryFQDN = new URL("https://sapi.bigbank.com/jwkms/testdirectory/jwks");
+    static void setupAll() {
+        testDirectoryFQDN = URI.create("https://sapi.bigbank.com/jwkms/testdirectory/jwks");
     }
 
     @BeforeEach
@@ -43,7 +42,7 @@ class TrustedDirectoryServiceStaticTest {
     }
 
     @Test
-    void getTrustedDirectoryConfiguration_IGTestDirectoryEnabled() throws MalformedURLException {
+    void getTrustedDirectoryConfiguration_IGTestDirectoryEnabled() {
         // Given
         Boolean enableIGTestTrustedDirectory = true;
         TrustedDirectoryService trustedDirectoryService =

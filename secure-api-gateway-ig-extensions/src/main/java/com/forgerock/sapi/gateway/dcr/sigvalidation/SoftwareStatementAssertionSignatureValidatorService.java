@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.sigvalidation;
 
-import java.net.URL;
+import java.net.URI;
 import java.security.SignatureException;
 
 import org.forgerock.http.protocol.Response;
@@ -43,7 +43,7 @@ public class SoftwareStatementAssertionSignatureValidatorService {
 
     /**
      * Constructs a DCRSsaValidator
-     * @param jwkSetService obtains a JWK Set from a url (may provide caching)
+     * @param jwkSetService obtains a JWK Set from a uri (may provide caching)
      * @param jwtSignatureValidator validates the Software Statement Assertion's signature against a JWK Set
      */
     public SoftwareStatementAssertionSignatureValidatorService(JwkSetService jwkSetService,
@@ -67,22 +67,21 @@ public class SoftwareStatementAssertionSignatureValidatorService {
         Reject.ifNull(softwareStatement, "softwareStatement must be provided");
         try {
 
-            URL issuingDirectoryJwksUrl = softwareStatement.getTrustedDirectoryJwksUrl();
-            return this.jwkSetService.getJwkSet(issuingDirectoryJwksUrl).thenAsync(directoryJwkSet -> {
+            URI issuingDirectoryJwksUri = softwareStatement.getTrustedDirectoryJwksUri();
+            return this.jwkSetService.getJwkSet(issuingDirectoryJwksUri).thenAsync(directoryJwkSet -> {
                 try {
                     this.jwtSignatureValidator.validateSignature(softwareStatement.getSignedJwt(), directoryJwkSet);
                     log.debug("SSA has a valid signature");
                     softwareStatement.setSignatureHasBeenValidated(true);
                     return Promises.newResultPromise(new Response(Status.OK));
                 } catch (SignatureException e) {
-                    String errorDescription = "Failed to validate SSA against jwks_uri '" + issuingDirectoryJwksUrl +
-                            "'";
+                    String errorDescription = "Failed to validate SSA against jwks_uri '" + issuingDirectoryJwksUri + "'";
                     log.debug(errorDescription);
                     return Promises.newExceptionPromise(
                         new DCRSignatureValidationException(DCRErrorCode.INVALID_SOFTWARE_STATEMENT, errorDescription));
                 }
             }, ex -> {
-                String errorDescription = "Failed to obtain jwk set from trusted directory uri " + issuingDirectoryJwksUrl;
+                String errorDescription = "Failed to obtain jwk set from trusted directory uri " + issuingDirectoryJwksUri;
                 log.debug(errorDescription, ex);
                 return Promises.newExceptionPromise(
                         new DCRSignatureValidationException(DCRErrorCode.INVALID_SOFTWARE_STATEMENT, errorDescription));

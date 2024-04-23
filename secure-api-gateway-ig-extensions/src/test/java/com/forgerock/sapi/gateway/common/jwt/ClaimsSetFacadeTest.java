@@ -19,6 +19,7 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowableOfType;
 
 import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
 import java.util.List;
 import java.util.Map;
@@ -87,7 +88,7 @@ class ClaimsSetFacadeTest {
     void success_getStringClaimAsURL() throws JwtException {
         // Given
         // When
-        URL claimValue = claimSet.getStringClaimAsURL("jwks_uri");
+        URI claimValue = claimSet.getStringClaimAsURI("jwks_uri");
         // Then
         assertThat(claimValue).isNotNull();
     }
@@ -96,7 +97,7 @@ class ClaimsSetFacadeTest {
     void throwsWhenClaimNotUrl_getStringClaimAsURL() {
         // Given
         // When
-        JwtException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURL("claim1"), JwtException.class);
+        JwtException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURI("@~}~@}"), JwtException.class);
         // Then
         assertThat(exception).isNotNull();
     }
@@ -105,7 +106,7 @@ class ClaimsSetFacadeTest {
     void throwsWhenClaimDoesNotExist_getStringClaimAsURL() {
         // Given
         // When
-        JwtException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURL("nonexistant"), JwtException.class);
+        JwtException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURI("nonexistant"), JwtException.class);
         // Then
         assertThat(exception).isNotNull();
     }
@@ -114,7 +115,7 @@ class ClaimsSetFacadeTest {
     void throwsWhenInvalidArgument_getStringClaimAsURL() {
         // Given
         // When
-        IllegalArgumentException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURL(""),
+        IllegalArgumentException exception = catchThrowableOfType(() ->claimSet.getStringClaimAsURI(""),
                 IllegalArgumentException.class);
         // Then
         assertThat(exception).isNotNull();
@@ -130,7 +131,7 @@ class ClaimsSetFacadeTest {
     }
 
     @Test
-    void throwsWhenClaimDoesNotExist_getJsonValueClaim() throws JwtException {
+    void throwsWhenClaimDoesNotExist_getJsonValueClaim() {
         // Given
         // When
         JwtException exception  = catchThrowableOfType(()->claimSet.getJsonValueClaim("nonExistent"), JwtException.class);
@@ -139,7 +140,7 @@ class ClaimsSetFacadeTest {
     }
 
     @Test
-    void throwsWhenInvalidArgument_getJsonValueClaim() throws JwtException {
+    void throwsWhenInvalidArgument_getJsonValueClaim() {
         // Given
         // When
         IllegalArgumentException exception  = catchThrowableOfType(()->claimSet.getJsonValueClaim(""),
@@ -294,7 +295,7 @@ class ClaimsSetFacadeTest {
         ClaimsSetFacade claimsSetFacade = new ClaimsSetFacade(claimsSet);
 
         // When
-        List<URL> responseTypes =  claimsSetFacade.getRequiredUriListClaim("response_type");
+        List<URI> responseTypes =  claimsSetFacade.getRequiredUriListClaim("response_type");
 
         // Then
         assertThat(responseTypes).isNotNull();
@@ -306,7 +307,7 @@ class ClaimsSetFacadeTest {
     void fail_getRequiredUriList_NotURLs() {
 
         // Given
-        JwtClaimsSet claimsSet = new JwtClaimsSet(Map.of("response_type", List.of("hello", "there")));
+        JwtClaimsSet claimsSet = new JwtClaimsSet(Map.of("response_type", List.of("@~}[hello", "there")));
         ClaimsSetFacade claimsSetFacade = new ClaimsSetFacade(claimsSet);
 
         // When
@@ -315,7 +316,7 @@ class ClaimsSetFacadeTest {
 
         // Then
         assertThat(exception).isNotNull();
-        assertThat(exception.getMessage()).contains("claim of name 'response_type' is expected to hold valid URLs:");
+        assertThat(exception.getMessage()).contains("claim of name 'response_type' is expected to hold valid URIs:");
     }
 
     @Test

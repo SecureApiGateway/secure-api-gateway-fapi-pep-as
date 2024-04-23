@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.models;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
@@ -42,7 +42,7 @@ public class RegistrationRequest extends SapiJwt {
     public static final String REGISTRATION_REQUEST_KEY = "registrationRequest";
 
     private final SoftwareStatement softwareStatement;
-    private final List<URL> redirectUris;
+    private final List<URI> redirectUris;
 
     public RegistrationRequest(Builder builder){
         super(builder);
@@ -71,9 +71,9 @@ public class RegistrationRequest extends SapiJwt {
     }
 
     /**
-     * @return the redirect urls specified in the registration request
+     * @return the redirect uris specified in the registration request
      */
-    public List<URL> getRedirectUris(){
+    public List<URI> getRedirectUris(){
         return this.redirectUris;
     }
 
@@ -85,7 +85,7 @@ public class RegistrationRequest extends SapiJwt {
         private static final Logger log = LoggerFactory.getLogger(Builder.class);
         private final SoftwareStatement.Builder softwareStatementBuilder;
         private SoftwareStatement softwareStatement;
-        private List<URL> redirectUris;
+        private List<URI> redirectUris;
 
         /**
          * Construct a {@code Builder)

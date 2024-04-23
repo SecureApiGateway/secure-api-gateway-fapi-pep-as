@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.sigvalidation;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
@@ -46,7 +46,7 @@ public class JwksSupplierJwksUri implements JwksSupplier {
     @Override
     public Promise<JWKSet, FailedToLoadJWKException> getJWKSet(RegistrationRequest registrationRequest) {
             SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement();
-            URL softwareStatementsJwksUri = softwareStatement.getJwksUri();
+            URI softwareStatementsJwksUri = softwareStatement.getJwksUri();
             log.debug("Using the jwkSetService to obtain a JWKSet from '{}'", softwareStatementsJwksUri);
             return jwkSetService.getJwkSet(softwareStatementsJwksUri);
     }

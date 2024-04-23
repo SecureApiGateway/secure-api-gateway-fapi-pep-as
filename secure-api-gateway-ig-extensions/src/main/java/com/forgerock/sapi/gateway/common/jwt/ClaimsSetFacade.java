@@ -15,8 +15,8 @@
  */
 package com.forgerock.sapi.gateway.common.jwt;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -118,7 +118,7 @@ public class ClaimsSetFacade {
         }
     }
 
-    public List<URL> getRequiredUriListClaim(String claimName) throws JwtException {
+    public List<URI> getRequiredUriListClaim(String claimName) throws JwtException {
         checkClaimName(claimName);
         try {
             JsonValue claimValue = this.claimsSet.get(claimName);
@@ -127,14 +127,14 @@ public class ClaimsSetFacade {
             }
             if (claimValue.isList()){
                 List<Object> claimValueList = claimValue.asList();
-                List<URL> uriList = new ArrayList<>(claimValueList.size());
+                List<URI> uriList = new ArrayList<>(claimValueList.size());
                 for(int index = 0; index < claimValueList.size(); index++){
                     Object claim = claimValueList.get(index);
                     try {
-                        URL url = new URL((String)claim);
-                        uriList.add(index, url);
-                    } catch (MalformedURLException e) {
-                        throw new JwtException("claim of name '" + claimName + "' is expected to hold valid URLs: " + e.getMessage());
+                        final URI uri = new URI((String)claim);
+                        uriList.add(index, uri);
+                    } catch (URISyntaxException e) {
+                        throw new JwtException("claim of name '" + claimName + "' is expected to hold valid URIs: " + e.getMessage());
                     }
                 }
                 return uriList;
@@ -148,24 +148,24 @@ public class ClaimsSetFacade {
 
 
     /**
-     * Get the value of a string claim from the claims set and convert it to a URL
+     * Get the value of a string claim from the claims set and convert it to a URI
      *
-     * @param claimName the name of the string claim that is expected to hold a valid URL
-     * @return a {@code URL}
+     * @param claimName the name of the string claim that is expected to hold a valid URI
+     * @return a {@code URI}
      * @throws JwtException if the claim does not exist, or holds an empty string, or is not a string, or if the value
      *                      of the string is not a valid URL
      */
-    public URL getStringClaimAsURL(String claimName) throws JwtException {
+    public URI getStringClaimAsURI(String claimName) throws JwtException {
         checkClaimName(claimName);
         try {
             String claimValueAsString = this.claimsSet.getClaim(claimName, String.class);
             if (StringUtils.isNullOrEmpty(claimValueAsString)) {
-                throw new JwtException("Jwt claim '" + claimName + "' must be valid URL as a String value");
+                throw new JwtException("Jwt claim '" + claimName + "' must be valid URI as a String value");
             }
             try {
-                return new URL(claimValueAsString);
-            } catch (MalformedURLException e) {
-                throw new JwtException("Jwt claim '" + claimName + "' must be a valid URL as a String Value");
+                return new URI(claimValueAsString);
+            } catch (URISyntaxException e) {
+                throw new JwtException("Jwt claim '" + claimName + "' must be a valid URI as a String Value");
             }
         } catch (ClassCastException exception) {
             throw new JwtException("Jwt must contain URL claim '" + claimName + "'");

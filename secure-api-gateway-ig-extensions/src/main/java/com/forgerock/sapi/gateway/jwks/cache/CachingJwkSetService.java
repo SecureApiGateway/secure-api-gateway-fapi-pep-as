@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.jwks.cache;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWK;
@@ -42,9 +42,9 @@ public class CachingJwkSetService implements JwkSetService {
 
     private static final Logger logger = LoggerFactory.getLogger(CachingJwkSetService.class);
     private final JwkSetService underlyingJwkSetService;
-    private final Cache<URL, JWKSet> jwkSetCache;
+    private final Cache<URI, JWKSet> jwkSetCache;
 
-    public CachingJwkSetService(JwkSetService underlyingJwkSetService, Cache<URL, JWKSet> jwkSetCache) {
+    public CachingJwkSetService(JwkSetService underlyingJwkSetService, Cache<URI, JWKSet> jwkSetCache) {
         Reject.ifNull(underlyingJwkSetService, "underlyingJwkSetService must be supplied");
         Reject.ifNull(jwkSetCache, "jwkSetCache implementation must be supplied");
         this.underlyingJwkSetService = underlyingJwkSetService;
@@ -52,40 +52,41 @@ public class CachingJwkSetService implements JwkSetService {
     }
 
     @Override
-    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URL jwkStoreUrl) {
-        if (jwkStoreUrl == null) {
-            return Promises.newExceptionPromise(new FailedToLoadJWKException("jwkStoreUrl is null"));
+    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URI jwkSetUri) {
+        if (jwkSetUri == null) {
+            return Promises.newExceptionPromise(new FailedToLoadJWKException("jwkSetUri is null"));
         }
-        final JWKSet cachedJwkSet = jwkSetCache.get(jwkStoreUrl);
+        final JWKSet cachedJwkSet = jwkSetCache.get(jwkSetUri);
         if (cachedJwkSet == null) {
-            return underlyingJwkSetService.getJwkSet(jwkStoreUrl).thenOnResult(jwkSet -> {
-                logger.debug("Fetched jwkStore from url: {}", jwkStoreUrl);
-                jwkSetCache.put(jwkStoreUrl, jwkSet);
+            return underlyingJwkSetService.getJwkSet(jwkSetUri).thenOnResult(jwkSet -> {
+                logger.debug("Fetched jwkStore from uri: {}", jwkSetUri);
+                jwkSetCache.put(jwkSetUri, jwkSet);
             });
         } else {
-            logger.info("Found jwkStore in cache, for url: {}", jwkStoreUrl);
+            logger.info("Found jwkStore in cache, for uri: {}", jwkSetUri);
             return Promises.newResultPromise(cachedJwkSet);
         }
     }
 
     @Override
-    public Promise<JWK, FailedToLoadJWKException> getJwk(URL jwkStoreUrl, String keyId) {
+    public Promise<JWK, FailedToLoadJWKException> getJwk(URI jwkSetUri, String keyId) {
         if (keyId == null) {
             return Promises.newExceptionPromise(new FailedToLoadJWKException("keyId is null"));
         }
-        return getJwkSet(jwkStoreUrl).thenAsync(jwkSetResultHandler(jwkStoreUrl, keyId));
+        return getJwkSet(jwkSetUri).thenAsync(jwkSetResultHandler(jwkSetUri, keyId));
     }
 
-    private AsyncFunction<JWKSet, JWK, FailedToLoadJWKException> jwkSetResultHandler(URL jwkStoreUrl, String keyId) {
+    private AsyncFunction<JWKSet, JWK, FailedToLoadJWKException> jwkSetResultHandler(URI jwksSetUri, String keyId) {
         return jwkSet -> {
             JWK jwk = jwkSet.findJwk(keyId);
             if (jwk != null) {
                 return Promises.newResultPromise(jwk);
             } else {
-                logger.debug("keyId: {} not found in cached JWKSet for url: {}, invalidating and fetching JWKSet from url again", keyId, jwkStoreUrl);
+                logger.debug("keyId: {} not found in cached JWKSet for uri: {}, " +
+                        "invalidating and fetching JWKSet from uri again", keyId, jwksSetUri);
                 // JWKSet exists but key not in set, new key may have been added to set since it was cached, fetch it again
-                jwkSetCache.invalidate(jwkStoreUrl);
-                return getJwkSet(jwkStoreUrl).then(JwkSetService.findJwkByKeyId(keyId));
+                jwkSetCache.invalidate(jwksSetUri);
+                return getJwkSet(jwksSetUri).then(JwkSetService.findJwkByKeyId(keyId));
             }
         };
     }

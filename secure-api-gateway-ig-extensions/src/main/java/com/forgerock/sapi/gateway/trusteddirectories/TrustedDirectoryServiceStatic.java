@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -40,7 +40,7 @@ public class TrustedDirectoryServiceStatic implements TrustedDirectoryService {
      * @param secureApiGatewayJwksUri The jwks_uri against which the signature of SSAs issued by the Trusted Directory
      *                                may be validated
      */
-    public TrustedDirectoryServiceStatic(Boolean enableIGTestTrustedDirectory, URL secureApiGatewayJwksUri) {
+    public TrustedDirectoryServiceStatic(Boolean enableIGTestTrustedDirectory, URI secureApiGatewayJwksUri) {
         directoryConfigurations = new HashMap<>();
 
         addOpenBankingTestTrustedDirectory();
@@ -61,7 +61,7 @@ public class TrustedDirectoryServiceStatic implements TrustedDirectoryService {
         return directoryConfigurations.get(issuer);
     }
 
-    private void addGatewayTestTrustedDirectory(URL testDirectoryFQDN) {
+    private void addGatewayTestTrustedDirectory(URI testDirectoryFQDN) {
         TrustedDirectory secureApiGatewayTrustedDirectory = new TrustedDirectorySecureApiGateway(testDirectoryFQDN);
         directoryConfigurations.put(secureApiGatewayTrustedDirectory.getIssuer(), secureApiGatewayTrustedDirectory);
     }
