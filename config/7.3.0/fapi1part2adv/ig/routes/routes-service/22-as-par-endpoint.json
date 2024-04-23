@@ -37,6 +37,17 @@
           "comment": "Ensure authorize request object is FAPI compliant"
         },
         {
+          "name": "ResponsePathTransportCertValidationFilter",
+          "type": "ResponsePathTransportCertValidationFilter",
+          "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
+          "config": {
+            "trustedDirectoryService": "TrustedDirectoriesService",
+            "jwkSetService": "JwkSetService",
+            "certificateRetriever": "HeaderCertificateRetriever",
+            "transportCertValidator": "TransportCertValidator"
+          }
+        },
+        {
           "name": "ParResponseFetchApiClientFilter",
           "type": "ParResponseFetchApiClientFilter",
           "comment": "Add ApiClient data to the context attributes",

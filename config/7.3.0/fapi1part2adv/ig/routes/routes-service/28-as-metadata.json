@@ -17,7 +17,7 @@
             "file": "ASWellKnownFilter.groovy",
             "args": {
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
-              "mtlsEndpoints": ["registration_endpoint", "token_endpoint"],
+              "mtlsEndpoints": ["registration_endpoint", "token_endpoint", "pushed_authorization_request_endpoint"],
               "igHost": "&{ig.fqdn}",
               "mtlsHost": "&{mtls.fqdn}"
             }

@@ -22,30 +22,36 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URISyntaxException;
-import java.util.function.Function;
 
 import org.forgerock.http.Client;
 import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
+import org.forgerock.http.protocol.Response;
+import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
-import org.forgerock.util.promise.NeverThrowsException;
-import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoder;
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest;
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientServiceTest.MockGetApiClientIdmHandler;
 
-class AuthorizeResponseFetchApiClientFilterTest extends BaseAuthorizeResponseFetchApiClientFilterTest {
+class AuthorizeResponsePathFetchApiClientFilterTest extends BaseResponsePathFetchApiClientFilterTest {
 
-    @Override
-    protected Function<Request, Promise<String, NeverThrowsException>> createClientIdRetriever() {
-        return AuthorizeResponseFetchApiClientFilter.queryParamClientIdRetriever();
+    protected ResponsePathFetchApiClientFilter createFilter(ApiClientService apiClientService) {
+        final HeapImpl heap = new HeapImpl(Name.of("heap"));
+        heap.put("apiClientService", apiClientService);
+        final JsonValue config = json(object(field("apiClientService", "apiClientService")));
+        try {
+            return (ResponsePathFetchApiClientFilter) new AuthorizeResponseFetchApiClientFilterHeaplet().create(Name.of("test"), config, heap);
+        } catch (HeapException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Override
@@ -57,6 +63,17 @@ class AuthorizeResponseFetchApiClientFilterTest extends BaseAuthorizeResponseFet
             throw new RuntimeException(e);
         }
         return request;
+    }
+
+    @Override
+    protected Response createValidUpstreamResponse() {
+        // /authorize response is a redirect
+        return new Response(Status.FOUND);
+    }
+
+    @Test
+    void returnsErrorResponseWhenClientIdParamNotFound() throws Exception {
+        returnsErrorResponseWhenClientIdParamNotFound(new Request().setUri("/authorize"), createValidUpstreamResponse());
     }
 
     @Nested
@@ -77,7 +94,7 @@ class AuthorizeResponseFetchApiClientFilterTest extends BaseAuthorizeResponseFet
             heap.put("IdmApiClientService", new IdmApiClientService(new Client(idmClientHandler), idmBaseUri, new IdmApiClientDecoder()));
 
             final JsonValue config = json(object(field("apiClientService", "IdmApiClientService")));
-            final AuthorizeResponseFetchApiClientFilter filter = (AuthorizeResponseFetchApiClientFilter) new AuthorizeResponseFetchApiClientFilterHeaplet().create(Name.of("test"), config, heap);
+            final ResponsePathFetchApiClientFilter filter = (ResponsePathFetchApiClientFilter) new AuthorizeResponseFetchApiClientFilterHeaplet().create(Name.of("test"), config, heap);
 
             // Test the filter created by the Heaplet
             callFilterValidateSuccessBehaviour(idmApiClientData, filter);
