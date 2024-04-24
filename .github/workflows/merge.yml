@@ -1,107 +1,15 @@
-name: merge-main
-
+name: Merge - Build and Deploy
 on:
   push:
     branches:
       - main
     paths-ignore:
       - '**/README.md'
-
-env:
-  ARGO_SERVICE_NAME: ig
-  SERVICE_NAME: sapig-core
-  GIT_SHA_SHORT: $(echo ${{ github.sha }} | cut -c1-7)
-
 jobs:
-  build:
-    name: Build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      # Java version and maven settings with protected repository id
-      - uses: actions/setup-java@v4
-        name: Set Java and Maven Cache with Protected Repository
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          architecture: x64
-          cache: 'maven'
-          server-id: forgerock-internal-releases # protected repo id to get the protected dependencies
-          server-username: FR_ARTIFACTORY_USER # env variable for username in deploy
-          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable for token in deploy
-
-      - name: Get Version
-        id: get_version
-        run: |
-          echo "VERSION=$( mvn help:evaluate -Dexpression=project.version -q -DforceStdout )" >> $GITHUB_ENV
-          echo "MAVEN_SERVER_COMMUNITY=maven.forgerock.org-community" >> $GITHUB_ENV
-        env:
-          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
-          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
-
-      - name: Context Forgerock Maven Community Repository
-        if: contains( env.VERSION, 'SNAPSHOT')
-        run: |
-          echo "MAVEN_SERVER_COMMUNITY=maven.forgerock.org-community-snapshots" >> $GITHUB_ENV
-          
-      - name: Auth to GCP
-        uses: google-github-actions/auth@v2
-        with:
-          credentials_json: ${{ secrets.DEV_GAR_KEY }}
-
-      - name: Set up Cloud SDK
-        uses: google-github-actions/setup-gcloud@v2.1.0
-
-      # Configure docker to use the gcloud command-line tool as a credential helper
-      - name: Auth Docker
-        run: |
-          gcloud auth configure-docker europe-west4-docker.pkg.dev
-
-      - name: Build Code + Test + Create Docker Image
-        run: |
-          make clean docker tag=${{ env.GIT_SHA_SHORT }}
-          docker tag ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }}:${{ env.GIT_SHA_SHORT }} ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }}:latest
-          docker push ${{ vars.GAR_DEV_REPO }}/securebanking/${{ env.SERVICE_NAME }} --all-tags
-        env:
-          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
-          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
-
-      # Overwrite maven settings with the creds for the maven server to deploy to
-      - uses: actions/setup-java@v4
-        name: Set Java and Maven Cache with Community Repository
-        with:
-          distribution: 'zulu'
-          java-version: '17'
-          architecture: x64
-          cache: 'maven'
-          server-id: ${{ env.MAVEN_SERVER_COMMUNITY }} # community repo to publish the java artifact
-          server-username: FR_ARTIFACTORY_USER # env variable for username in deploy
-          server-password: FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD # env variable for token in deploy
-
-      - name: Deploy Maven Artifact Package
-        run: mvn -B deploy -DskipTests
-        env:
-          FR_ARTIFACTORY_USER: ${{ secrets.FR_ARTIFACTORY_USER }}
-          FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD: ${{ secrets.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD }}
-
-      # We want an up to date dev tag to run in individual envs, image does not get pushed to any maven repository 
-      - name: Build Code + Test + Create Dev Docker Image
-        run: |
-          make clean docker tag=dev env="dev" 
-
-  deploy:
-    runs-on: ubuntu-latest
-    name: Deploy
-    needs: build
-    steps:
-      - name: 'Update Environment'
-        uses: codefresh-io/codefresh-pipeline-runner@master
-        with:
-          args: '-v SERVICE_NAME=${{ env.ARGO_SERVICE_NAME }}'
-        env:
-          PIPELINE_NAME: 'SAPIG-devenv/dev-core-service-build'
-          CF_API_KEY: ${{ secrets.CF_API_KEY }}
-          TRIGGER_NAME: github-actions-trigger-core
-          CF_BRANCH: main
-        id: run-pipeline
+  run_merge-template:
+    name: Merge - Build and Deploy
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-merge.yml@main
+    secrets: inherit
+    with:
+      componentName: secure-api-gateway-core
+      dockerTag: $(echo ${{ github.sha }} | cut -c1-7)
