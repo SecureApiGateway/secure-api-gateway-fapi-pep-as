@@ -15,16 +15,19 @@
  */
 package com.forgerock.sapi.gateway.metrics;
 
-import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.forgerock.http.protocol.Form;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.Context;
+import org.forgerock.util.promise.NeverThrowsException;
+import org.forgerock.util.promise.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,39 +48,40 @@ public class TokenEndpointMetricsContextSupplier implements MetricsContextSuppli
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     @Override
-    public Map<String, Object> getMetricsContext(Context requestContext, Request request) {
-        final Map<String, Object> context = new HashMap<>();
-        final String grantType = getGrantType(request);
-        if (grantType != null) {
-            context.put(GRANT_TYPE, grantType);
-        }
-        final List<String> scope = getScopes(request);
-        if (scope != null && !scope.isEmpty()) {
-            context.put(SCOPE, scope);
-        }
-        return context;
+    public Promise<Map<String, Object>, NeverThrowsException> getMetricsContext(Context requestContext, Request request) {
+        return request.getEntity().getFormAsync().then(form -> {
+            final Map<String, Object> context = new HashMap<>();
+            final String grantType = getGrantType(form);
+            if (grantType != null) {
+                context.put(GRANT_TYPE, grantType);
+            }
+            final List<String> scopes = getScopes(form);
+            if (scopes != null && !scopes.isEmpty()) {
+                context.put(SCOPE, scopes);
+            }
+            return context;
+        }, ioe -> {
+            logger.error("Failed to extract metrics context data from request form", ioe);
+            return Collections.emptyMap();
+        });
     }
 
-    private String getGrantType(Request request) {
-        return getSingleFormValue(request, GRANT_TYPE);
+    private String getGrantType(Form form) {
+        return getSingleFormValue(form, GRANT_TYPE);
     }
 
-    private List<String> getScopes(Request request) {
-        final String scopeParam = getSingleFormValue(request, SCOPE);
+    private List<String> getScopes(Form form) {
+        final String scopeParam = getSingleFormValue(form, SCOPE);
         if (scopeParam != null) {
             return Arrays.asList(scopeParam.split("\\s+"));
         }
         return null;
     }
 
-    private String getSingleFormValue(Request request, String paramName) {
-        try {
-            final List<String> params = request.getEntity().getForm().get(paramName);
-            if (params != null && params.size() > 0) {
-                return params.get(0);
-            }
-        } catch (IOException e) {
-            logger.error("Failed to get {} from request form", paramName, e);
+    private String getSingleFormValue(Form form, String paramName) {
+        final List<String> params = form.get(paramName);
+        if (params != null && !params.isEmpty()) {
+            return params.get(0);
         }
         return null;
     }

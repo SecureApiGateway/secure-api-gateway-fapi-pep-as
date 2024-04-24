@@ -20,6 +20,9 @@ import java.util.Map;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.services.context.Context;
+import org.forgerock.util.promise.NeverThrowsException;
+import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 
 /**
  * Supplies context data to store in the RouteMetricsEvent.context field.
@@ -32,17 +35,17 @@ public interface MetricsContextSupplier {
      * Implementation which returns an empty context, this can be used for routes which do not have any context
      * information to report.
      */
-    MetricsContextSupplier EMPTY_CONTEXT_SUPPLIER = (requestContext, request) -> Collections.emptyMap();
+    MetricsContextSupplier EMPTY_CONTEXT_SUPPLIER = (requestContext, request) -> Promises.newResultPromise(Collections.emptyMap());
 
     /**
      * Extract Metrics Context information for the given HTTP Request and Request Context.
      *
      * @param requestContext HTTP request's Context which may be used to extract metrics context information from
      * @param request        HTTP request which may be used to extract metrics context information from
-     * @return Map<String, Object> the metrics context information for this request, NOTE: must be serializable to JSON using
-     * the {@link org.forgerock.http.util.Json#writeJson(Object)} method. When there is no context information to report
-     * then an empty Map should be returned.
+     * @return Promise with a Map<String, Object> containing the metrics context information for this request.
+     * NOTE: must be serializable to JSON using the {@link org.forgerock.http.util.Json#writeJson(Object)} method.
+     * When there is no context information to report then an empty Map should be returned.
      */
-    Map<String, Object> getMetricsContext(Context requestContext, Request request);
+    Promise<Map<String, Object>, NeverThrowsException> getMetricsContext(Context requestContext, Request request);
 
 }
