@@ -6,9 +6,14 @@ ifndef tag
 	$(warning no tag supplied; latest assumed)
 	$(eval tag=latest)
 endif
-	docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${tag}
-	docker push ${repo}/securebanking/${service}:${tag}
 
+	if [ "${tag}" = "latest" ]; then \
+		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${tag} -t ${repo}/securebanking/${service}:dev; \
+		docker push ${repo}/securebanking/${service} --all-tags; \
+    else \
+   		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${tag}; \
+   		docker push ${repo}/securebanking/${service}:${tag}; \
+   	fi;
 conf:
 ifndef env
 	$(warning no env supplied; prod assumed)
