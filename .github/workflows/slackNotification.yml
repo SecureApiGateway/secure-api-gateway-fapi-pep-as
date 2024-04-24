@@ -6,5 +6,5 @@ on:
 jobs:
   run_slack-notification:
     name: Merge Notification
-    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-slack-notification.yml@1389-standard-steps-for-workflows
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-slack-notification.yml@main
     secrets: inherit
