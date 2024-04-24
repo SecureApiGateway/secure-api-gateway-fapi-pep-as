@@ -82,7 +82,7 @@ public class FetchTrustedDirectoryFilter implements Filter {
             context.asContext(AttributesContext.class).getAttributes().put(TRUSTED_DIRECTORY_ATTR_KEY, getTrustedDirectory(apiClient));
             return next.handle(context, request);
         } catch (RuntimeException ex) {
-            logger.error("Failed to get trustedDirectory for apiClient: " + apiClient, ex);
+            logger.error("Failed to get trustedDirectory for apiClient: {}", apiClient, ex);
             throw ex;
         }
     }
