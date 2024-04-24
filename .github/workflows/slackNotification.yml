@@ -1,6 +1,8 @@
 name: Merge Notification
 on:
   push:
+    branches:
+      - main
 jobs:
   run_slack-notification:
     name: Merge Notification
