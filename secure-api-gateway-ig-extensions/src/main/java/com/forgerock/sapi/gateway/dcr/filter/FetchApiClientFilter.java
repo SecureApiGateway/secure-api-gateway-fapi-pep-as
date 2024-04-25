@@ -43,6 +43,7 @@ import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Fetches {@link ApiClient} data from IDM using the client_id identified from the access_token provided with this request.
@@ -81,10 +82,10 @@ public class FetchApiClientFilter implements Filter {
      * this filter.
      *
      * @param context the context to retrieve the ApiClient from
-     * @return the ApiClient or null if it is not set in the context.
+     * @return the ApiClient from the context
      */
     public static ApiClient getApiClientFromContext(Context context) {
-        return (ApiClient) context.asContext(AttributesContext.class).getAttributes().get(API_CLIENT_ATTR_KEY);
+        return ContextUtils.getRequiredAttributeAsType(context, API_CLIENT_ATTR_KEY, ApiClient.class);
     }
 
     /**

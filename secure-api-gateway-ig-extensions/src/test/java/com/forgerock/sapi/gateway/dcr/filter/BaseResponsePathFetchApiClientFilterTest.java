@@ -21,6 +21,7 @@ import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.json;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -108,7 +109,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.BAD_GATEWAY);
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        verifyApiClientNotInContext(context);
     }
 
     void returnsErrorResponseWhenClientIdParamNotFound(Request request, Response upstreamResponse) throws Exception {
@@ -126,7 +127,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         final JsonValue json = json(response.getEntity().getJson());
         assertThat(json.get("error").asString()).isEqualTo("invalid_request");
         assertThat(json.get("error_description").asString()).isEqualTo("'client_id' is missing in the request.");
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        verifyApiClientNotInContext(context);
     }
 
     @Test
@@ -139,7 +140,11 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.INTERNAL_SERVER_ERROR);
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        verifyApiClientNotInContext(context);
+    }
+
+    private static void verifyApiClientNotInContext(AttributesContext context) {
+        assertThrows(IllegalStateException.class, () -> FetchApiClientFilter.getApiClientFromContext(context));
     }
 
     @Test
@@ -155,6 +160,6 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.UNAUTHORIZED);
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        verifyApiClientNotInContext(context);
     }
 }

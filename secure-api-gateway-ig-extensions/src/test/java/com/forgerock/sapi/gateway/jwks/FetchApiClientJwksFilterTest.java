@@ -89,7 +89,7 @@ class FetchApiClientJwksFilterTest {
 
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> filter.filter(context, new Request(), responseHandler));
-        assertEquals("apiClient not found in request context", exception.getMessage());
+        assertEquals("Required attribute: \"apiClient\" not found in context", exception.getMessage());
     }
 
     @Test
@@ -102,7 +102,7 @@ class FetchApiClientJwksFilterTest {
 
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> filter.filter(context, new Request(), responseHandler));
-        assertEquals("trustedDirectory not found in request context", exception.getMessage());
+        assertEquals("Required attribute: \"trustedDirectory\" not found in context", exception.getMessage());
     }
 
     @Test

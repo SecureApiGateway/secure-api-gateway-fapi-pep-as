@@ -129,7 +129,7 @@ class ManageApiClientFilterTest {
     }
 
     static void verifyContextDoesNotContainApiClient(Context context) {
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        assertThrows(IllegalStateException.class, () -> FetchApiClientFilter.getApiClientFromContext(context));
     }
 
     void addRegistrationRequestToAttributesContext(Context context) {
@@ -303,9 +303,7 @@ class ManageApiClientFilterTest {
                     () -> invokeFilter(context, createPostRequest(), responseHandler));
 
 
-            assertThat(illegalStateException).hasMessageContaining(
-                    "requires AttributesContext contain \"registrationRequest\" of " +
-                              "type: \"class com.forgerock.sapi.gateway.dcr.models.RegistrationRequest\"");
+            assertThat(illegalStateException).hasMessageContaining("Required attribute: \"registrationRequest\" not found in context");
 
             verifyNoInteractions(apiClientService, apiClientOrganisationService);
         }
@@ -406,8 +404,7 @@ class ManageApiClientFilterTest {
 
 
             assertThat(illegalStateException).hasMessageContaining(
-                    "requires AttributesContext contain \"registrationRequest\" of " +
-                            "type: \"class com.forgerock.sapi.gateway.dcr.models.RegistrationRequest\"");
+                    "Required attribute: \"registrationRequest\" not found in context");
 
             verifyNoInteractions(apiClientService, apiClientOrganisationService);
         }
