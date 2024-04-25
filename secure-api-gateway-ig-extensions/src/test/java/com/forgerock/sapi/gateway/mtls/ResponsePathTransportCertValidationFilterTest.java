@@ -20,6 +20,7 @@ import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -33,6 +34,7 @@ import java.net.URISyntaxException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 
 import org.forgerock.http.Filter;
@@ -176,8 +178,9 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             final AttributesContext emptyContext = new AttributesContext(new RootContext());
             final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(emptyContext, new Request(), nextHandler);
-            final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
-            validateResponseIsUnauthorised(response, "ApiClient not found");
+
+            final ExecutionException executionException = assertThrows(ExecutionException.class, () -> responsePromise.get(1, TimeUnit.MILLISECONDS));
+            assertEquals("Required attribute: \"apiClient\" not found in context", executionException.getCause().getMessage());
         }
 
         @Test

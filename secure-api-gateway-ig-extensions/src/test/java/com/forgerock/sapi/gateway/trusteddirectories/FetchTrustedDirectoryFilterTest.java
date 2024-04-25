@@ -20,7 +20,6 @@ import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -85,7 +84,7 @@ public class FetchTrustedDirectoryFilterTest {
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> callFilterAndValidateSuccessResponse(new FetchTrustedDirectoryFilter(trustedDirectoryService), new AttributesContext(new RootContext("root"))));
 
-        assertThat(exception.getMessage()).contains("apiClient not found in request context");
+        assertThat(exception.getMessage()).isEqualTo("Required attribute: \"apiClient\" not found in context");
     }
 
     @Test
@@ -123,9 +122,6 @@ public class FetchTrustedDirectoryFilterTest {
     }
 
     private void callFilterAndValidateSuccessResponse(FetchTrustedDirectoryFilter filter, Context context) {
-        assertNull(FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext(context),
-                "There must be no TrustedDirectory in the context prior to the test running");
-
         final TestSuccessResponseHandler successResponseHandler = new TestSuccessResponseHandler();
         filter.filter(context, new Request(), successResponseHandler);
 

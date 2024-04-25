@@ -43,6 +43,7 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.fapi.FapiUtils;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
 
@@ -106,7 +107,7 @@ public class RouteMetricsFilter implements Filter {
 
     private RouteMetricsEvent buildRouteMetricsEvent(Stopwatch stopwatch, Context context, Request request,
                                                      Response response, Map<String, Object> metricsContext) {
-        final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
+        final ApiClient apiClient = getApiClientFromContext(context);
 
         final RouteMetricsEvent metricEvent = new RouteMetricsEvent();
         metricEvent.setTimestamp(timestampSupplier.getAsLong());
@@ -127,6 +128,11 @@ public class RouteMetricsFilter implements Filter {
         stopwatch.stop();
         metricEvent.setResponseTimeMillis(stopwatch.elapsed(TimeUnit.MILLISECONDS));
         return metricEvent;
+    }
+
+    private static ApiClient getApiClientFromContext(Context context) {
+        return ContextUtils.getAttributeAsType(context, FetchApiClientFilter.API_CLIENT_ATTR_KEY, ApiClient.class)
+                           .orElse(null);
     }
 
     private Promise<Map<String, Object>, NeverThrowsException> getRouteMetricsContext(Context context, Request request) {
@@ -153,11 +159,7 @@ public class RouteMetricsFilter implements Filter {
     }
 
     static String getApiClientId(ApiClient apiClient) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return apiClient.getOAuth2ClientId();
-        }
+        return apiClient == null ? null : apiClient.getOAuth2ClientId();
     }
 
     static String getApiClientOrgId(ApiClient apiClient) {
@@ -173,19 +175,11 @@ public class RouteMetricsFilter implements Filter {
     }
 
     static String getSoftwareId(ApiClient apiClient ) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return apiClient.getSoftwareClientId();
-        }
+        return apiClient == null ? null : apiClient.getSoftwareClientId();
     }
 
     static String getTrustedDirectory(ApiClient apiClient) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return TrustedDirectoryService.getTrustedDirectoryIssuerName(apiClient);
-        }
+        return apiClient == null ? null : TrustedDirectoryService.getTrustedDirectoryIssuerName(apiClient);
     }
 
     private static String getRouteId(Context context) {

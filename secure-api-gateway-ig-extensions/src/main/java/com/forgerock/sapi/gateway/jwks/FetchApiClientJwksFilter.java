@@ -15,6 +15,8 @@
  */
 package com.forgerock.sapi.gateway.jwks;
 
+import static com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter.getApiClientFromContext;
+import static com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
 import org.forgerock.http.Filter;
@@ -38,6 +40,7 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Filter which fetches a {@link JWKSet} containing the keys for an {@link ApiClient} that are registered with a
@@ -68,10 +71,10 @@ public class FetchApiClientJwksFilter implements Filter {
      * this filter.
      *
      * @param context the context to retrieve the JWKSet from
-     * @return the JWKSet or null if it is not set in the context.
+     * @return the JWKSet from the context
      */
     public static JWKSet getApiClientJwkSetFromContext(Context context) {
-        return (JWKSet) context.asContext(AttributesContext.class).getAttributes().get(API_CLIENT_JWKS_ATTR_KEY);
+        return ContextUtils.getRequiredAttributeAsType(context, API_CLIENT_JWKS_ATTR_KEY, JWKSet.class);
     }
 
     public FetchApiClientJwksFilter(ApiClientJwkSetService apiClientJwkSetService) {
@@ -81,8 +84,8 @@ public class FetchApiClientJwksFilter implements Filter {
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
-        final ApiClient apiClient = getApiClient(context);
-        final TrustedDirectory trustedDirectory = getTrustedDirectory(context);
+        final ApiClient apiClient = getApiClientFromContext(context);
+        final TrustedDirectory trustedDirectory = getTrustedDirectoryFromContext(context);
 
         return apiClientJwkSetService.getJwkSet(apiClient, trustedDirectory).thenAsync(jwkSet -> {
             logger.debug("Added jwks to context for apiClient");
@@ -97,24 +100,6 @@ public class FetchApiClientJwksFilter implements Filter {
                     apiClient, trustedDirectory, rte);
             return Promises.newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
         });
-    }
-
-    private TrustedDirectory getTrustedDirectory(Context context) {
-        final TrustedDirectory trustedDirectory = FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext(context);
-        if (trustedDirectory == null) {
-            logger.error("trustedDirectory not found in request context");
-            throw new IllegalStateException("trustedDirectory not found in request context");
-        }
-        return trustedDirectory;
-    }
-
-    private ApiClient getApiClient(Context context) {
-        final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
-        if (apiClient == null) {
-            logger.error("apiClient not found in request context");
-            throw new IllegalStateException("apiClient not found in request context");
-        }
-        return apiClient;
     }
 
     /**
