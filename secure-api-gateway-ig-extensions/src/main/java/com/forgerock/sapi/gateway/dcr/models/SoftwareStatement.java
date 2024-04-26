@@ -57,7 +57,7 @@ public class SoftwareStatement extends SapiJwt {
      *
      * @param builder a {@code SoftwareStatement.Builder}
      */
-    public SoftwareStatement(Builder builder) {
+    private SoftwareStatement(Builder builder) {
         super(builder);
         this.orgId = builder.orgId;
         this.orgName = builder.orgName;
