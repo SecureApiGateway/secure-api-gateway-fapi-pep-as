@@ -44,7 +44,7 @@ public class RegistrationRequest extends SapiJwt {
     private final SoftwareStatement softwareStatement;
     private final List<URI> redirectUris;
 
-    public RegistrationRequest(Builder builder){
+    private RegistrationRequest(Builder builder){
         super(builder);
         this.softwareStatement = builder.softwareStatement;
         this.redirectUris = builder.redirectUris;

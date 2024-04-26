@@ -60,6 +60,10 @@ public class ClaimsSetFacade {
         return hasExpired;
     }
 
+    public boolean hasClaim(String claimName) {
+        return claimsSet.getClaim(claimName) != null;
+    }
+
     /**
      * Get a String type claim from the JWT
      *
