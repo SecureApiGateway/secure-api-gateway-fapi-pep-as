@@ -15,18 +15,18 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1;
 
+import static com.forgerock.sapi.gateway.dcr.models.RegistrationRequest.REGISTRATION_REQUEST_KEY;
+import static com.forgerock.sapi.gateway.util.ContextUtils.getRequiredAttributeAsType;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
-import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
-import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -35,13 +35,10 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.json.JsonValue;
-import org.forgerock.json.jose.common.JwtReconstruction;
-import org.forgerock.json.jose.exceptions.InvalidJwtException;
 import org.forgerock.json.jose.jws.JwsAlgorithm;
-import org.forgerock.json.jose.jws.SignedJwt;
-import org.forgerock.json.jose.jwt.JwtClaimsSet;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
+import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
@@ -49,10 +46,14 @@ import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.forgerock.sapi.gateway.common.jwt.ClaimsSetFacade;
+import com.forgerock.sapi.gateway.common.jwt.JwtException;
 import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
 import com.forgerock.sapi.gateway.dcr.common.ErrorResponseFactory;
 import com.forgerock.sapi.gateway.dcr.common.Validator;
 import com.forgerock.sapi.gateway.dcr.common.exceptions.ValidationException;
+import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
+import com.forgerock.sapi.gateway.dcr.request.RegistrationRequestBuilderFilter;
 import com.forgerock.sapi.gateway.mtls.CertificateRetriever;
 import com.forgerock.sapi.gateway.mtls.ContextCertificateRetriever;
 import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
@@ -108,6 +109,10 @@ import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
  *
  * Note, we also check that the redirect_uri does not contain localhost as we don't want redirects to URIs on the
  * <p>
+ * This filter applies validation to a {@link RegistrationRequest} object that it expects to find the in the
+ * {@link AttributesContext}, this means that a filter to add the object to the context must run prior to this one in
+ * the chain. Typically, this is done by the {@link RegistrationRequestBuilderFilter}.
+ * <p></p>
  * This filter should sit in front of filter(s) which implement DCR for a particular API.
  * <p>
  * This filter will reject any requests which would result in an OAuth2 client being created which did not conform to
@@ -205,18 +210,9 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
     private CertificateRetriever clientCertificateRetriever;
 
     /**
-     * Function which returns the DCR Registration Request json object.
-     * <p>
-     * NOTE: If a JWT is submitted which contains the DCR Registration Request as claims, then those claims should
-     * be extracted from the JWT and returned. This function provides flexibility, allowing the registration request
-     * to be sourced directly or unwrapped from within a JWT.
-     */
-    private BiFunction<Context, Request, JsonValue> registrationRequestObjectSupplier;
-
-    /**
      * List of Validators which will validate the DCR Registration json object
      */
-    private List<Validator<JsonValue>> registrationRequestObjectValidators;
+    private List<Validator<RegistrationRequest>> registrationRequestObjectValidators;
 
     /**
      * Factory which produces HTTP Responses for DCR error conditions
@@ -254,11 +250,9 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
         }
 
         try {
-            final JsonValue registrationRequestObject = registrationRequestObjectSupplier.apply(context, request);
-            if (registrationRequestObject == null) {
-                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "registration request entity is missing or malformed");
-            }
-            validateRegistrationRequestObject(registrationRequestObject);
+            final RegistrationRequest registrationRequest = getRequiredAttributeAsType(context, REGISTRATION_REQUEST_KEY,
+                                                                                       RegistrationRequest.class);
+            validateRegistrationRequestObject(registrationRequest);
         } catch (ValidationException ve) {
             LOGGER.debug("FAPI Validation failed", ve);
             return Promises.newResultPromise(errorResponseFactory.errorResponse(context, ve));
@@ -270,9 +264,9 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
         return next.handle(context, request);
     }
 
-    void validateRegistrationRequestObject(JsonValue registrationObject) {
-        for (Validator<JsonValue> validator : registrationRequestObjectValidators) {
-            validator.validate(registrationObject);
+    void validateRegistrationRequestObject(RegistrationRequest registrationRequest) {
+        for (Validator<RegistrationRequest> validator : registrationRequestObjectValidators) {
+            validator.validate(registrationRequest);
         }
     }
 
@@ -288,27 +282,20 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      * Note, we also check that the redirect_uri does not contain localhost as we don't want redirects to URIs on the
      * server
      *
-     * @param registrationObject the DCR Registration Request json object to validate
+     * @param registrationRequest the RegistrationRequest object to validate
      */
-    void validateRedirectUris(JsonValue registrationObject) {
-        final List<String> redirectUris = registrationObject.get("redirect_uris").asList(String.class);
+    void validateRedirectUris(RegistrationRequest registrationRequest) {
+        final List<URI> redirectUris = registrationRequest.getRedirectUris();
         if (redirectUris == null) {
             throw new ValidationException(DCRErrorCode.INVALID_REDIRECT_URI, "request object must contain redirect_uris field");
         }
         if (redirectUris.isEmpty()) {
             throw new ValidationException(DCRErrorCode.INVALID_REDIRECT_URI, "redirect_uris array must not be empty");
         }
-        for (String uriString : redirectUris) {
-            final URI redirectUri;
-            try {
-                redirectUri = new URI(uriString);
-            } catch (URISyntaxException ex) {
-                throw new ValidationException(DCRErrorCode.INVALID_REDIRECT_URI, "redirect_uri: " + uriString + " is not a valid URI");
-            }
+        for (URI redirectUri : redirectUris) {
             if (!"https".equals(redirectUri.getScheme())) {
                 throw new ValidationException(DCRErrorCode.INVALID_REDIRECT_URI, "redirect_uris must use https scheme");
             }
-
             if (redirectUri.getHost().contains("localhost")) {
                 throw new ValidationException(DCRErrorCode.INVALID_REDIRECT_URI, "redirect_uris must not contain localhost");
             }
@@ -326,14 +313,14 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      *   <li>the response_type value code in conjunction with the response_mode value jwt</li>
      * </ol>
      *
-     * @param registrationObject the DCR Registration Request json object to validate
+     * @param registrationRequest the RegistrationRequest object to validate
      */
-    void validateResponseTypes(JsonValue registrationObject) {
-        final List<String> responseTypesList = registrationObject.get("response_types").asList(String.class);
-        if (responseTypesList == null || responseTypesList.isEmpty()) {
+    void validateResponseTypes(RegistrationRequest registrationRequest) {
+        final Optional<List<String>> requestedResponseTypes = registrationRequest.getResponseTypes();
+        if (requestedResponseTypes.isEmpty()) {
             throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: response_types");
         }
-
+        final List<String> responseTypesList = requestedResponseTypes.get();
         for (String responseTypes : responseTypesList) {
             // Convert the request responseTypes String into a set by splitting on whitespace
             final Set<String> responseTypesSet = Set.of(responseTypes.split(" "));
@@ -356,16 +343,23 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      *    <li>private_key_jwt as specified in section 9 of <a href="http://openid.net/specs/openid-connect-core-1_0.html">OIDC</a>;</li>
      * </ol>
      *
-     * @param registrationObject the DCR Registration Request json object to validate
+     * @param registrationRequest the RegistrationRequest object to validate
      */
-    void validateTokenEndpointAuthMethods(JsonValue registrationObject) {
-        final String tokenEndpointAuthMethod = registrationObject.get("token_endpoint_auth_method").asString();
-        if (tokenEndpointAuthMethod == null) {
-            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: token_endpoint_auth_method");
-        }
-        if (!supportedTokenEndpointAuthMethods.contains(tokenEndpointAuthMethod)) {
-            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "token_endpoint_auth_method not supported, must be one of: "
-                    + supportedTokenEndpointAuthMethods.stream().sorted().toList());
+    void validateTokenEndpointAuthMethods(RegistrationRequest registrationRequest) {
+        try {
+            final ClaimsSetFacade claimsSet = registrationRequest.getClaimsSet();
+            if (!claimsSet.hasClaim("token_endpoint_auth_method")) {
+                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: token_endpoint_auth_method");
+            }
+            final String tokenEndpointAuthMethod = claimsSet.getStringClaim("token_endpoint_auth_method");
+            if (!supportedTokenEndpointAuthMethods.contains(tokenEndpointAuthMethod)) {
+                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA,
+                        "token_endpoint_auth_method not supported, must be one of: "
+                                + supportedTokenEndpointAuthMethods.stream().sorted().toList());
+            }
+        } catch (JwtException e) {
+            LOGGER.warn("Unexpected exception thrown processing registration request token_endpoint_auth_method field", e);
+            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "token_endpoint_auth_method field malformed");
         }
     }
 
@@ -387,14 +381,22 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      *     <li>shall not use none</li>
      * </ol>
      *
-     * @param registrationObject the DCR Registration Request json object to validate
+     * @param registrationRequest the RegistrationRequest object to validate
      */
-    void validateSigningAlgorithmUsed(JsonValue registrationObject) {
+    void validateSigningAlgorithmUsed(RegistrationRequest registrationRequest) {
+        final ClaimsSetFacade claimsSet = registrationRequest.getClaimsSet();
         for (String signingFieldName : registrationObjectSigningFieldNames) {
-            final String signingAlg = registrationObject.get(signingFieldName).asString();
-            if (signingAlg != null && !supportedSigningAlgorithms.contains(signingAlg)) {
-                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: "
-                        + signingFieldName + ", must be one of: " + supportedSigningAlgorithms);
+            if (claimsSet.hasClaim(signingFieldName)) {
+                try {
+                    final String signingAlg = claimsSet.getStringClaim(signingFieldName);
+                    if (!supportedSigningAlgorithms.contains(signingAlg)) {
+                        throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: "
+                                + signingFieldName + ", must be one of: " + supportedSigningAlgorithms);
+                    }
+                } catch (JwtException e) {
+                    throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: "
+                            + signingFieldName + ", must be one of: " + supportedSigningAlgorithms);
+                }
             }
         }
     }
@@ -415,11 +417,7 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
         this.clientCertificateRetriever = certificateRetriever;
     }
 
-    void setRegistrationRequestObjectSupplier(BiFunction<Context, Request, JsonValue> registrationRequestObjectSupplier) {
-        this.registrationRequestObjectSupplier = registrationRequestObjectSupplier;
-    }
-
-    void setRegistrationRequestObjectValidators(List<Validator<JsonValue>> registrationRequestObjectValidators) {
+    void setRegistrationRequestObjectValidators(List<Validator<RegistrationRequest>> registrationRequestObjectValidators) {
         this.registrationRequestObjectValidators = registrationRequestObjectValidators;
     }
 
@@ -429,46 +427,9 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      *
      * @return list of validators that apply the default validation rules to the request object as per the spec.
      */
-    public List<Validator<JsonValue>> getDefaultRequestObjectValidators() {
+    public List<Validator<RegistrationRequest>> getDefaultRequestObjectValidators() {
         return List.of(this::validateRedirectUris, this::validateResponseTypes, this::validateSigningAlgorithmUsed,
                        this::validateTokenEndpointAuthMethods);
-    }
-
-    /**
-     * Supplies the Registration Request json object from a JWT contained within the Request.entity
-     * <p>
-     * The JWT signing algo in the header is validated against the supported set of signing algorithms for FAPI.
-     * No other validation is done at this point, it is assumed that Filters later in the chain will validate the sig etc
-     */
-    public static class RegistrationRequestObjectFromJwtSupplier implements BiFunction<Context, Request, JsonValue> {
-
-        private final Set<String> supportedSigningAlgorithms;
-
-        public RegistrationRequestObjectFromJwtSupplier(Collection<String> supportedSigningAlgorithms) {
-            this.supportedSigningAlgorithms = new HashSet<>(supportedSigningAlgorithms);
-        }
-
-        @Override
-        public JsonValue apply(Context context, Request request) {
-            try {
-                final String registrationRequestJwtString = request.getEntity().getString();
-                final SignedJwt registrationRequestJwt = new JwtReconstruction().reconstructJwt(registrationRequestJwtString,
-                                                                                                SignedJwt.class);
-                LOGGER.debug("Registration Request JWT to validate: {}", registrationRequestJwtString);
-                final JwsAlgorithm signingAlgo = registrationRequestJwt.getHeader().getAlgorithm();
-                // This validation is being done here as outside the supplier we are not aware that a JWT existed
-                if (signingAlgo == null || !supportedSigningAlgorithms.contains(signingAlgo.getJwaAlgorithmName())) {
-                    throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA,
-                            "DCR request JWT signed must be signed with one of: " + supportedSigningAlgorithms);
-                }
-                final JwtClaimsSet claimsSet = registrationRequestJwt.getClaimsSet();
-                return claimsSet.toJsonValue();
-            } catch (InvalidJwtException | IOException e) {
-                LOGGER.warn("FAPI DCR failed: unable to extract registration object JWT from request", e);
-                // These are not validation errors, so do not raise a validation exception, instead allow the filter to handle the null response
-                return null;
-            }
-        }
     }
 
     /** Creates and initializes a FapiAdvancedDCRValidationFilter */
@@ -519,11 +480,8 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
                 filter.setClientCertificateRetriever(new HeaderCertificateRetriever(clientCertHeaderName));
             }
 
-            final List<Validator<JsonValue>> requestObjectValidators = filter.getDefaultRequestObjectValidators();
+            final List<Validator<RegistrationRequest>> requestObjectValidators = filter.getDefaultRequestObjectValidators();
             filter.setRegistrationRequestObjectValidators(requestObjectValidators);
-
-            final BiFunction<Context, Request, JsonValue> registrationObjectSupplier = new RegistrationRequestObjectFromJwtSupplier(supportedSigningAlgorithms);
-            filter.setRegistrationRequestObjectSupplier(registrationObjectSupplier);
 
             return filter;
         }

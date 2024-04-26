@@ -23,7 +23,6 @@ import static org.forgerock.util.Reject.checkNotNull;
 import static org.forgerock.util.promise.Promises.newResultPromise;
 
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 import org.forgerock.http.Filter;
@@ -52,6 +51,7 @@ import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientOrganisationService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Filter to manage {@link ApiClient}s in a data store as part of protecting an OAuth2.0 /register (DCR) endpoint.
@@ -227,21 +227,9 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private static SoftwareStatement extractSoftwareStatement(Context context) {
-        final AttributesContext attributesContext = context.asContext(AttributesContext.class);
-        final RegistrationRequest registrationRequest = getAttributeAsType(attributesContext, RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
+        final RegistrationRequest registrationRequest = ContextUtils.getRequiredAttributeAsType(context,
+                RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
         return registrationRequest.getSoftwareStatement();
-    }
-
-    private static <T> T getAttributeAsType(AttributesContext attributesContext, String attributeName, Class<T> clazz) {
-        final Map<String, Object> attributes = attributesContext.getAttributes();
-        final Object attribute = attributes.get(attributeName);
-        if (!clazz.isInstance(attribute)) {
-            // Throwing a Runtime exception as this indicates a programming or route configuration error, the client can do nothing about it
-            throw new IllegalStateException("ManageApiClientFilter.class requires AttributesContext contain " +
-                    "\"" + attributeName + "\" of type: \"" + clazz + "\" - ensure that a filter is adding this attribute " +
-                    "to the context");
-        }
-        return clazz.cast(attribute);
     }
 
     /**

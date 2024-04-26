@@ -15,8 +15,9 @@
  */
 package com.forgerock.sapi.gateway.metrics;
 
+import static java.util.Objects.requireNonNull;
+import static java.util.Objects.requireNonNullElse;
 import static org.forgerock.openig.util.JsonValues.optionalHeapObject;
-import static org.forgerock.util.Reject.checkNotNull;
 
 import java.util.Collections;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,6 +43,7 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.fapi.FapiUtils;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
 
@@ -82,28 +85,29 @@ public class RouteMetricsFilter implements Filter {
     public RouteMetricsFilter(Ticker ticker, LongSupplier timestampSupplier,
                               RouteMetricsEventPublisher metricsEventPublisher,
                               MetricsContextSupplier metricsContextSupplier) {
-        this.ticker = checkNotNull(ticker, "ticker must be provided");
-        this.timestampSupplier = checkNotNull(timestampSupplier, "timestampSupplier must be provided");
-        this.metricsEventPublisher = checkNotNull(metricsEventPublisher, "metricsEventPublisher must be provided");
-        this.metricsContextSupplier = checkNotNull(metricsContextSupplier, "metricsContextSupplier must be provided");
+        this.ticker = requireNonNull(ticker, "ticker must be provided");
+        this.timestampSupplier = requireNonNull(timestampSupplier, "timestampSupplier must be provided");
+        this.metricsEventPublisher = requireNonNull(metricsEventPublisher, "metricsEventPublisher must be provided");
+        this.metricsContextSupplier = requireNonNull(metricsContextSupplier, "metricsContextSupplier must be provided");
     }
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler handler) {
         final Stopwatch stopwatch = Stopwatch.createStarted(ticker);
-        final Map<String, Object> routeMetricsContext = getRouteMetricsContext(context, request);
-        return handler.handle(context, request).thenOnResult(response -> {
-            try {
-                metricsEventPublisher.publish(buildRouteMetricsEvent(stopwatch, context, request, response, routeMetricsContext));
-            } catch (RuntimeException ex) {
-                logger.error("Failed to publish metrics due to exception", ex);
-            }
+        return getRouteMetricsContext(context, request).thenAsync(routeMetricsContext -> {
+            return handler.handle(context, request).thenOnResult(response -> {
+                try {
+                    metricsEventPublisher.publish(buildRouteMetricsEvent(stopwatch, context, request, response, routeMetricsContext));
+                } catch (RuntimeException ex) {
+                    logger.error("Failed to publish metrics due to exception", ex);
+                }
+            });
         });
     }
 
     private RouteMetricsEvent buildRouteMetricsEvent(Stopwatch stopwatch, Context context, Request request,
                                                      Response response, Map<String, Object> metricsContext) {
-        final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
+        final ApiClient apiClient = getApiClientFromContext(context);
 
         final RouteMetricsEvent metricEvent = new RouteMetricsEvent();
         metricEvent.setTimestamp(timestampSupplier.getAsLong());
@@ -126,16 +130,23 @@ public class RouteMetricsFilter implements Filter {
         return metricEvent;
     }
 
-    private Map<String, Object> getRouteMetricsContext(Context context, Request request) {
+    private static ApiClient getApiClientFromContext(Context context) {
+        return ContextUtils.getAttributeAsType(context, FetchApiClientFilter.API_CLIENT_ATTR_KEY, ApiClient.class)
+                           .orElse(null);
+    }
+
+    private Promise<Map<String, Object>, NeverThrowsException> getRouteMetricsContext(Context context, Request request) {
         try {
-            final Map<String, Object> metricsContext = metricsContextSupplier.getMetricsContext(context, request);
-            if (metricsContext != null) {
-                return metricsContext;
-            }
+            return metricsContextSupplier.getMetricsContext(context, request)
+                                         .thenCatchRuntimeException(rte -> {
+                                             logger.error("Unexpected exception thrown invoking metricsContextSupplier", rte);
+                                             return Collections.emptyMap();
+                                         })
+                                         .then(metricsContext -> requireNonNullElse(metricsContext, Collections.emptyMap()));
         } catch (RuntimeException ex) {
             logger.error("Unexpected exception thrown invoking metricsContextSupplier", ex);
+            return Promises.newResultPromise(Collections.emptyMap());
         }
-        return Collections.emptyMap();
     }
 
     /**
@@ -148,11 +159,7 @@ public class RouteMetricsFilter implements Filter {
     }
 
     static String getApiClientId(ApiClient apiClient) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return apiClient.getOAuth2ClientId();
-        }
+        return apiClient == null ? null : apiClient.getOAuth2ClientId();
     }
 
     static String getApiClientOrgId(ApiClient apiClient) {
@@ -168,19 +175,11 @@ public class RouteMetricsFilter implements Filter {
     }
 
     static String getSoftwareId(ApiClient apiClient ) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return apiClient.getSoftwareClientId();
-        }
+        return apiClient == null ? null : apiClient.getSoftwareClientId();
     }
 
     static String getTrustedDirectory(ApiClient apiClient) {
-        if (apiClient == null) {
-            return null;
-        } else {
-            return TrustedDirectoryService.getTrustedDirectoryIssuerName(apiClient);
-        }
+        return apiClient == null ? null : TrustedDirectoryService.getTrustedDirectoryIssuerName(apiClient);
     }
 
     private static String getRouteId(Context context) {

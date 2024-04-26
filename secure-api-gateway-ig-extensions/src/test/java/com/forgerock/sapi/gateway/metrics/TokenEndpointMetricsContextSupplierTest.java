@@ -19,12 +19,15 @@ import static org.assertj.core.api.Assertions.*;
 
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 import org.forgerock.http.protocol.Form;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
+import org.forgerock.util.promise.NeverThrowsException;
+import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -48,7 +51,7 @@ class TokenEndpointMetricsContextSupplierTest {
     }
 
     @Test
-    void populatesContextFromValidRequest() {
+    void populatesContextFromValidRequest() throws ExecutionException, InterruptedException {
         final String expectedGrantType = "client_credentials";
 
         final Request request = new Request();
@@ -60,14 +63,17 @@ class TokenEndpointMetricsContextSupplierTest {
         form.put("another_thing", List.of("ldfsfdsd"));
         request.setEntity(form);
 
-        final Map<String, Object> metricsContext = tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, request);
+        final Promise<Map<String, Object>, NeverThrowsException> metricsContextPromise =
+                tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, request);
+
+        final Map<String, Object> metricsContext = metricsContextPromise.get();
         assertThat(metricsContext.size()).isEqualTo(2);
         assertThat(metricsContext.get("grant_type")).isEqualTo(expectedGrantType);
         assertThat(metricsContext.get("scope")).isEqualTo(List.of("payments", "openid"));
     }
 
     @Test
-    void returnsEmptyContextForInvalidRequest() {
+    void returnsEmptyContextForInvalidRequest() throws ExecutionException, InterruptedException {
         // Valid request with a form body, but does not contain any of the expected fields
         final Request request = new Request().setEntity(new Form());
         final Form form = new Form();
@@ -76,12 +82,16 @@ class TokenEndpointMetricsContextSupplierTest {
         form.put("another_thing", List.of("ldfsfdsd"));
         request.setEntity(form);
 
-        assertThat(tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, request)).isEmpty();
+        final Promise<Map<String, Object>, NeverThrowsException> metricsContextPromise =
+                tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, request);
+        assertThat(metricsContextPromise.get()).isEmpty();
     }
 
     @Test
-    void returnsEmptyContextWhenUnableToAnyDataFromRequest() {
+    void returnsEmptyContextWhenUnableToAnyDataFromRequest() throws ExecutionException, InterruptedException {
         // Invalid request which is not a form
-        assertThat(tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, new Request())).isEmpty();
+        final Promise<Map<String, Object>, NeverThrowsException> metricsContextPromise =
+                tokenEndpointMetricsContextSupplier.getMetricsContext(httpRequestContext, new Request());
+        assertThat(metricsContextPromise.get()).isEmpty();
     }
 }
