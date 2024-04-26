@@ -1,0 +1,22 @@
+name: Release - Build, Deploy & Create Release
+on:
+  workflow_dispatch:
+    inputs:
+      releaseNotes:
+        description: "Release Notes - Issues Included in Release"
+        required: false
+        type: string
+      releaseVersion:
+        description: "The version to be Released (#.#.#.#)"
+        required: true
+        type: string
+jobs:
+  run_release-template:
+    name: Release - Build, Deploy & Create Release
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-release.yml@1389-standard-steps-for-workflows
+    secrets: inherit
+    with:
+      componentName: secure-api-gateway-core
+      dockerTag: $(echo ${{ github.sha }} | cut -c1-7)
+      releaseNotes: ${{ inputs.releaseNotes }}
+      releaseVersion: ${{ inputs.releaseVersion }}
