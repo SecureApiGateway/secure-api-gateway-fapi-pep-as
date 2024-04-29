@@ -16,6 +16,7 @@
 package com.forgerock.sapi.gateway.dcr.request;
 
 
+import static java.util.Objects.requireNonNull;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
 import java.util.List;
@@ -30,7 +31,6 @@ import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
-import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
@@ -56,8 +56,9 @@ public class RegistrationRequestBuilderFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationRequestBuilderFilter.class);
     private final RegistrationRequestEntitySupplier registrationEntitySupplier;
-    private final RegistrationRequest.Builder registrationRequestBuilder;
     private final ResponseFactory responseFactory;
+    private final TrustedDirectoryService trustedDirectoryService;
+    private final JwtDecoder jwtDecoder;
     private final List<String> RESPONSE_MEDIA_TYPES = List.of(HttpMediaTypes.APPLICATION_JSON);
     private static final Set<String> VALIDATABLE_HTTP_REQUEST_METHODS = Set.of("POST", "PUT");
 
@@ -65,19 +66,19 @@ public class RegistrationRequestBuilderFilter implements Filter {
      * Constructor
      * @param registrationEntitySupplier - used by the filter to obtain the b64 url encoded registration request string
      *                                   from the request entity
-     * @param registrationRequestBuilder - A builder that can be used to create a RegistrationRequest model from the b64
-     *                                   url encoded jwt string provided in the request
+     * @param trustedDirectoryService used by the filter as part of decoding data from the SSA contained within the
+     *                                registration request JWT
+     * @param jwtDecoder used to decode registration request and SSA JWTs
      * @param responseFactory used to create a suitably formatted response should an error occur while processing the
      *                        registration request
      */
     public RegistrationRequestBuilderFilter(RegistrationRequestEntitySupplier registrationEntitySupplier,
-            RegistrationRequest.Builder registrationRequestBuilder, ResponseFactory responseFactory) {
-        Reject.ifNull(registrationEntitySupplier, "registrationEntitySupplier must be provided");
-        Reject.ifNull(registrationRequestBuilder, "registrationRequestBuilder must be provided");
-        Reject.ifNull(responseFactory, "responseFactory must be provided");
-        this.registrationEntitySupplier = registrationEntitySupplier;
-        this.registrationRequestBuilder = registrationRequestBuilder;
-        this.responseFactory = responseFactory;
+                                            TrustedDirectoryService trustedDirectoryService,
+                                            JwtDecoder jwtDecoder, ResponseFactory responseFactory) {
+        this.registrationEntitySupplier = requireNonNull(registrationEntitySupplier, "registrationEntitySupplier must not be null");
+        this.jwtDecoder = requireNonNull(jwtDecoder, "jwtDecoder must not be null");
+        this.trustedDirectoryService = requireNonNull(trustedDirectoryService, "trustedDirectoryService must not be null");
+        this.responseFactory = requireNonNull(responseFactory, "responseFactory must not be null");
     }
 
     @Override
@@ -87,8 +88,10 @@ public class RegistrationRequestBuilderFilter implements Filter {
         }
         log.debug("Running RegistrationRequestEntityValidatorFilter");
         try {
-            String b64EncodedRegistrationRequestEntity = this.registrationEntitySupplier.apply(context, request);
-            RegistrationRequest registrationRequest = this.registrationRequestBuilder.build(b64EncodedRegistrationRequestEntity);
+            final String b64EncodedRegistrationRequestEntity = this.registrationEntitySupplier.apply(context, request);
+            final RegistrationRequest registrationRequest = new RegistrationRequest.Builder(
+                    new SoftwareStatement.Builder(trustedDirectoryService, jwtDecoder), jwtDecoder)
+                    .build(b64EncodedRegistrationRequestEntity);
             context.asContext(AttributesContext.class).getAttributes().put(RegistrationRequest.REGISTRATION_REQUEST_KEY,
                     registrationRequest);
             log.info("Created context attribute " + RegistrationRequest.REGISTRATION_REQUEST_KEY);
@@ -131,10 +134,6 @@ public class RegistrationRequestBuilderFilter implements Filter {
                     = new RegistrationRequestEntitySupplier();
 
             final JwtDecoder jwtDecoder = new JwtDecoder();
-            final SoftwareStatement.Builder softwareStatementBuilder = new SoftwareStatement.Builder(
-                    trustedDirectoryService, jwtDecoder);
-            final RegistrationRequest.Builder registrationRequestBuilder = new RegistrationRequest.Builder(
-                    softwareStatementBuilder, jwtDecoder);
 
             final ContentTypeFormatterFactory contentTypeFormatterFactory = new ContentTypeFormatterFactory();
             final ContentTypeNegotiator contentTypeNegotiator =
@@ -143,8 +142,8 @@ public class RegistrationRequestBuilderFilter implements Filter {
             final ResponseFactory responseFactory = new ResponseFactory(contentTypeNegotiator,
                     contentTypeFormatterFactory);
 
-            return new RegistrationRequestBuilderFilter( registrationEntitySupplier,
-                    registrationRequestBuilder, responseFactory);
+            return new RegistrationRequestBuilderFilter(registrationEntitySupplier,
+                    trustedDirectoryService, jwtDecoder, responseFactory);
         }
     }
 }
