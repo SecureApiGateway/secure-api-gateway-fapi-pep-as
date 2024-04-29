@@ -1,4 +1,5 @@
 name: Release - Build, Deploy & Create Release
+run-name: "${{ inputs.releaseVersion }}: Release - Build, Deploy & Create Release"
 on:
   workflow_dispatch:
     inputs:
@@ -13,7 +14,7 @@ on:
 jobs:
   run_release-template:
     name: Release - Build, Deploy & Create Release
-    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-release.yml@1389-standard-steps-for-workflows
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-release.yml@main
     secrets: inherit
     with:
       componentName: secure-api-gateway-core
