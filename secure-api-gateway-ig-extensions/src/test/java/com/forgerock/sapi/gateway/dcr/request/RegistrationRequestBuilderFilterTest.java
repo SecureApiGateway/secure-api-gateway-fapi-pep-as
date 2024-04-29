@@ -47,7 +47,6 @@ import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,7 +58,6 @@ import com.forgerock.sapi.gateway.dcr.models.RegistrationRequestFactory;
 import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
 import com.forgerock.sapi.gateway.dcr.models.SoftwareStatementTestFactory;
 import com.forgerock.sapi.gateway.jws.JwtDecoder;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryTestFactory;
 import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.forgerock.sapi.gateway.util.CryptoUtils;
@@ -69,24 +67,15 @@ class RegistrationRequestBuilderFilterTest {
 
     private RegistrationRequestBuilderFilter filter;
     private final RegistrationRequestEntitySupplier reqRequestSupplier = new RegistrationRequestEntitySupplier();
-    private static RegistrationRequest.Builder registrationRequestBuilder ;
     private static final JwtDecoder jwtDecoder = new JwtDecoder();
     private final ResponseFactory responseFactory = mock(ResponseFactory.class);
     private final Handler handler = mock(Handler.class);
 
-    @BeforeAll
-    static void setupClass()  {
-        TrustedDirectoryService trustedDirectoryService = TrustedDirectoryTestFactory.getTrustedDirectoryService();
-        SoftwareStatement.Builder softwareStatementBuilder = new SoftwareStatement.Builder(trustedDirectoryService, jwtDecoder);
-        registrationRequestBuilder = new RegistrationRequest.Builder(softwareStatementBuilder, jwtDecoder);
-    }
-
     @BeforeEach
     void setUp() {
-        when(handler.handle(any(Context.class), any(Request.class)))
-                .thenReturn(Promises.newResultPromise(new Response(Status.OK)));
-        filter = new RegistrationRequestBuilderFilter(reqRequestSupplier, registrationRequestBuilder,
-                responseFactory);
+        when(handler.handle(any(Context.class), any(Request.class))).thenReturn(Promises.newResultPromise(new Response(Status.OK)));
+        filter = new RegistrationRequestBuilderFilter(reqRequestSupplier, TrustedDirectoryTestFactory.getTrustedDirectoryService(),
+                                                      jwtDecoder, responseFactory);
     }
 
     @AfterEach
@@ -174,9 +163,8 @@ class RegistrationRequestBuilderFilterTest {
     }
 
     /**
-     * Test which demonstrates the race condition that arises when sharing an instance of the builder across threads.
-     * The number of threads used by the test is parameterized, the test will pass when a single thread is used, and
-     * will fail when multiple are used. Running with a single thread is a sanity test to verify the test logic is sound.
+     * Test used to demonstrate that https://github.com/SecureApiGateway/SecureApiGateway/issues/1402 has been fixed.
+     * A race condition was identified in the filter due to a shared builder instance being used.
      */
     @ParameterizedTest
     @ValueSource(ints = {1, 16})
@@ -193,7 +181,7 @@ class RegistrationRequestBuilderFilterTest {
                                                 "software_statement", ssaJwt);
 
         final int tasks = 256;
-        final List<Callable<Void>> callables = new ArrayList<>(tasks);
+        final List<Callable<Void>> invokeFilterTasks = new ArrayList<>(tasks);
         for (int i = 0; i < tasks; i++) {
             final Map<String, Object> taskClaims = new HashMap<>(baseClaims);
             // Add some uniqueness to the registration request JWT
@@ -209,20 +197,22 @@ class RegistrationRequestBuilderFilterTest {
             request.getEntity().setString(registrationRequestJwt);
 
             // Create a task which invokes the filter and verifies the registrationRequest contains the unique data for the particular task
-            callables.add(() -> {
+            invokeFilterTasks.add(() -> {
                 final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, handler);
                 responsePromise.getOrThrow();
 
                 // Validate the RegistrationRequest created by the filter
-                final RegistrationRequest registrationRequest = ContextUtils.getRequiredAttributeAsType(context, RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
+                final RegistrationRequest registrationRequest = ContextUtils.getRequiredAttributeAsType(context,
+                        RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
+
                 assertThat(registrationRequest.getRedirectUris()).isEqualTo(redirectUris.stream().map(URI::create).toList());
                 assertThat(registrationRequest.getIssuer()).isEqualTo(issuer);
                 return null;
             });
         }
-        ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
+        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
         try {
-            final List<Future<Void>> futures = executorService.invokeAll(callables);
+            final List<Future<Void>> futures = executorService.invokeAll(invokeFilterTasks);
             for (Future<?> future : futures) {
                 future.get();
             }
