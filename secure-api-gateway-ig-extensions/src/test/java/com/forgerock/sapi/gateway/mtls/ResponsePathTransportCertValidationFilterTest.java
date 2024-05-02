@@ -27,6 +27,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
@@ -58,8 +59,10 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
@@ -68,13 +71,14 @@ import com.forgerock.sapi.gateway.jwks.ApiClientJwkSetService;
 import com.forgerock.sapi.gateway.jwks.mocks.MockJwkSetService;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.ParEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryOpenBankingTest;
+import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestHandler;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 import com.nimbusds.jose.JWSAlgorithm;
 
+@ExtendWith(MockitoExtension.class)
 public class ResponsePathTransportCertValidationFilterTest {
 
     private static final String testClientId = "client-id-1234";
@@ -103,7 +107,7 @@ public class ResponsePathTransportCertValidationFilterTest {
 
         private TransportCertValidator mockTransportCertValidator;
 
-        private final TrustedDirectoryOpenBankingTest testTrustedDirectory = new TrustedDirectoryOpenBankingTest();
+        private TrustedDirectory mockTrustedDirectory;
 
         @BeforeEach
         public void createValidFilter() {
@@ -115,6 +119,7 @@ public class ResponsePathTransportCertValidationFilterTest {
                 throw new CertificateException("invalid cert");
             });
             mockTransportCertValidator = mock(TransportCertValidator.class);
+            mockTrustedDirectory = mock(TrustedDirectory.class);
 
             certMandatoryTransportFilter = new ResponsePathTransportCertValidationFilter(mockTrustedDirectoryService,
                     mockApiClientJwkSetService, mockCertificateRetriever, mockTransportCertValidator, true);
@@ -217,9 +222,9 @@ public class ResponsePathTransportCertValidationFilterTest {
             final TestHandler nextHandler = createHandlerWithValidResponse();
 
             mockCertificateResolverValidCert();
-            mockTrustedDirectoryServiceReturndTestTrustedDirectory();
+            mockTrustedDirectoryServiceReturnsTestTrustedDirectory();
 
-            doReturn(Promises.newExceptionPromise(new FailedToLoadJWKException("boom"))).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
+            doReturn(Promises.newExceptionPromise(new FailedToLoadJWKException("boom"))).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(mockTrustedDirectory));
 
             final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
@@ -232,10 +237,10 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             final X509Certificate clientCert = mock(X509Certificate.class);
             doReturn(clientCert).when(mockCertificateRetriever).retrieveCertificate(any(), any());
-            mockTrustedDirectoryServiceReturndTestTrustedDirectory();
+            mockTrustedDirectoryServiceReturnsTestTrustedDirectory();
 
             final JWKSet clientJwks = new JWKSet();
-            doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
+            doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(mockTrustedDirectory));
             doThrow(new CertificateException("Cert has expired")).when(mockTransportCertValidator).validate(eq(clientCert), eq(clientJwks));
 
             final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
@@ -248,10 +253,10 @@ public class ResponsePathTransportCertValidationFilterTest {
             final TestHandler nextHandler = createHandlerWithValidResponse();
 
             mockCertificateResolverValidCert();
-            mockTrustedDirectoryServiceReturndTestTrustedDirectory();
+            mockTrustedDirectoryServiceReturnsTestTrustedDirectory();
 
             final JWKSet clientJwks = new JWKSet();
-            doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
+            doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(mockTrustedDirectory));
 
             final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.getOrThrow(1, TimeUnit.MILLISECONDS);
@@ -266,8 +271,8 @@ public class ResponsePathTransportCertValidationFilterTest {
             return mockCert;
         }
 
-        private void mockTrustedDirectoryServiceReturndTestTrustedDirectory() {
-            doReturn(testTrustedDirectory).when(mockTrustedDirectoryService).getTrustedDirectoryConfiguration(eq(testApiClient));
+        private void mockTrustedDirectoryServiceReturnsTestTrustedDirectory() {
+            doReturn(mockTrustedDirectory).when(mockTrustedDirectoryService).getTrustedDirectoryConfiguration(eq(testApiClient));
         }
 
         private void validateResponseIsUnauthorised(Response response, String expectedErrorMsg) {
@@ -305,7 +310,11 @@ public class ResponsePathTransportCertValidationFilterTest {
             final Heaplet heaplet = heapletClass.getDeclaredConstructor().newInstance();
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
 
-            heap.put("trustedDirectoryService", (TrustedDirectoryService) issuer -> new TrustedDirectoryOpenBankingTest());
+            heap.put("trustedDirectoryService", (TrustedDirectoryService) issuer -> {
+                final TrustedDirectory trustedDirectory = mock(TrustedDirectory.class);
+                when(trustedDirectory.softwareStatementHoldsJwksUri()).thenReturn(Boolean.TRUE);
+                return trustedDirectory;
+            });
             heap.put("jwkSetService", new MockJwkSetService(Map.of(testApiClient.getJwksUri(), clientJwks)));
             heap.put("transportCertValidator", new DefaultTransportCertValidator());
             heap.put("headerCertificateRetriever", new HeaderCertificateRetriever(certHeader));

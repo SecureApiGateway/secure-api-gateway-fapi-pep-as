@@ -81,12 +81,7 @@ public class RegistrationRequestFactory {
         registrationRequestClaims.putAll(overrideRegRequestClaims);
 
         String regRequestB64EncodedJwt = CryptoUtils.createEncodedJwtString(registrationRequestClaims, JWSAlgorithm.PS256);
-        TrustedDirectoryService trustedDirectoryService = new TrustedDirectoryService() {
-            @Override
-            public TrustedDirectory getTrustedDirectoryConfiguration(String issuer) {
-                return TrustedDirectoryTestFactory.getJwksBasedTrustedDirectory();
-            }
-        };
+        TrustedDirectoryService trustedDirectoryService = issuer -> TrustedDirectoryTestFactory.getEmbeddedJwksBasedDirectoryIssuer();
 
         SoftwareStatement.Builder ssBuilder = new SoftwareStatement.Builder(trustedDirectoryService, new JwtDecoder());
         RegistrationRequest.Builder builder = new RegistrationRequest.Builder(ssBuilder, new JwtDecoder());
