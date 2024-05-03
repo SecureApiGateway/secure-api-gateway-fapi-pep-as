@@ -37,6 +37,15 @@
           "comment": "Ensure authorize request object is FAPI compliant"
         },
         {
+          "name": "FixParParamsForAm",
+          "comment": "Workaround for an AM bug in the /par endpoint",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "FixParParamsForAm.groovy"
+          }
+        },
+        {
           "name": "ResponsePathTransportCertValidationFilter",
           "type": "ResponsePathTransportCertValidationFilter",
           "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
