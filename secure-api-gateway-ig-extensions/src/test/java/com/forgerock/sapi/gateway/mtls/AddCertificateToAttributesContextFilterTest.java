@@ -66,6 +66,11 @@ class AddCertificateToAttributesContextFilterTest {
         public X509Certificate retrieveCertificate(Context context, Request request) {
             return certificate;
         }
+
+        @Override
+        public boolean certificateExists(Context context, Request request) {
+            return true;
+        }
     }
 
     private static class ExceptionThrowingCertificateRetriever implements CertificateRetriever {
@@ -73,6 +78,11 @@ class AddCertificateToAttributesContextFilterTest {
         @Override
         public X509Certificate retrieveCertificate(Context context, Request request) throws CertificateException {
             throw new CertificateException("Cert is invalid");
+        }
+
+        @Override
+        public boolean certificateExists(Context context, Request request) {
+            return true;
         }
     }
 
