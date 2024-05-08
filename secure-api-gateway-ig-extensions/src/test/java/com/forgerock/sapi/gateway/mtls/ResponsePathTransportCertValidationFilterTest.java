@@ -46,6 +46,7 @@ import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.heap.HeapImpl;
+import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
@@ -57,13 +58,16 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.jwks.ApiClientJwkSetService;
 import com.forgerock.sapi.gateway.jwks.mocks.MockJwkSetService;
-import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.Heaplet;
+import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.ParEndpointTransportCertValidationFilterHeaplet;
+import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryOpenBankingTest;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 import com.forgerock.sapi.gateway.util.CryptoUtils;
@@ -89,7 +93,7 @@ public class ResponsePathTransportCertValidationFilterTest {
     @Nested
     class TransportCertValidationTests {
 
-        private ResponsePathTransportCertValidationFilter transportCertValidationFilter;
+        private ResponsePathTransportCertValidationFilter certMandatoryTransportFilter;
 
         private TrustedDirectoryService mockTrustedDirectoryService;
 
@@ -112,16 +116,14 @@ public class ResponsePathTransportCertValidationFilterTest {
             });
             mockTransportCertValidator = mock(TransportCertValidator.class);
 
-            transportCertValidationFilter = new ResponsePathTransportCertValidationFilter(mockTrustedDirectoryService,
-                    mockApiClientJwkSetService, mockCertificateRetriever, mockTransportCertValidator);
-
-
+            certMandatoryTransportFilter = new ResponsePathTransportCertValidationFilter(mockTrustedDirectoryService,
+                    mockApiClientJwkSetService, mockCertificateRetriever, mockTransportCertValidator, true);
         }
 
         @Test
-        void failsWhenCertNotFound() throws Exception {
+        void failsWhenCertNotFoundAndCertIsMandatory() throws Exception {
             final TestSuccessResponseHandler handler = new TestSuccessResponseHandler();
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), handler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), handler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
 
             validateResponseIsUnauthorised(response, "invalid cert");
@@ -129,11 +131,27 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
+        void skipsValidationWhenCertNotFoundAndCertNotMandatory() throws Exception {
+            final TestSuccessResponseHandler handler = new TestSuccessResponseHandler();
+            ResponsePathTransportCertValidationFilter filter = new ResponsePathTransportCertValidationFilter(
+                    mockTrustedDirectoryService, mockApiClientJwkSetService, mockCertificateRetriever,
+                    mockTransportCertValidator, false);
+
+            doReturn(false).when(mockCertificateRetriever).certificateExists(any(), any());
+
+            final Promise<Response, NeverThrowsException> responsePromise = filter.filter(createContext(), new Request(), handler);
+            final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
+
+            assertEquals(Status.OK, response.getStatus());
+            assertTrue(handler.hasBeenInteractedWith(), "next handler must have been called");
+        }
+
+        @Test
         void errorResponseFromNextHandlerIsPassedOn() throws Exception {
             // next handler in chain returns forbidden response
             final TestHandler nextHandler = new TestHandler(Handlers.forbiddenHandler());
             mockCertificateResolverValidCert();
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             assertEquals(Status.FORBIDDEN, response.getStatus());
         }
@@ -148,7 +166,7 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             mockCertificateResolverValidCert();
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
         }
@@ -165,7 +183,7 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             mockCertificateResolverValidCert();
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
         }
@@ -177,7 +195,7 @@ public class ResponsePathTransportCertValidationFilterTest {
             mockCertificateResolverValidCert();
 
             final AttributesContext emptyContext = new AttributesContext(new RootContext());
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(emptyContext, new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(emptyContext, new Request(), nextHandler);
 
             final ExecutionException executionException = assertThrows(ExecutionException.class, () -> responsePromise.get(1, TimeUnit.MILLISECONDS));
             assertEquals("Required attribute: \"apiClient\" not found in context", executionException.getCause().getMessage());
@@ -189,7 +207,7 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             mockCertificateResolverValidCert();
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
         }
@@ -203,7 +221,7 @@ public class ResponsePathTransportCertValidationFilterTest {
 
             doReturn(Promises.newExceptionPromise(new FailedToLoadJWKException("boom"))).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
         }
@@ -220,7 +238,7 @@ public class ResponsePathTransportCertValidationFilterTest {
             doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
             doThrow(new CertificateException("Cert has expired")).when(mockTransportCertValidator).validate(eq(clientCert), eq(clientJwks));
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
             validateResponseIsUnauthorised(response, "Cert has expired");
         }
@@ -235,7 +253,7 @@ public class ResponsePathTransportCertValidationFilterTest {
             final JWKSet clientJwks = new JWKSet();
             doReturn(Promises.newResultPromise(clientJwks)).when(mockApiClientJwkSetService).getJwkSet(eq(testApiClient), eq(testTrustedDirectory));
 
-            final Promise<Response, NeverThrowsException> responsePromise = transportCertValidationFilter.filter(createContext(), new Request(), nextHandler);
+            final Promise<Response, NeverThrowsException> responsePromise = certMandatoryTransportFilter.filter(createContext(), new Request(), nextHandler);
             final Response response = responsePromise.getOrThrow(1, TimeUnit.MILLISECONDS);
 
             assertEquals(Status.OK, response.getStatus());
@@ -273,14 +291,18 @@ public class ResponsePathTransportCertValidationFilterTest {
     @Nested
     class HeapletTests {
 
-        @Test
-        public void testFilterCreatedFromHeaplet() throws Exception {
+        @ParameterizedTest
+        @ValueSource(classes = {
+                TokenEndpointTransportCertValidationFilterHeaplet.class,
+                ParEndpointTransportCertValidationFilterHeaplet.class
+        })
+        public void testCertIsValidated(Class<? extends Heaplet> heapletClass) throws Exception {
             final Pair<X509Certificate, JWKSet> certAndJwks = CryptoUtils.generateTestTransportCertAndJwks("tls");
             final X509Certificate clientCert = certAndJwks.getFirst();
             final JWKSet clientJwks = certAndJwks.getSecond();
             final String certHeader = "ssl-client-cert";
 
-            final Heaplet transportCertValidationFilterHeaplet = new Heaplet();
+            final Heaplet heaplet = heapletClass.getDeclaredConstructor().newInstance();
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
 
             heap.put("trustedDirectoryService", (TrustedDirectoryService) issuer -> new TrustedDirectoryOpenBankingTest());
@@ -292,7 +314,7 @@ public class ResponsePathTransportCertValidationFilterTest {
                                                  field("jwkSetService", "jwkSetService"),
                                                  field("transportCertValidator", "transportCertValidator"),
                                                  field("certificateRetriever", "headerCertificateRetriever")));
-            final Filter filter = (Filter) transportCertValidationFilterHeaplet.create(Name.of("test"), config, heap);
+            final Filter filter = (Filter) heaplet.create(Name.of("test"), config, heap);
 
             final TestHandler nextHandler = createHandlerWithValidResponse();
             final Request request = HeaderCertificateRetrieverTest.createRequestWithCertHeader(clientCert, certHeader);

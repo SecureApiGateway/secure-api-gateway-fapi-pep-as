@@ -50,7 +50,7 @@ public class HeaderCertificateRetriever implements CertificateRetriever {
 
     @Override
     public X509Certificate retrieveCertificate(Context context, Request request) throws CertificateException {
-        final String headerValue = request.getHeaders().getFirst(certificateHeaderName);
+        final String headerValue = retrieveCertificateHeader(request);
         if (headerValue == null) {
             logger.debug("No client cert could be found for header: {}", certificateHeaderName);
             throw new CertificateException("Client mTLS certificate not provided");
@@ -65,6 +65,15 @@ public class HeaderCertificateRetriever implements CertificateRetriever {
         }
         logger.debug("Found client cert: {}", certPem);
         return parseCertificate(certPem);
+    }
+
+    private String retrieveCertificateHeader(Request request) {
+        return request.getHeaders().getFirst(certificateHeaderName);
+    }
+
+    @Override
+    public boolean certificateExists(Context context, Request request) {
+        return retrieveCertificateHeader(request) != null;
     }
 
     static X509Certificate parseCertificate(String cert) throws CertificateException {

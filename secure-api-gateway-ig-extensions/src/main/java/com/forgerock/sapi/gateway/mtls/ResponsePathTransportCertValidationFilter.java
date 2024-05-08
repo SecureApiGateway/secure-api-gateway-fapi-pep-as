@@ -64,8 +64,6 @@ import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
  * <p>
  * If the validation is successful the Authorisation Server Response is passed on along the filter chain. Otherwise,
  * an error response is returned with 400 BAD_REQUEST status.
- * <p>
- * See {@link Heaplet} for filter configuration options.
  */
 public class ResponsePathTransportCertValidationFilter implements Filter {
 
@@ -75,6 +73,13 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      * Retrieves the client's mTLS certificate
      */
     private final CertificateRetriever certificateRetriever;
+
+    /**
+     * Controls whether the mTLS certificate is required for all requests processed by this filter.
+     * If it is not required, then validation is skipped if it is not presented, with the request passing along
+     * the filter chain.
+     */
+    private final boolean certificateIsMandatory;
 
     /**
      * Service which retrieves {@link TrustedDirectory} configuration
@@ -92,9 +97,10 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
     private final TransportCertValidator transportCertValidator;
 
     public ResponsePathTransportCertValidationFilter(TrustedDirectoryService trustedDirectoryService,
-                                                      ApiClientJwkSetService apiClientJwkSetService,
-                                                      CertificateRetriever certificateRetriever,
-                                                      TransportCertValidator transportCertValidator) {
+                                                     ApiClientJwkSetService apiClientJwkSetService,
+                                                     CertificateRetriever certificateRetriever,
+                                                     TransportCertValidator transportCertValidator,
+                                                     boolean certificateIsMandatory) {
         Reject.ifNull(trustedDirectoryService, "trustedDirectoryService must be provided");
         Reject.ifNull(apiClientJwkSetService, "apiClientJwkSetService must be provided");
         Reject.ifNull(certificateRetriever, "certificateRetriever must be provided");
@@ -103,10 +109,16 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
         this.apiClientJwkSetService = apiClientJwkSetService;
         this.certificateRetriever = certificateRetriever;
         this.transportCertValidator = transportCertValidator;
+        this.certificateIsMandatory = certificateIsMandatory;
     }
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
+        if (!certificateIsMandatory && !certificateRetriever.certificateExists(context, request)) {
+            // Skip validation for the case where the cert does not exist and it is optional
+            logger.debug("Skipping cert validation, cert not found and validation is optional");
+            return next.handle(context, request);
+        }
         final X509Certificate clientCertificate;
         try {
              clientCertificate = certificateRetriever.retrieveCertificate(context, request);
@@ -169,7 +181,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
     }
 
     /**
-     * Heaplet used to create {@link ResponsePathTransportCertValidationFilter} objects
+     * Heaplet used to create TokenEndpointTransportCertValidationFilter or ParEndpointTransportCertValidationFilter objects
      * <p>
      * Mandatory fields:
      * <p>
@@ -181,8 +193,8 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      * Example config:
      * <pre>{@code
      * {
-     *           "name": "ResponsePathTransportCertValidationFilter",
-     *           "type": "ResponsePathTransportCertValidationFilter",
+     *           "name": "TokenEndpointTransportCertValidationFilter or ParEndpointTransportCertValidationFilter",
+     *           "type": "TokenEndpointTransportCertValidationFilter or ParEndpointTransportCertValidationFilter",
      *           "comment": "Validate the client's MTLS transport cert",
      *           "config": {
      *             "certificateRetriever": "HeaderCertificateRetriever",
@@ -193,7 +205,13 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      * }
      * }</pre>
      */
-    public static class Heaplet extends GenericHeaplet {
+    private static class ResponsePathTransportCertValidationFilterHeaplet extends GenericHeaplet {
+
+        private final boolean certificateIsMandatory;
+
+        public ResponsePathTransportCertValidationFilterHeaplet(boolean certificateIsMandatory) {
+            this.certificateIsMandatory = certificateIsMandatory;
+        }
 
         @Override
         public Object create() throws HeapException {
@@ -207,11 +225,26 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
                     .as(requiredHeapObject(heap, TransportCertValidator.class));
 
             final CertificateRetriever certificateRetriever = config.get("certificateRetriever")
-                                                                    .as(requiredHeapObject(heap, CertificateRetriever.class));
+                    .as(requiredHeapObject(heap, CertificateRetriever.class));
 
             return new ResponsePathTransportCertValidationFilter(trustedDirectoryService, apiClientJwkSetService,
-                                                                  certificateRetriever, transportCertValidator);
+                    certificateRetriever, transportCertValidator, certificateIsMandatory);
 
+        }
+    }
+
+
+    public static class TokenEndpointTransportCertValidationFilterHeaplet extends ResponsePathTransportCertValidationFilterHeaplet {
+        public TokenEndpointTransportCertValidationFilterHeaplet() {
+            // Cert must always be passed to the token endpoint as it is always required for sender constrained access tokens
+            super(true);
+        }
+    }
+
+    public static class ParEndpointTransportCertValidationFilterHeaplet extends ResponsePathTransportCertValidationFilterHeaplet {
+        public ParEndpointTransportCertValidationFilterHeaplet() {
+            // Cert is optional for PAR, it is only required when doing tls_client_auth
+            super(false);
         }
     }
 }

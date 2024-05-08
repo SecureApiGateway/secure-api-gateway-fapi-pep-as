@@ -46,9 +46,9 @@
           }
         },
         {
-          "name": "ResponsePathTransportCertValidationFilter",
-          "type": "ResponsePathTransportCertValidationFilter",
-          "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
+          "name": "ParEndpointTransportCertValidationFilter",
+          "type": "ParEndpointTransportCertValidationFilter",
+          "comment": "If the client provides a certificate for authentication, verify that it is valid and is mapped to their SSA",
           "config": {
             "trustedDirectoryService": "TrustedDirectoriesService",
             "jwkSetService": "JwkSetService",
