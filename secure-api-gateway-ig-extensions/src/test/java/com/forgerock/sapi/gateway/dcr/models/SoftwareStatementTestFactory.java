@@ -56,7 +56,7 @@ public class SoftwareStatementTestFactory {
     };
 
     public static Map<String, Object> getValidJwksBasedSsaClaims(Map<String, Object> overrideSsaClaims) {
-        TrustedDirectory directory = TrustedDirectoryTestFactory.getJwksBasedTrustedDirectory();
+        TrustedDirectory directory = TrustedDirectoryTestFactory.getEmbeddedJwksBasedDirectoryIssuer();
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("iss", directory.getIssuer());

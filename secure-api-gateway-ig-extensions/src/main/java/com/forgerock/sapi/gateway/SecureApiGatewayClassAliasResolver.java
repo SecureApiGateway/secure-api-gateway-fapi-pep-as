@@ -55,6 +55,8 @@ import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter;
+import com.forgerock.sapi.gateway.trusteddirectories.StaticTrustedDirectoryService;
+import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryHeaplet;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 
 public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
@@ -65,7 +67,6 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("CaffeineCachingJwkSetService", CaffeineCachingJwkSetService.class);
         ALIASES.put("RestJwkSetService", RestJwkSetService.class);
         ALIASES.put("RsaJwtSignatureValidator", RsaJwtSignatureValidator.class);
-        ALIASES.put("TrustedDirectoriesService", TrustedDirectoryService.class);
         ALIASES.put("FetchApiClientFilter", FetchApiClientFilter.class);
         ALIASES.put("FetchTrustedDirectoryFilter", FetchTrustedDirectoryFilter.class);
         ALIASES.put("FetchApiClientJwksFilter", FetchApiClientJwksFilter.class);
@@ -97,6 +98,8 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("PathParamClientIdRequestParameterLocator", PathParamClientIdRequestParameterLocator.class);
         ALIASES.put("QueryParamClientIdRequestParameterLocator", QueryParamClientIdRequestParameterLocator.class);
         ALIASES.put("TokenEndpointResponseFetchApiClientFilter", TokenEndpointResponseFetchApiClientFilter.class);
+        ALIASES.put("TrustedDirectory", TrustedDirectoryHeaplet.class);
+        ALIASES.put("StaticTrustedDirectoryService", StaticTrustedDirectoryService.class);
     }
 
     /**
