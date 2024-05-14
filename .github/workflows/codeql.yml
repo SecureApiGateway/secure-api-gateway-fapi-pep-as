@@ -1,4 +1,4 @@
-name: Merge - Build and Deploy
+name: Merge - Perform Code Scan
 on:
   push:
     branches:
