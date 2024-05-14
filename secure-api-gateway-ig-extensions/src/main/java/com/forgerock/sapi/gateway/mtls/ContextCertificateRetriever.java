@@ -19,15 +19,17 @@ import static com.forgerock.sapi.gateway.mtls.AddCertificateToAttributesContextF
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Optional;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
-import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.Reject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * CertificateRetriever implementation which retrieves the certificate from the {@link org.forgerock.services.context.AttributesContext}.
@@ -47,12 +49,20 @@ public class ContextCertificateRetriever implements CertificateRetriever {
 
     @Override
     public X509Certificate retrieveCertificate(Context context, Request request) throws CertificateException {
-        final X509Certificate certificate = (X509Certificate) context.asContext(AttributesContext.class).getAttributes().get(certificateAttribute);
-        if (certificate == null) {
+        final Optional<X509Certificate> certificate = getCertificateAttribute(context);
+        return certificate.orElseThrow(() -> {
             logger.debug("No client cert could be found in attribute: {}", certificateAttribute);
-            throw new CertificateException("Client mTLS certificate not provided");
-        }
-        return certificate;
+            return new CertificateException("Client mTLS certificate not provided");
+        });
+    }
+
+    private Optional<X509Certificate> getCertificateAttribute(Context context) {
+        return ContextUtils.getAttributeAsType(context, certificateAttribute, X509Certificate.class);
+    }
+
+    @Override
+    public boolean certificateExists(Context context, Request request) {
+        return getCertificateAttribute(context).isPresent();
     }
 
     /**

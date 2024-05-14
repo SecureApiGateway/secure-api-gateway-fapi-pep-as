@@ -37,4 +37,15 @@ public interface CertificateRetriever {
      */
     X509Certificate retrieveCertificate(Context context, Request request) throws CertificateException;
 
+    /**
+     * Checks whether the client's mTLS certificate can be located. This can be used in situations where the certificate
+     * is optional, allowing callers to peek to see if it exists before calling retrieveCertificate method which will
+     * throw an exception if the certificate cannot be retrieved.
+     *
+     * @param context Context - the filter context
+     * @param request Request - the HTTP request
+     * @return whether a client's mTLS certificate can be located for the given context / request
+     */
+    boolean certificateExists(Context context, Request request);
+
 }

@@ -18,7 +18,8 @@ package com.forgerock.sapi.gateway.mtls;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -45,6 +46,7 @@ import com.forgerock.sapi.gateway.util.CryptoUtils;
 class HeaderCertificateRetrieverTest {
 
     private static final String TEST_CERT_HEADER_NAME = "clientCertHeader";
+    private static final RootContext EMPTY_CONTEXT = new RootContext("test");
 
     public static X509Certificate createValidCert() {
         return CryptoUtils.generateX509Cert(CryptoUtils.generateRsaKeyPair(), "CN=blah");
@@ -69,7 +71,9 @@ class HeaderCertificateRetrieverTest {
     private void testRetrievesClientCert(HeaderCertificateRetriever headerCertificateRetriever, String headerName) throws CertificateException {
         final X509Certificate clientCert = createValidCert();
         final Request request = createRequestWithCertHeader(clientCert, headerName);
-        final X509Certificate actualCert = headerCertificateRetriever.retrieveCertificate(new RootContext("test"), request);
+
+        assertThat(headerCertificateRetriever.certificateExists(EMPTY_CONTEXT, request)).isTrue();
+        final X509Certificate actualCert = headerCertificateRetriever.retrieveCertificate(EMPTY_CONTEXT, request);
         assertEquals(clientCert, actualCert);
     }
 
@@ -77,8 +81,10 @@ class HeaderCertificateRetrieverTest {
     void failsToRetrievesCertIfMissingHeader() {
         final HeaderCertificateRetriever headerCertificateRetriever = new HeaderCertificateRetriever(TEST_CERT_HEADER_NAME);
         final Request requestWithNoHeader = new Request();
+
+        assertThat(headerCertificateRetriever.certificateExists(EMPTY_CONTEXT, requestWithNoHeader)).isFalse();
         final CertificateException certificateException = assertThrows(CertificateException.class,
-                () -> headerCertificateRetriever.retrieveCertificate(new RootContext("test"), requestWithNoHeader));
+                () -> headerCertificateRetriever.retrieveCertificate(EMPTY_CONTEXT, requestWithNoHeader));
 
         assertEquals("Client mTLS certificate not provided", certificateException.getMessage());
     }
@@ -86,11 +92,13 @@ class HeaderCertificateRetrieverTest {
     @Test
     void failsToRetrievesCertIfHeaderNotValidUrlEncodedString() {
         final HeaderCertificateRetriever headerCertificateRetriever = new HeaderCertificateRetriever(TEST_CERT_HEADER_NAME);
-        final Request requestWithNoHeader = new Request();
+        final Request requestWithInvalidCertFormat = new Request();
         final String headerValueInvalidUrlEncoding = "%-128blah blah blah";
-        requestWithNoHeader.addHeaders(new GenericHeader(TEST_CERT_HEADER_NAME, headerValueInvalidUrlEncoding));
+        requestWithInvalidCertFormat.addHeaders(new GenericHeader(TEST_CERT_HEADER_NAME, headerValueInvalidUrlEncoding));
+
+        assertThat(headerCertificateRetriever.certificateExists(EMPTY_CONTEXT, requestWithInvalidCertFormat)).isTrue();
         final CertificateException certificateException = assertThrows(CertificateException.class,
-                () -> headerCertificateRetriever.retrieveCertificate(new RootContext("test"), requestWithNoHeader));
+                () -> headerCertificateRetriever.retrieveCertificate(EMPTY_CONTEXT, requestWithInvalidCertFormat));
 
         assertEquals("Failed to URL decode certificate header value. Expect certificate in PEM encoded then URL encoded format",
                 certificateException.getMessage());
@@ -99,11 +107,13 @@ class HeaderCertificateRetrieverTest {
     @Test
     void failsToRetrievesCertIfHeaderNotValidPemEncodedString() {
         final HeaderCertificateRetriever headerCertificateRetriever = new HeaderCertificateRetriever(TEST_CERT_HEADER_NAME);
-        final Request requestWithNoHeader = new Request();
+        final Request requestWithInvalidCertFormat = new Request();
         final String headerValueInvalidPem = URLEncoder.encode("blah blah blah", Charset.defaultCharset());
-        requestWithNoHeader.addHeaders(new GenericHeader(TEST_CERT_HEADER_NAME, headerValueInvalidPem));
+        requestWithInvalidCertFormat.addHeaders(new GenericHeader(TEST_CERT_HEADER_NAME, headerValueInvalidPem));
+
+        assertThat(headerCertificateRetriever.certificateExists(EMPTY_CONTEXT, requestWithInvalidCertFormat)).isTrue();
         final CertificateException certificateException = assertThrows(CertificateException.class,
-                () -> headerCertificateRetriever.retrieveCertificate(new RootContext("test"), requestWithNoHeader));
+                () -> headerCertificateRetriever.retrieveCertificate(EMPTY_CONTEXT, requestWithInvalidCertFormat));
 
         assertEquals("Could not parse certificate: java.io.IOException: Empty input", certificateException.getMessage());
     }

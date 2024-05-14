@@ -120,7 +120,7 @@
             "name": "FetchTrustedDirectoryFilter",
             "type": "FetchTrustedDirectoryFilter",
             "config": {
-              "trustedDirectoryService": "TrustedDirectoriesService"
+              "trustedDirectoryService": "TrustedDirectoryService"
             }
           },
           {
@@ -322,12 +322,43 @@
       }
     },
     {
-      "name": "TrustedDirectoriesService",
-      "type": "TrustedDirectoriesService",
+      "name": "TrustedDirectoryService",
+      "type": "StaticTrustedDirectoryService",
       "comment": "Used to obtain meta information about a trusted directory by look up using the 'iss' field value",
       "config": {
-        "enableIGTestTrustedDirectory": "${security.enableTestTrustedDirectory}",
-        "SecureApiGatewayJwksUri": "https://&{ig.fqdn}/jwkms/testdirectory/jwks"
+        "trustedDirectories": [
+          {
+            "name": "Open Banking Test Directory",
+            "type": "TrustedDirectory",
+            "config": {
+              "directoryJwksUri": "https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks",
+              "issuer": "OpenBanking Ltd",
+              "softwareStatementJwksUriClaimName": "software_jwks_endpoint",
+              "softwareStatementOrgIdClaimName": "org_id",
+              "softwareStatementOrgNameClaimName": "org_name",
+              "softwareStatementSoftwareIdClaimName": "software_id",
+              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
+              "softwareStatementRolesClaimName": "software_roles",
+              "softwareStatementClientNameClaimName": "software_client_name"
+            }
+          },
+          {
+            "name": "Secure API Gateway Test Directory",
+            "type": "TrustedDirectory",
+            "config": {
+              "directoryJwksUri": "https://&{ig.fqdn}/jwkms/testdirectory/jwks",
+              "issuer": "test-publisher",
+              "softwareStatementJwksClaimName": "software_jwks",
+              "softwareStatementOrgIdClaimName": "org_id",
+              "softwareStatementOrgNameClaimName": "org_name",
+              "softwareStatementSoftwareIdClaimName": "software_id",
+              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
+              "softwareStatementRolesClaimName": "software_roles",
+              "softwareStatementClientNameClaimName": "software_client_name",
+              "disabled": "${!security.enableTestTrustedDirectory}"
+            }
+          }
+        ]
       }
     },
     {

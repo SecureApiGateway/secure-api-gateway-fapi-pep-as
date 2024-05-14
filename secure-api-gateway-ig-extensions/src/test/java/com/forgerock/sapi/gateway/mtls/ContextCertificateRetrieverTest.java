@@ -43,6 +43,8 @@ import com.forgerock.sapi.gateway.mtls.ContextCertificateRetriever.Heaplet;
 
 class ContextCertificateRetrieverTest {
 
+    private static final Request EMPTY_REQUEST = new Request();
+
     @Test
     void shouldFetchCertFromContext() throws CertificateException {
         final String certificateAttribute = DEFAULT_CERTIFICATE_ATTRIBUTE;
@@ -56,7 +58,8 @@ class ContextCertificateRetrieverTest {
         attributesContext.getAttributes().put(certificateAttribute, certificate);
         final TransactionIdContext context = new TransactionIdContext(attributesContext, new TransactionId("123"));
 
-        assertThat(certificateRetriever.retrieveCertificate(context, new Request())).isSameAs(certificate);
+        assertThat(certificateRetriever.certificateExists(context, EMPTY_REQUEST)).isTrue();
+        assertThat(certificateRetriever.retrieveCertificate(context, EMPTY_REQUEST)).isSameAs(certificate);
     }
 
     @Test
@@ -67,7 +70,8 @@ class ContextCertificateRetrieverTest {
 
     private static void testNoCertFound(ContextCertificateRetriever certificateRetriever) {
         final TransactionIdContext context = new TransactionIdContext(new AttributesContext(new RootContext()), new TransactionId("123"));
-        assertThrows(CertificateException.class, () -> certificateRetriever.retrieveCertificate(context, new Request()));
+        assertThat(certificateRetriever.certificateExists(context, EMPTY_REQUEST)).isFalse();
+        assertThrows(CertificateException.class, () -> certificateRetriever.retrieveCertificate(context, EMPTY_REQUEST));
     }
 
     @Nested

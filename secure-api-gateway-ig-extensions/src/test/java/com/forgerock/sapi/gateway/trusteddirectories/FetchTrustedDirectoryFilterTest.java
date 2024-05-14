@@ -23,8 +23,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.net.URI;
-
 import org.forgerock.http.protocol.Request;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.jws.JwsHeader;
@@ -36,7 +34,6 @@ import org.forgerock.openig.heap.Name;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -48,13 +45,7 @@ import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
 public class FetchTrustedDirectoryFilterTest {
 
-    private TrustedDirectoryService trustedDirectoryService;
-
-    @BeforeEach
-    void setUp() {
-        URI secureApiGatewayJwksUri = URI.create("https://test-bank.com");
-        trustedDirectoryService = new TrustedDirectoryServiceStatic(true, secureApiGatewayJwksUri);
-    }
+    private final TrustedDirectoryService trustedDirectoryService = TrustedDirectoryTestFactory.getTrustedDirectoryService();
 
     public static ApiClient createApiClient(String issuer) {
         final JwtClaimsSet ssaClaims = new JwtClaimsSet();
@@ -73,7 +64,7 @@ public class FetchTrustedDirectoryFilterTest {
     private void testFetchingOpenBankingTestIssuer(FetchTrustedDirectoryFilter filter) {
         final Context rootContext = new RootContext("root");
         final AttributesContext attributesContext = new AttributesContext(rootContext);
-        final ApiClient apiClient = createApiClient(TrustedDirectoryOpenBankingTest.issuer);
+        final ApiClient apiClient = createApiClient(TrustedDirectoryTestFactory.JWKS_URI_BASED_DIRECTORY_ISSUER);
         attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
 
         callFilterAndValidateSuccessResponse(filter, attributesContext);
@@ -126,7 +117,7 @@ public class FetchTrustedDirectoryFilterTest {
         filter.filter(context, new Request(), successResponseHandler);
 
         final TrustedDirectory trustedDirectory = FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext(context);
-        assertEquals(TrustedDirectoryOpenBankingTest.issuer, trustedDirectory.getIssuer());
+        assertEquals(TrustedDirectoryTestFactory.JWKS_URI_BASED_DIRECTORY_ISSUER, trustedDirectory.getIssuer());
         assertTrue(successResponseHandler.hasBeenInteractedWith(), "Expected filter to pass request on to the successResponseHandler");
     }
 }
