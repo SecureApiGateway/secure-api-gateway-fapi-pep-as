@@ -37,11 +37,20 @@
           "comment": "Ensure authorize request object is FAPI compliant"
         },
         {
-          "name": "ResponsePathTransportCertValidationFilter",
-          "type": "ResponsePathTransportCertValidationFilter",
-          "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
+          "name": "FixParParamsForAm",
+          "comment": "Workaround for an AM bug in the /par endpoint",
+          "type": "ScriptableFilter",
           "config": {
-            "trustedDirectoryService": "TrustedDirectoriesService",
+            "type": "application/x-groovy",
+            "file": "FixParParamsForAm.groovy"
+          }
+        },
+        {
+          "name": "ParEndpointTransportCertValidationFilter",
+          "type": "ParEndpointTransportCertValidationFilter",
+          "comment": "If the client provides a certificate for authentication, verify that it is valid and is mapped to their SSA",
+          "config": {
+            "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
             "certificateRetriever": "HeaderCertificateRetriever",
             "transportCertValidator": "TransportCertValidator"

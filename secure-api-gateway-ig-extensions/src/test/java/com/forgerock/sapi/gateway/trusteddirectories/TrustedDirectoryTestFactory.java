@@ -15,16 +15,20 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
+import static java.util.stream.Collectors.toMap;
+
 import java.net.URI;
+import java.util.List;
+import java.util.function.Function;
 
 public class TrustedDirectoryTestFactory {
 
-    private static URI jwks_uri = URI.create("https://jwks_uri.com");
+    private static final URI DIRECTORY_JWKS_URI = URI.create("https://jwks_uri.com");
 
-    public static String JWKS_BASED_DIRECTORY_ISSUER = "JwksBasedTrustedDirectory";
-    public static String JWKS_URI_BASED_DIRECTORY_ISSUER = "JwksUriBasedTrustedDirectory";
+    public static final String EMBEDDED_JWKS_BASED_DIRECTORY_ISSUER = "EmbeddedJwksBasedTrustedDirectory";
+    public static final String JWKS_URI_BASED_DIRECTORY_ISSUER = "JwksUriBasedTrustedDirectory";
 
-    private static TrustedDirectory jwksUriBasedTrustedDirectory = new TrustedDirectory() {
+    private static final TrustedDirectory jwksUriBasedTrustedDirectory = new TrustedDirectory() {
         @Override
         public String getIssuer() {
             return JWKS_URI_BASED_DIRECTORY_ISSUER;
@@ -32,7 +36,7 @@ public class TrustedDirectoryTestFactory {
 
         @Override
         public URI getDirectoryJwksUri() {
-            return jwks_uri;
+            return DIRECTORY_JWKS_URI;
         }
 
         @Override
@@ -79,17 +83,22 @@ public class TrustedDirectoryTestFactory {
         public String getSoftwareStatementClientNameClaimName() {
             return "software_client_name";
         }
+
+        @Override
+        public boolean isDisabled() {
+            return false;
+        }
     };
 
-    private static TrustedDirectory jwksBasedTrustedDirectory = new TrustedDirectory() {
+    private static final TrustedDirectory jwksBasedTrustedDirectory = new TrustedDirectory() {
         @Override
         public String getIssuer() {
-            return JWKS_BASED_DIRECTORY_ISSUER;
+            return EMBEDDED_JWKS_BASED_DIRECTORY_ISSUER;
         }
 
         @Override
         public URI getDirectoryJwksUri() {
-            return jwks_uri;
+            return DIRECTORY_JWKS_URI;
         }
 
         @Override
@@ -136,28 +145,24 @@ public class TrustedDirectoryTestFactory {
         public String getSoftwareStatementClientNameClaimName() {
             return "software_client_name";
         }
+
+        @Override
+        public boolean isDisabled() {
+            return false;
+        }
     };
 
     public static TrustedDirectory getJwksUriBasedTrustedDirectory() {
         return jwksUriBasedTrustedDirectory;
     }
 
-    public static TrustedDirectory getJwksBasedTrustedDirectory() {
+    public static TrustedDirectory getEmbeddedJwksBasedDirectoryIssuer() {
         return jwksBasedTrustedDirectory;
     }
 
     public static TrustedDirectoryService getTrustedDirectoryService() {
-        return new TrustedDirectoryService() {
-            @Override
-            public TrustedDirectory getTrustedDirectoryConfiguration(String issuer) {
-                if (issuer.equals(jwksBasedTrustedDirectory.getIssuer())) {
-                    return getJwksBasedTrustedDirectory();
-                } else if (issuer.equals(jwksUriBasedTrustedDirectory.getIssuer())) {
-                    return getJwksUriBasedTrustedDirectory();
-                } else {
-                    return null;
-                }
-            }
-        };
+        final List<TrustedDirectory> directories = List.of(getJwksUriBasedTrustedDirectory(), getEmbeddedJwksBasedDirectoryIssuer());
+        return new StaticTrustedDirectoryService(directories.stream()
+                                                            .collect(toMap(TrustedDirectory::getIssuer, Function.identity())));
     }
 }

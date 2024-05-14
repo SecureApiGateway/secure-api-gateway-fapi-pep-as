@@ -29,6 +29,12 @@ import java.net.URI;
  *     About Dynamic Client Registration</a>
  */
 public interface TrustedDirectory {
+
+    /**
+     * @return whether the directory can be used or not.
+     */
+    boolean isDisabled();
+
     /**
      * @return the value that can be expected to be found in the issuer field of Software Statements issued
      * by the Trusted Directory
