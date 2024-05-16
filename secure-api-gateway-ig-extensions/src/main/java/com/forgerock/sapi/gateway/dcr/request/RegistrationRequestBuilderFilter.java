@@ -44,6 +44,7 @@ import com.forgerock.sapi.gateway.dcr.common.ResponseFactory;
 import com.forgerock.sapi.gateway.dcr.common.exceptions.DCRException;
 import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
 import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
+import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement.Builder;
 import com.forgerock.sapi.gateway.jws.JwtDecoder;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 
@@ -87,42 +88,55 @@ public class RegistrationRequestBuilderFilter implements Filter {
             return next.handle(context, request);
         }
         log.debug("Running RegistrationRequestEntityValidatorFilter");
-        try {
-            final String b64EncodedRegistrationRequestEntity = this.registrationEntitySupplier.apply(context, request);
-            final RegistrationRequest registrationRequest = new RegistrationRequest.Builder(
-                    new SoftwareStatement.Builder(trustedDirectoryService, jwtDecoder), jwtDecoder)
-                    .build(b64EncodedRegistrationRequestEntity);
-            context.asContext(AttributesContext.class).getAttributes().put(RegistrationRequest.REGISTRATION_REQUEST_KEY,
-                    registrationRequest);
-            log.info("Created context attribute " + RegistrationRequest.REGISTRATION_REQUEST_KEY);
-            return next.handle(context, request);
-        } catch (DCRException exception){
-            Response response = responseFactory.getResponse(RESPONSE_MEDIA_TYPES, Status.BAD_REQUEST,
-                    exception.getErrorFields());
-            log.info("Failed to understand the Registration Request body: {}", exception.getMessage(), exception);
-            return Promises.newResultPromise(response);
-        } catch (RuntimeException rte){
-            log.warn("Caught runtime exception while applying RegistrationRequestEntityValidatorFilter", rte);
-            Response internServerError = responseFactory.getInternalServerErrorResponse(request, RESPONSE_MEDIA_TYPES);
-            return Promises.newResultPromise(internServerError);
-        }
+
+        return this.registrationEntitySupplier.apply(context, request)
+                                              .thenAsync(registrationRequestJwt -> {
+            try {
+                final Builder softwareStatementBuilder = new Builder(trustedDirectoryService, jwtDecoder);
+                final RegistrationRequest registrationRequest =
+                        new RegistrationRequest.Builder(softwareStatementBuilder, jwtDecoder)
+                                               .build(registrationRequestJwt);
+
+                context.asContext(AttributesContext.class).getAttributes()
+                                                          .put(RegistrationRequest.REGISTRATION_REQUEST_KEY,
+                                                               registrationRequest);
+
+                log.info("Created context attribute " + RegistrationRequest.REGISTRATION_REQUEST_KEY);
+                return next.handle(context, request);
+            } catch (DCRException exception) {
+                log.info("Failed to understand the Registration Request body: {}", exception.getMessage(), exception);
+                return Promises.newResultPromise(responseFactory.getResponse(RESPONSE_MEDIA_TYPES,
+                                                                             Status.BAD_REQUEST,
+                                                                             exception.getErrorFields()));
+            } catch (RuntimeException rte) {
+                log.warn("Caught runtime exception while applying RegistrationRequestEntityValidatorFilter", rte);
+                return Promises.newResultPromise(responseFactory.getInternalServerErrorResponse(request,
+                                                                                                RESPONSE_MEDIA_TYPES));
+            }
+        }, ioe -> {
+            log.error("Failed to extract request JWT from HTTP Request", ioe);
+            return Promises.newResultPromise(responseFactory.getInternalServerErrorResponse(request,
+                                                                                            RESPONSE_MEDIA_TYPES));
+        });
     }
 
     /**
      * Heaplet used to create {@link RegistrationRequestBuilderFilter} objects
-     *
+     * <p>
      * Mandatory fields:
-     *  - trustedDirectoryService: the name of the service used to provide the trusted directory config
-     *
+     * - trustedDirectoryService: the name of the service used to provide the trusted directory config
+     * <p>
+     * <pre>{@code
      * Example config:
      * {
-     *      "comment": "Pull the registration request from the entity and create a RegistrationRequest object context attribute",
      *      "name": "RegistrationRequestEntityValidationFilter",
      *      "type": "RegistrationRequestEntityValidatorFilter",
+     *      "comment": "Pull the registration request from the entity and create a RegistrationRequest object context attribute",
      *      "config": {
      *        "trustedDirectoryService": "TrustedDirectoriesService"
      *      }
      *  }
+     * }</pre>
      */
     public static class Heaplet extends GenericHeaplet {
         @Override
