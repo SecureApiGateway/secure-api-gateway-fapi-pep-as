@@ -159,8 +159,9 @@ class ConsentRequestAccessAuthorisationFilterTest {
 
     @Test
     void testSsoTokenContextMissing() {
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(createMockJwtValidationContext(TEST_USER_ID),
-                new Request(), new TestSuccessResponseHandler());
+        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(new RootContext(),
+                                                                                      new Request(),
+                                                                                      new TestSuccessResponseHandler());
 
         verifyInternalServerErrorResponse(responsePromise);
         verifyExceptionHandlerContainsSingleException(IllegalArgumentException.class,
