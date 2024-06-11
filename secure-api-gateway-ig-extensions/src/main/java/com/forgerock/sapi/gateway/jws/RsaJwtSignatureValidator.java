@@ -61,22 +61,22 @@ public class RsaJwtSignatureValidator implements JwtSignatureValidator {
 
             String kid = jwt.getHeader().getKeyId();
             if (kid == null) {
-                throw new IllegalStateException("kid must be present in the JWT header");
+                throw new SignatureException("kid must be present in the JWT header");
             }
 
             final JwsAlgorithm jwsAlgorithm = jwt.getHeader().getAlgorithm();
             if (!supportedAlgorithms.contains(jwsAlgorithm)) {
-                throw new IllegalStateException("jwt signed using unsupported algorithm: " + jwsAlgorithm);
+                throw new SignatureException("jwt signed using unsupported algorithm: " + jwsAlgorithm);
             }
             JWK jwk = jwkSet.findJwk(kid);
             if (jwk == null) {
-                throw new IllegalStateException("jwk not found in supplied jwkSet for kid: " + kid);
+                throw new SignatureException("jwk not found in supplied jwkSet for kid: " + kid);
             }
             if (!(jwk instanceof RsaJWK)) {
-                throw new IllegalStateException("jwk for kid: " + kid + " must be of type RsaJwk");
+                throw new SignatureException("jwk for kid: " + kid + " must be of type RsaJwk");
             }
             if (!USE_SIGNING_KEY.equals(jwk.getUse())) {
-                throw new IllegalStateException("jwk for kid: " + kid + " must be signing key, instead found: " + jwk.getUse());
+                throw new SignatureException("jwk for kid: " + kid + " must be signing key, instead found: " + jwk.getUse());
             }
 
             log.debug("RsaJwtSignatureValidator() found jwk for kid. Signing algo supported, is RsaJwk, and is signing " +

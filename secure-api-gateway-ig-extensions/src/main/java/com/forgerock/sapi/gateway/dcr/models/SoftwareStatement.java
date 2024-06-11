@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.models;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 
 import org.forgerock.json.JsonException;
@@ -41,15 +41,15 @@ import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 public class SoftwareStatement extends SapiJwt {
 
     // The jwks_uri of the trusted directory against which the Software Statement signature may be validated
-    private final URL trustedDirectoryJwksUrl;
+    private final URI trustedDirectoryJwksUri;
     private final String orgId;
     private final String orgName;
     private final String softwareId;
     private final String clientName;
     private final boolean hasJwksUri;
-    private final URL jwksUri;
+    private final URI jwksUri;
     private final JWKSet jwksSet;
-    private final List<URL> redirectUris;
+    private final List<URI> redirectUris;
     private final List<String> roles;
 
     /**
@@ -57,7 +57,7 @@ public class SoftwareStatement extends SapiJwt {
      *
      * @param builder a {@code SoftwareStatement.Builder}
      */
-    public SoftwareStatement(Builder builder) {
+    private SoftwareStatement(Builder builder) {
         super(builder);
         this.orgId = builder.orgId;
         this.orgName = builder.orgName;
@@ -67,15 +67,15 @@ public class SoftwareStatement extends SapiJwt {
         this.jwksUri = builder.jwksUri;
         this.jwksSet = builder.jwkSet;
         this.redirectUris = builder.redirectUris;
-        this.trustedDirectoryJwksUrl = builder.trustedDirectoryJwksUrl;
+        this.trustedDirectoryJwksUri = builder.trustedDirectoryJwksUri;
         this.roles = builder.roles;
     }
 
     /**
-     * @return the URL against which the software statement assertions signature may be validated
+     * @return the URI against which the software statement assertions signature may be validated
      */
-    public URL getTrustedDirectoryJwksUrl() {
-        return trustedDirectoryJwksUrl;
+    public URI getTrustedDirectoryJwksUri() {
+        return trustedDirectoryJwksUri;
     }
 
     /**
@@ -115,11 +115,11 @@ public class SoftwareStatement extends SapiJwt {
     }
 
     /**
-     * @return if hasJwksUri returns true, then this will return a URL that defines the URL at which the JWKS that holds
-     * all of the public keys associated with the software statement. The JWKS obtained from this URL can be used to
+     * @return if hasJwksUri returns true, then this will return a URI that defines the URI at which the JWKS that holds
+     * all of the public keys associated with the software statement. The JWKS obtained from this URI can be used to
      * validate all the transport, signing keys and encryption keys that will be used by the ApiClient
      */
-    public URL getJwksUri() {
+    public URI getJwksUri() {
         return jwksUri;
     }
 
@@ -136,7 +136,7 @@ public class SoftwareStatement extends SapiJwt {
      * @return the list of redirect uris registered with the trusted directory as being valid for this software
      * statement
      */
-    public List<URL> getRedirectUris() {
+    public List<URI> getRedirectUris() {
         return this.redirectUris;
     }
 
@@ -158,10 +158,10 @@ public class SoftwareStatement extends SapiJwt {
         private String softwareId;
         private String clientName;
         private boolean hasJwksUri;
-        private URL jwksUri;
+        private URI jwksUri;
         private JWKSet jwkSet;
-        private URL trustedDirectoryJwksUrl;
-        private List<URL> redirectUris;
+        private URI trustedDirectoryJwksUri;
+        private List<URI> redirectUris;
         private List<String> roles;
 
         public Builder(TrustedDirectoryService trustedDirectoryService, JwtDecoder jwtDecoder) {
@@ -199,7 +199,7 @@ public class SoftwareStatement extends SapiJwt {
         private void getSsaSpecificFieldsFromJwt(TrustedDirectory trustedDirectory) throws JwtException {
             if (trustedDirectory.softwareStatementHoldsJwksUri()) {
                 this.hasJwksUri = true;
-                this.jwksUri = claimsSet.getStringClaimAsURL(trustedDirectory.getSoftwareStatementJwksUriClaimName());
+                this.jwksUri = claimsSet.getStringClaimAsURI(trustedDirectory.getSoftwareStatementJwksUriClaimName());
             } else {
                 this.hasJwksUri = false;
                 this.jwkSet = getJwkSet();
@@ -208,7 +208,7 @@ public class SoftwareStatement extends SapiJwt {
             this.orgName = claimsSet.getStringClaim(trustedDirectory.getSoftwareStatementOrgNameClaimName());
             this.softwareId = claimsSet.getStringClaim(trustedDirectory.getSoftwareStatementSoftwareIdClaimName());
             this.clientName = claimsSet.getStringClaim(trustedDirectory.getSoftwareStatementClientNameClaimName());
-            this.trustedDirectoryJwksUrl = trustedDirectory.getDirectoryJwksUri();
+            this.trustedDirectoryJwksUri = trustedDirectory.getDirectoryJwksUri();
             this.redirectUris = claimsSet.getRequiredUriListClaim(trustedDirectory.getSoftwareStatementRedirectUrisClaimName());
             this.roles = claimsSet.getRequiredStringListClaim(trustedDirectory.getSoftwareStatementRolesClaimName());
         }

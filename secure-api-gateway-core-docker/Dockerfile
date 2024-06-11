@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-FROM gcr.io/forgerock-io/ig:2023.4.0
+FROM gcr.io/forgerock-io/ig:2024.3.0
 # Switching back to forgerock user, app will run as this
 USER forgerock
 # Create dir where secrets can be mounted into
@@ -23,6 +23,9 @@ COPY --chown=forgerock:root 7.3.0/ig/bin/import-pem-certs.sh /home/forgerock
 
 # Copy all config files into the docker image.
 COPY --chown=forgerock:root 7.3.0/ig/lib /opt/ig/lib
+# Removing the bouncy castle jar that exists in the docker image as it clashes with the version used by SAPI-G.
+# This version clash results in the JwkmsIssueCert.groovy script hanging
+RUN rm -f /opt/ig/lib/bcprov-jdk18on-1.74.jar
 COPY --chown=forgerock:root 7.3.0/ig/scripts /var/ig/scripts/
 COPY --chown=forgerock:root 7.3.0/ig/config /var/ig/config/
 

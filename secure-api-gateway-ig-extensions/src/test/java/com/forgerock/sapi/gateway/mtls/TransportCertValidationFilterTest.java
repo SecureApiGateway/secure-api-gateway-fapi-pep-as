@@ -130,7 +130,7 @@ class TransportCertValidationFilterTest {
         final TestSuccessResponseHandler responseHandler = new TestSuccessResponseHandler();
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> transportCertValidationFilter.filter(context, request, responseHandler));
-        assertEquals("apiClientJwkSet not found in request context", exception.getMessage());
+        assertEquals("Required attribute: \"apiClientJwkSet\" not found in context", exception.getMessage());
     }
 
     @Test

@@ -17,7 +17,10 @@ package com.forgerock.sapi.gateway.jwks;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.argThat;
 
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.List;
 
@@ -43,34 +46,40 @@ public class RestJwkSetServiceTest {
         return RsaJWK.builder("modulusValue", "exponentValue").keyId(keyId).build();
     }
 
-    private void mockJwkSet(JWK expectedJwk, URL jwkSetUrl) {
-        Mockito.when(jwkSetParser.jwkSetAsync(Mockito.eq(jwkSetUrl))).thenReturn(
-                Promises.newResultPromise(
-                        new JWKSet(List.of(createJWK("dfsd"), createJWK("fssd"),
-                                expectedJwk, createJWK("fdssffff")))));
+    private void mockJwkSet(JWK expectedJwk, URI jwkSetUri) {
+        final URL urlMatcher = argThat(url -> {
+            try {
+                return url.toURI().equals(jwkSetUri);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        Mockito.when(jwkSetParser.jwkSetAsync(urlMatcher))
+               .thenReturn(Promises.newResultPromise(new JWKSet(List.of(createJWK("dfsd"), createJWK("fssd"),
+                                                                expectedJwk, createJWK("fdssffff")))));
     }
 
-    private void mockJwkSet(URL jwkSetUrl) {
-        mockJwkSet(createJWK("anotherTestJwk"), jwkSetUrl);
+    private void mockJwkSet(URI jwkSetUri) {
+        mockJwkSet(createJWK("anotherTestJwk"), jwkSetUri);
     }
 
     @Test
     void shouldFindKidInJWKSet() throws Exception {
         final String kid1 = "kid1";
         final JWK jwk = createJWK(kid1);
-        final URL jwkSetUrl = new URL("http://abc");
-        mockJwkSet(jwk, jwkSetUrl);
+        final URI jwkSetUri = URI.create("http://abc");
+        mockJwkSet(jwk, jwkSetUri);
         final RestJwkSetService restJwkSetService = new RestJwkSetService(jwkSetParser);
-        assertEquals(jwk.getKeyId(), restJwkSetService.getJwk(jwkSetUrl, kid1).get().getKeyId());
+        assertEquals(jwk.getKeyId(), restJwkSetService.getJwk(jwkSetUri, kid1).get().getKeyId());
     }
 
     @Test
-    void shouldReturnNullIfKidNotInJWKSet() throws Exception {
-        final URL jwkSetUrl = new URL("http://abc");
-        mockJwkSet(jwkSetUrl);
+    void shouldReturnNullIfKidNotInJWKSet() {
+        final URI jwkSetUri = URI.create("http://abc");
+        mockJwkSet(jwkSetUri);
         final RestJwkSetService restJwkSetService = new RestJwkSetService(jwkSetParser);
         final FailedToLoadJWKException failedToLoadJWKException = assertThrows(FailedToLoadJWKException.class,
-                () -> restJwkSetService.getJwk(jwkSetUrl, "kid2").getOrThrow());
+                () -> restJwkSetService.getJwk(jwkSetUri, "kid2").getOrThrow());
         assertEquals("Failed to find keyId: kid2 in JWKSet", failedToLoadJWKException.getMessage());
     }
 }

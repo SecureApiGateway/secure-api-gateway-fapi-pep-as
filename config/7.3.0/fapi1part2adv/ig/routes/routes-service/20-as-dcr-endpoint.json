@@ -39,10 +39,10 @@
         },
         {
           "comment": "Pull the registration request from the entity and create a RegistrationRequest object context attribute",
-          "name": "RegistrationRequestEntityValidationFilter",
-          "type": "RegistrationRequestEntityValidatorFilter",
+          "name": "RegistrationRequestBuilderFilter",
+          "type": "RegistrationRequestBuilderFilter",
           "config": {
-            "trustedDirectoryService": "TrustedDirectoriesService"
+            "trustedDirectoryService": "TrustedDirectoryService"
           }
         },
         {
@@ -50,15 +50,15 @@
           "name": "RegistrationRequestJwtSignatureValidationFilter",
           "type": "RegistrationRequestJwtSignatureValidationFilter",
           "config": {
-            "clientHandler": "ClientHandler",
+            "clientHandler": "OBClientHandler",
             "jwkSetService": "JwkSetService",
             "jwtSignatureValidator": "RsaJwtSignatureValidator"
           }
         },
         {
           "comment": "Validate that the request will result in an OAuth2 client that is FAPI compliant",
-          "name": "FAPIAdvancedDCRValidationFilter",
-          "type": "FAPIAdvancedDCRValidationFilter",
+          "name": "FapiAdvancedDCRValidationFilter",
+          "type": "FapiAdvancedDCRValidationFilter",
           "config": {
             "certificateRetriever": "ContextCertificateRetriever",
             "supportedSigningAlgorithms": ["PS256"],
@@ -73,11 +73,11 @@
             "type": "application/x-groovy",
             "file": "ProcessRegistration.groovy",
             "args": {
-              "routeArgProxyBaseUrl": "https://&{ig.fqdn}/jwkms/jwksproxy",
+              "jwkSetService": "${heap['JwkSetService']}",
               "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
               "jwtSignatureValidator": "${heap['RsaJwtSignatureValidator']}",
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
-              "trustedDirectoryService": "${heap['TrustedDirectoriesService']}"
+              "trustedDirectoryService": "${heap['TrustedDirectoryService']}"
             }
           }
         },

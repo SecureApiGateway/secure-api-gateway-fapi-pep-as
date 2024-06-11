@@ -67,12 +67,18 @@
           "name": "TokenEndpointTransportCertValidationFilter",
           "type": "TokenEndpointTransportCertValidationFilter",
           "config": {
-            "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}",
-            "idmClientHandler": "IDMClientHandler",
-            "trustedDirectoryService": "TrustedDirectoriesService",
+            "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
             "certificateRetriever": "HeaderCertificateRetriever",
             "transportCertValidator": "TransportCertValidator"
+          }
+        },
+        {
+          "name": "TokenEndpointResponseFetchApiClientFilter",
+          "type": "TokenEndpointResponseFetchApiClientFilter",
+          "comment": "Fetches the ApiClient and adds it to the attributes context if the AS returns with a success response",
+          "config": {
+            "apiClientService": "IdmApiClientService"
           }
         }
       ],

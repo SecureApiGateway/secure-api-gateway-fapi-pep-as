@@ -22,8 +22,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.when;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
 import java.security.SignatureException;
 import java.util.Map;
 
@@ -67,20 +66,17 @@ class SoftwareStatementAssertionSignatureValidatorServiceTest {
     void failIfSignatureInvalid_validateSoftwareStatementAssertionSignature() throws Exception {
         // Given
         SignedJwt ssaSignedJwt = CryptoUtils.createSignedJwt(Map.of("iss", SSA_ISSUER),
-                JWSAlgorithm.PS256);
-        final String JWK_SET_URL_STR = "https://jwkset.com";
-        final URL JWK_SET_URL = new URL(JWK_SET_URL_STR);
-        final JWKSet JWKS_SET = new JWKSet();
-
+                                                             JWSAlgorithm.PS256);
+        final URI jwksUri = URI.create("https://jwkset.com");
+        final JWKSet jwkSet = new JWKSet();
 
         // When
-        when(softwareStatement.getTrustedDirectoryJwksUrl()).thenReturn(JWK_SET_URL);
+        when(softwareStatement.getTrustedDirectoryJwksUri()).thenReturn(jwksUri);
         when(softwareStatement.getSignedJwt()).thenReturn(ssaSignedJwt);
-        when(softwareStatement.getJwksSet()).thenReturn(JWKS_SET);
-        when(jwkSetService.getJwkSet(JWK_SET_URL)).thenReturn(
-                Promises.newResultPromise(JWKS_SET));
+        when(softwareStatement.getJwksSet()).thenReturn(jwkSet);
+        when(jwkSetService.getJwkSet(jwksUri)).thenReturn(Promises.newResultPromise(jwkSet));
         doThrow(new SignatureException("Invalid sig")).when(jwtSignatureValidator)
-                .validateSignature(ssaSignedJwt, JWKS_SET);
+                .validateSignature(ssaSignedJwt, jwkSet);
 
         Promise<Response, DCRSignatureValidationException> promise =
                 ssaSigValidator.validateJwtSignature(softwareStatement);
@@ -92,20 +88,17 @@ class SoftwareStatementAssertionSignatureValidatorServiceTest {
     }
 
     @Test
-    void success_validateSoftwareStatementAssertionSignature()
-            throws MalformedURLException, InterruptedException, DCRSignatureValidationException {
+    void success_validateSoftwareStatementAssertionSignature() throws InterruptedException, DCRSignatureValidationException {
         // Given
         SignedJwt ssaSignedJwt = CryptoUtils.createSignedJwt(Map.of("iss", SSA_ISSUER),
-                JWSAlgorithm.PS256);
-        final String JWK_SET_URL_STR = "https://jwkset.com";
-        final URL JWK_SET_URL = new URL(JWK_SET_URL_STR);
-        final JWKSet JWKS_SET = new JWKSet();
+                                                            JWSAlgorithm.PS256);
+        final URI jwksUri = URI.create("https://jwkset.com");
+        final JWKSet jwkSet = new JWKSet();
 
         // When
-        when(softwareStatement.getTrustedDirectoryJwksUrl()).thenReturn(JWK_SET_URL);
+        when(softwareStatement.getTrustedDirectoryJwksUri()).thenReturn(jwksUri);
         when(softwareStatement.getSignedJwt()).thenReturn(ssaSignedJwt);
-        when(jwkSetService.getJwkSet(JWK_SET_URL)).thenReturn(
-                Promises.newResultPromise(JWKS_SET));
+        when(jwkSetService.getJwkSet(jwksUri)).thenReturn(Promises.newResultPromise(jwkSet));
 
         Promise<Response, DCRSignatureValidationException> promise =
                 ssaSigValidator.validateJwtSignature(softwareStatement);

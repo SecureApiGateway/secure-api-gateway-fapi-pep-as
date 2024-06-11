@@ -19,10 +19,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.junit.jupiter.api.Assertions.*;
-
-import java.net.MalformedURLException;
-import java.net.URL;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.json.JsonValue;
@@ -35,26 +34,18 @@ import org.forgerock.openig.heap.Name;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
+import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter.Heaplet;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
 public class FetchTrustedDirectoryFilterTest {
 
-    private TrustedDirectoryService trustedDirectoryService;
-
-    @BeforeEach
-    void setUp() throws MalformedURLException {
-        String secureApiGatewayJwksUri = "https://test-bank.com";
-        URL secureApiGatewayJwksUrl = new URL(secureApiGatewayJwksUri);
-        trustedDirectoryService = new TrustedDirectoryServiceStatic(true, secureApiGatewayJwksUrl);
-    }
+    private final TrustedDirectoryService trustedDirectoryService = TrustedDirectoryTestFactory.getTrustedDirectoryService();
 
     public static ApiClient createApiClient(String issuer) {
         final JwtClaimsSet ssaClaims = new JwtClaimsSet();
@@ -73,7 +64,7 @@ public class FetchTrustedDirectoryFilterTest {
     private void testFetchingOpenBankingTestIssuer(FetchTrustedDirectoryFilter filter) {
         final Context rootContext = new RootContext("root");
         final AttributesContext attributesContext = new AttributesContext(rootContext);
-        final ApiClient apiClient = createApiClient(TrustedDirectoryOpenBankingTest.issuer);
+        final ApiClient apiClient = createApiClient(TrustedDirectoryTestFactory.JWKS_URI_BASED_DIRECTORY_ISSUER);
         attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
 
         callFilterAndValidateSuccessResponse(filter, attributesContext);
@@ -84,7 +75,7 @@ public class FetchTrustedDirectoryFilterTest {
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> callFilterAndValidateSuccessResponse(new FetchTrustedDirectoryFilter(trustedDirectoryService), new AttributesContext(new RootContext("root"))));
 
-        assertThat(exception.getMessage()).contains("apiClient not found in request context");
+        assertThat(exception.getMessage()).isEqualTo("Required attribute: \"apiClient\" not found in context");
     }
 
     @Test
@@ -122,14 +113,11 @@ public class FetchTrustedDirectoryFilterTest {
     }
 
     private void callFilterAndValidateSuccessResponse(FetchTrustedDirectoryFilter filter, Context context) {
-        assertNull(FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext(context),
-                "There must be no TrustedDirectory in the context prior to the test running");
-
         final TestSuccessResponseHandler successResponseHandler = new TestSuccessResponseHandler();
         filter.filter(context, new Request(), successResponseHandler);
 
         final TrustedDirectory trustedDirectory = FetchTrustedDirectoryFilter.getTrustedDirectoryFromContext(context);
-        assertEquals(TrustedDirectoryOpenBankingTest.issuer, trustedDirectory.getIssuer());
+        assertEquals(TrustedDirectoryTestFactory.JWKS_URI_BASED_DIRECTORY_ISSUER, trustedDirectory.getIssuer());
         assertTrue(successResponseHandler.hasBeenInteractedWith(), "Expected filter to pass request on to the successResponseHandler");
     }
 }

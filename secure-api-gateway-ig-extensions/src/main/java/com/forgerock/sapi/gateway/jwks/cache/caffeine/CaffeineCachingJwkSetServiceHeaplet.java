@@ -17,7 +17,7 @@ package com.forgerock.sapi.gateway.jwks.cache.caffeine;
 
 import static org.forgerock.openig.util.JsonValues.javaDuration;
 
-import java.net.URL;
+import java.net.URI;
 import java.time.Duration;
 
 import org.forgerock.json.jose.jwk.JWKSet;
@@ -33,8 +33,8 @@ import com.forgerock.sapi.gateway.jwks.cache.caffeine.CaffeineCache.CacheOptions
 /**
  * Creates a {@link CachingJwkSetService} which is backed by a {@link CaffeineCache}
  * <p>
- * Delegates to {@link RestJwkSetServiceHeaplet} to create the {@link RestJwkSetService}, configuration for RestJwkSetService
- * will be honoured.
+ * Delegates to {@link RestJwkSetServiceHeaplet} to create the {@link RestJwkSetService}, configuration for
+ * RestJwkSetService will be honoured.
  */
 public class CaffeineCachingJwkSetServiceHeaplet extends RestJwkSetServiceHeaplet {
 
@@ -51,17 +51,19 @@ public class CaffeineCachingJwkSetServiceHeaplet extends RestJwkSetServiceHeaple
         return new CachingJwkSetService(restJwkSetService, createCaffeineCache());
     }
 
-    private CaffeineCache<URL, JWKSet> createCaffeineCache() {
+    private CaffeineCache<URI, JWKSet> createCaffeineCache() {
         final long maxCacheEntries = config.get("maxCacheEntries")
-                .as(evaluatedWithHeapProperties())
-                .defaultTo(DEFAULT_MAX_CACHE_SIZE)
-                .asLong();
+                                           .as(evaluatedWithHeapProperties())
+                                           .defaultTo(DEFAULT_MAX_CACHE_SIZE)
+                                           .asLong();
+
         final Duration expireAfterWrite = config.get("expireAfterWriteDuration")
-                .as(evaluatedWithHeapProperties())
-                .defaultTo(DEFAULT_EXPIRE_AFTER_WRITE_DURATION)
-                .as(javaDuration());
+                                                .as(evaluatedWithHeapProperties())
+                                                .defaultTo(DEFAULT_EXPIRE_AFTER_WRITE_DURATION)
+                                                .as(javaDuration());
+
         final CacheOptions options = new CacheOptions().maximumCacheEntries(maxCacheEntries)
-                .expireAfterWrite(expireAfterWrite);
+                                                       .expireAfterWrite(expireAfterWrite);
         logger.info("Creating a cache with options: {}", options);
         return new CaffeineCache<>(options);
     }

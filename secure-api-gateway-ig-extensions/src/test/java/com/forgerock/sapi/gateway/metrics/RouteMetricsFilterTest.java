@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 
 import org.forgerock.http.header.GenericHeader;
 import org.forgerock.http.protocol.Request;
@@ -46,10 +47,14 @@ import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -172,7 +177,7 @@ class RouteMetricsFilterTest {
         mockTickerForSingleResponseTime(expectedResponseTime);
 
         final Map<String, Object> customMetricsContextData = Map.of("customInfo", 123, "field2", "value2");
-        final MetricsContextSupplier customMetricsContextSupplier = (context, request) -> customMetricsContextData;
+        final MetricsContextSupplier customMetricsContextSupplier = (context, request) -> Promises.newResultPromise(customMetricsContextData);
         final RouteMetricsFilter routeMetricsFilter = createFilter(timestampSource, customMetricsContextSupplier);
 
         final Request request = createRequest("https://localhost/test/route", "POST");
@@ -194,12 +199,9 @@ class RouteMetricsFilterTest {
                 "POST", "/test/route", 200, true, customMetricsContextData);
     }
 
-    @Test
-    void gracefullyHandlesMetricsContextSupplierFailure() throws Exception {
-        MetricsContextSupplier buggyMetricsContextSupplier = (context, request) -> {
-            throw new IllegalStateException("error");
-        };
-
+    @ParameterizedTest
+    @MethodSource("createBuggyMetricsContextSuppliers")
+    void gracefullyHandlesMetricsContextSupplierFailure(MetricsContextSupplier buggyMetricsContextSupplier) throws Exception {
         final long expectedResponseTime = 123L;
         mockTickerForSingleResponseTime(expectedResponseTime);
         final RouteMetricsFilter routeMetricsFilter = createFilter(timestampSource, buggyMetricsContextSupplier);
@@ -221,6 +223,18 @@ class RouteMetricsFilterTest {
 
         validateMetricsEvent(metricsEvent, timestampSourceInitialValue, expectedResponseTime,
                 "POST", "/test/route", 200, true, EMPTY_METRICS_CONTEXT);
+    }
+
+    static Stream<Arguments> createBuggyMetricsContextSuppliers() {
+        return Stream.of(
+                Arguments.of(
+                        (MetricsContextSupplier) (requestContext, request) -> {
+                            throw new IllegalStateException("boom");
+                        }
+                ),
+                Arguments.of(
+                        (MetricsContextSupplier) (requestContext, request) -> Promises.newRuntimeExceptionPromise(new IllegalStateException("boom"))
+                ));
     }
 
     @Test

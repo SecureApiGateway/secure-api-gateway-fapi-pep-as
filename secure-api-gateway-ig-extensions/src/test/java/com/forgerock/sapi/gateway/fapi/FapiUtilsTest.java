@@ -24,14 +24,14 @@ import org.forgerock.http.header.GenericHeader;
 import org.forgerock.http.protocol.Request;
 import org.junit.jupiter.api.Test;
 
-class FAPIUtilsTest {
+class FapiUtilsTest {
     @Test
     void getFapiInteractionId() {
-        assertFalse(FAPIUtils.getFapiInteractionId(new Request()).isPresent(), "No x-fapi-interaction-id should be found");
+        assertFalse(FapiUtils.getFapiInteractionId(new Request()).isPresent(), "No x-fapi-interaction-id should be found");
 
         final String fapiInteractionId = UUID.randomUUID().toString();
         final Request requestWithFapiInteractionIdHeader = new Request().addHeaders(
                 new GenericHeader("x-fapi-interaction-id", fapiInteractionId));
-        assertEquals(fapiInteractionId, FAPIUtils.getFapiInteractionId(requestWithFapiInteractionIdHeader).get());
+        assertEquals(fapiInteractionId, FapiUtils.getFapiInteractionId(requestWithFapiInteractionIdHeader).get());
     }
 }

@@ -29,7 +29,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.LinkedHashMap;
@@ -229,11 +228,7 @@ public class IdmApiClientServiceTest {
 
         if (createApiClientJson.get("jwksUri").isNotNull()) {
             when(softwareStatement.hasJwksUri()).thenReturn(true);
-            try {
-                when(softwareStatement.getJwksUri()).thenReturn(URI.create(createApiClientJson.get("jwksUri").asString()).toURL());
-            } catch (MalformedURLException e) {
-                throw new RuntimeException(e);
-            }
+            when(softwareStatement.getJwksUri()).thenReturn(URI.create(createApiClientJson.get("jwksUri").asString()));
         }
         else if (createApiClientJson.get("jwks").isNotNull()) {
             when(softwareStatement.hasJwksUri()).thenReturn(false);

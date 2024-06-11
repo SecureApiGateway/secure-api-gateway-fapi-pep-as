@@ -21,27 +21,18 @@ import java.util.function.BiFunction;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.services.context.Context;
+import org.forgerock.util.promise.Promise;
 
 /**
  * Supplies the Registration Request json object from a JWT contained within the Request.entity
- * <p>
- * The JWT signing algo in the header is validated against the supported set of signing algorithms for FAPI.
- * No other validation is done at this point, it is assumed that Filters later in the chain will validate the
- * sig etc
  */
-public class RegistrationRequestEntitySupplier implements BiFunction<Context, Request, String> {
+public class RegistrationRequestEntitySupplier implements BiFunction<Context, Request, Promise<String, IOException>> {
 
     public RegistrationRequestEntitySupplier() {
     }
 
     @Override
-    public String apply(Context context, Request request)  {
-        try {
-            return request.getEntity().getString();
-        } catch (IOException e) {
-            // These are not validation errors, so do not raise a validation exception, instead allow the filter
-            // to handle the null response
-            return null;
-        }
+    public Promise<String, IOException> apply(Context context, Request request)  {
+        return request.getEntity().getStringAsync();
     }
 }

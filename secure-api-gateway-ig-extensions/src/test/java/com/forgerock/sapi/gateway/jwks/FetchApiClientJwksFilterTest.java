@@ -24,8 +24,9 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.when;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
@@ -48,18 +49,24 @@ import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.ApiClientTest;
 import com.forgerock.sapi.gateway.jwks.FetchApiClientJwksFilter.Heaplet;
 import com.forgerock.sapi.gateway.jwks.mocks.MockJwkSetService;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryOpenBankingTest;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
+@ExtendWith(MockitoExtension.class)
 class FetchApiClientJwksFilterTest {
+    
+    @Mock
+    private TrustedDirectory trustedDirectory;
 
     @Test
     void testFetchApiClientJwks() throws Exception {
@@ -69,7 +76,7 @@ class FetchApiClientJwksFilterTest {
 
         final Context context = new AttributesContext(new RootContext());
         addApiClientToContext(context, ApiClientTest.createBuilderWithJwks().build());
-        addTrustedDirectoryToContext(context, new TrustedDirectoryOpenBankingTest());
+        addTrustedDirectoryToContext(context, trustedDirectory);
         final TestSuccessResponseHandler responseHandler = new TestSuccessResponseHandler();
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), responseHandler);
         final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);
@@ -89,7 +96,7 @@ class FetchApiClientJwksFilterTest {
 
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> filter.filter(context, new Request(), responseHandler));
-        assertEquals("apiClient not found in request context", exception.getMessage());
+        assertEquals("Required attribute: \"apiClient\" not found in context", exception.getMessage());
     }
 
     @Test
@@ -102,7 +109,7 @@ class FetchApiClientJwksFilterTest {
 
         final IllegalStateException exception = assertThrows(IllegalStateException.class,
                 () -> filter.filter(context, new Request(), responseHandler));
-        assertEquals("trustedDirectory not found in request context", exception.getMessage());
+        assertEquals("Required attribute: \"trustedDirectory\" not found in context", exception.getMessage());
     }
 
     @Test
@@ -111,7 +118,7 @@ class FetchApiClientJwksFilterTest {
 
         final Context context = new AttributesContext(new RootContext());
         addApiClientToContext(context, ApiClientTest.createBuilderWithJwks().build());
-        addTrustedDirectoryToContext(context, new TrustedDirectoryOpenBankingTest());
+        addTrustedDirectoryToContext(context, trustedDirectory);
         final TestSuccessResponseHandler responseHandler = new TestSuccessResponseHandler();
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), responseHandler);
 
@@ -133,9 +140,11 @@ class FetchApiClientJwksFilterTest {
 
         @Test
         void successfullyCreatesFilter() throws Exception {
+            when(trustedDirectory.softwareStatementHoldsJwksUri()).thenReturn(Boolean.TRUE);
+
             final JWKSet jwkSet = createJwkSet();
-            final URL jwksUri = new URL("https://directory.com/jwks/12345");
-            final MockJwkSetService jwkSetService = new MockJwkSetService(Map.of(jwksUri, jwkSet));
+            final URI jwkSetUri = URI.create("https://directory.com/jwks/12345");
+            final MockJwkSetService jwkSetService = new MockJwkSetService(Map.of(jwkSetUri, jwkSet));
 
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
             heap.put("JwkSetService", jwkSetService);
@@ -144,8 +153,8 @@ class FetchApiClientJwksFilterTest {
             final FetchApiClientJwksFilter filter = (FetchApiClientJwksFilter) new Heaplet().create(Name.of("test"), config, heap);
 
             final Context context = new AttributesContext(new RootContext());
-            addApiClientToContext(context, createApiClientWithJwksUri(jwksUri.toURI()));
-            addTrustedDirectoryToContext(context, new TrustedDirectoryOpenBankingTest());
+            addApiClientToContext(context, createApiClientWithJwksUri(jwkSetUri));
+            addTrustedDirectoryToContext(context, trustedDirectory);
             final TestSuccessResponseHandler responseHandler = new TestSuccessResponseHandler();
             final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), responseHandler);
             final Response response = responsePromise.get(1, TimeUnit.MILLISECONDS);

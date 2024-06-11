@@ -18,8 +18,8 @@ package com.forgerock.sapi.gateway.dcr.models;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.assertj.core.api.AssertionsForClassTypes.catchThrowableOfType;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 
 import org.forgerock.json.jose.jwk.JWKSet;
@@ -58,7 +58,7 @@ class SoftwareStatementBuilderTest {
 
     @Test
     void successJwksUriBased_buildSoftwareStatement()
-            throws DCRRegistrationRequestBuilderException, MalformedURLException {
+            throws DCRRegistrationRequestBuilderException, URISyntaxException {
         // Given
         Map<String, Object> ssaClaims = SoftwareStatementTestFactory.getValidJwksUriBasedSsaClaims(Map.of());
         String requestJwt = CryptoUtils.createEncodedJwtString(ssaClaims, JWSAlgorithm.PS256);
@@ -73,7 +73,7 @@ class SoftwareStatementBuilderTest {
         assertThat(softwareStatement.getSoftwareId()).isEqualTo(SOFTWARE_ID);
         assertThat(softwareStatement.getClientName()).isEqualTo(SOFTWARE_CLIENT_NAME);
         assertThat(softwareStatement.hasJwksUri()).isTrue();
-        assertThat(softwareStatement.getJwksUri()).isEqualTo(new URL(JWKS_URI));
+        assertThat(softwareStatement.getJwksUri()).isEqualTo(new URI(JWKS_URI));
     }
 
     @Test

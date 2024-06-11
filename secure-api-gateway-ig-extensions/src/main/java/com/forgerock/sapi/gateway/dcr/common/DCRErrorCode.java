@@ -16,8 +16,8 @@
 package com.forgerock.sapi.gateway.dcr.common;
 
 /**
- * Dynamic Client Registration /register endpoint error codes, as specified by
- * OAuth 2.0 Dynamic Client Registration Protocol spec: https://www.rfc-editor.org/rfc/rfc7591#section-3.2.2
+ * Dynamic Client Registration (/register) endpoint error codes, as specified by spec:
+ * <a href="https://www.rfc-editor.org/rfc/rfc7591#section-3.2.2">OAuth 2.0 Dynamic Client Registration Protocol</a>
  */
 public enum DCRErrorCode {
     INVALID_REDIRECT_URI("invalid_redirect_uri"),

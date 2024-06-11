@@ -15,17 +15,26 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
-import static com.forgerock.sapi.gateway.dcr.filter.AuthorizeResponseFetchApiClientFilter.queryParamClientIdRetriever;
+import static com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter.createFilterWithRequestClientIdRetriever;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
+import java.util.List;
+import java.util.function.Function;
+
+import org.forgerock.http.protocol.Request;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
+import org.forgerock.util.promise.NeverThrowsException;
+import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 
 /**
- * Responsible for creating the {@link AuthorizeResponseFetchApiClientFilter}
+ * Responsible for creating a {@link ResponsePathFetchApiClientFilter} that can be used to protect calls to an
+ * OAuth2.0 authorize endpoint, the filter is configured to retrieve the client_id from the request's query parameter
+ * of the same name.
  * <p>
  * Mandatory config:
  * - apiClientService: reference to an {@link ApiClientService} implementation heap object to use to retrieve the {@link ApiClient}
@@ -44,9 +53,27 @@ import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
  */
 public class AuthorizeResponseFetchApiClientFilterHeaplet extends GenericHeaplet {
 
+    /**
+     * Helper function capable of retrieving the client_id parameter from the Request's Query params.
+     *
+     * @return Promise<String, NeverThrowsException> which returns the client_id or null if it does not exist
+     */
+    static Function<Request, Promise<String, NeverThrowsException>> queryParamClientIdRetriever() {
+        return request -> {
+            final List<String> clientIdParams = request.getQueryParams().get("client_id");
+            if (clientIdParams != null && !clientIdParams.isEmpty()) {
+                return Promises.newResultPromise(clientIdParams.get(0));
+            } else {
+                return Promises.newResultPromise(null);
+            }
+        };
+    }
+
     @Override
     public Object create() throws HeapException {
-        final ApiClientService apiClientService = config.get("apiClientService").as(requiredHeapObject(heap, ApiClientService.class));
-        return new AuthorizeResponseFetchApiClientFilter(apiClientService, queryParamClientIdRetriever());
+        final ApiClientService apiClientService = config.get("apiClientService")
+                                                        .as(requiredHeapObject(heap, ApiClientService.class));
+
+        return createFilterWithRequestClientIdRetriever(apiClientService, queryParamClientIdRetriever());
     }
 }

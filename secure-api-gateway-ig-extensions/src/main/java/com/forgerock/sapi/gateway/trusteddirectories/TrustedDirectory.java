@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.trusteddirectories;
 
-import java.net.URL;
+import java.net.URI;
 
 /**
  * A Trusted Directory is an external 'trust anchor' that the Secure API Gateway should trust to be the issuer
@@ -29,6 +29,12 @@ import java.net.URL;
  *     About Dynamic Client Registration</a>
  */
 public interface TrustedDirectory {
+
+    /**
+     * @return whether the directory can be used or not.
+     */
+    boolean isDisabled();
+
     /**
      * @return the value that can be expected to be found in the issuer field of Software Statements issued
      * by the Trusted Directory
@@ -37,10 +43,10 @@ public interface TrustedDirectory {
 
     /**
      *
-     * @return a String containing the jwks_uri against which software statement issued by this trusted directory
+     * @return a URI containing the jwks_uri against which software statement issued by this trusted directory
      * can be validated
      */
-    URL getDirectoryJwksUri();
+    URI getDirectoryJwksUri();
 
     /**
      * The software statement has a JWKS associated with it which contains the keys belonging to the particular software

@@ -9,8 +9,8 @@
       "config": {
         "file": "&{ig.instance.dir}&{ig.test.directory.signing.keystore.path}",
         "storeType": "PKCS12",
-        "storePassword": "ig.test.directory.signing.keystore.storepass",
-        "keyEntryPassword": "ig.test.directory.signing.keystore.storepass",
+        "storePasswordSecretId": "ig.test.directory.signing.keystore.storepass",
+        "entryPasswordSecretId": "ig.test.directory.signing.keystore.storepass",
         "secretsProvider": "SystemAndEnvSecretStore-IAM",
         "mappings": [{
           "secretId": "jwt.signer",
@@ -26,7 +26,7 @@
       "secretsProvider": "TestDirectorySigningKeyStore",
       "purposes": [{
         "secretId": "jwt.signer",
-        "keyUsage": "SIGN"
+        "keyUsage": "VERIFY"
       }]
     }
   }

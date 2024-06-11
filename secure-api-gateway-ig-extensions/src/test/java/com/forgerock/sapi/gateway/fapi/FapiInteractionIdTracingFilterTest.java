@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.fapi;
 
-import static com.forgerock.sapi.gateway.fapi.FAPIUtils.X_FAPI_INTERACTION_ID;
+import static com.forgerock.sapi.gateway.fapi.FapiUtils.X_FAPI_INTERACTION_ID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;

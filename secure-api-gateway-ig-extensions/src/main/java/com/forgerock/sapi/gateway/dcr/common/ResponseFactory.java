@@ -29,7 +29,7 @@ import org.forgerock.util.Reject;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeFormatter;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeFormatterFactory;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeNegotiator;
-import com.forgerock.sapi.gateway.fapi.FAPIUtils;
+import com.forgerock.sapi.gateway.fapi.FapiUtils;
 
 public class ResponseFactory {
     private final ContentTypeNegotiator contentTypeNegotiator;
@@ -55,7 +55,7 @@ public class ResponseFactory {
     public Response getInternalServerErrorResponse(Request request, List<String> acceptValues) {
         Map<String, String> errorFields = new LinkedHashMap<>();
         errorFields.put("error", "Server unable to process request");
-        final Optional<String> fapiInteractionId = FAPIUtils.getFapiInteractionId(request);
+        final Optional<String> fapiInteractionId = FapiUtils.getFapiInteractionId(request);
         if (fapiInteractionId.isPresent()) {
             errorFields.put("trace_id", fapiInteractionId.get());
         }

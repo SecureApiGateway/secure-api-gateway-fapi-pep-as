@@ -33,12 +33,14 @@ import org.slf4j.LoggerFactory;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
- * Fetches {@link TrustedDirectory} configuration for the {@link ApiClient} that is configured in the {@link AttributesContext}
- * and adds the TrustedDirectory to the attributes context so that it can be used by subsequent filters.
- *
- * This filter must be installed after a filter which adds the ApiClient to the context, typically: {@link FetchApiClientFilter}
+ * Fetches {@link TrustedDirectory} configuration for the {@link ApiClient} that is configured in the
+ * {@link AttributesContext} and add it to the context so that it can be used by subsequent filters.
+ * <p>
+ * This filter must be installed after a filter which adds the ApiClient to the context,
+ * typically: {@link FetchApiClientFilter}
  */
 public class FetchTrustedDirectoryFilter implements Filter {
 
@@ -56,14 +58,14 @@ public class FetchTrustedDirectoryFilter implements Filter {
 
     /**
      * Utility method to retrieve a TrustedDirectory object from a Context.
-     * This method can be used by other filters to retrieve the TrustedDirectory installed into the attributes context by
-     * this filter.
+     * This method can be used by other filters to retrieve the TrustedDirectory installed into the attributes context
+     * by this filter.
      *
      * @param context the context to retrieve the TrustedDirectory from
-     * @return the TrustedDirectory or null if it is not set in the context.
+     * @return the TrustedDirectory from the context
      */
     public static TrustedDirectory getTrustedDirectoryFromContext(Context context) {
-        return (TrustedDirectory) context.asContext(AttributesContext.class).getAttributes().get(TRUSTED_DIRECTORY_ATTR_KEY);
+        return ContextUtils.getRequiredAttributeAsType(context, TRUSTED_DIRECTORY_ATTR_KEY, TrustedDirectory.class);
     }
 
     public FetchTrustedDirectoryFilter(TrustedDirectoryService trustedDirectoryService) {
@@ -74,15 +76,11 @@ public class FetchTrustedDirectoryFilter implements Filter {
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
-        if (apiClient == null) {
-            logger.error("apiClient not found in request context");
-            throw new IllegalStateException("apiClient not found in request context");
-        }
         try {
             context.asContext(AttributesContext.class).getAttributes().put(TRUSTED_DIRECTORY_ATTR_KEY, getTrustedDirectory(apiClient));
             return next.handle(context, request);
         } catch (RuntimeException ex) {
-            logger.error("Failed to get trustedDirectory for apiClient: " + apiClient, ex);
+            logger.error("Failed to get trustedDirectory for apiClient: {}", apiClient, ex);
             throw ex;
         }
     }
@@ -97,19 +95,20 @@ public class FetchTrustedDirectoryFilter implements Filter {
 
     /**
      * Responsible for creating the {@link FetchTrustedDirectoryFilter}
-     *
+     * <p>
      * Mandatory config:
      * - trustedDirectoryService: the name of a {@link TrustedDirectoryService} object on the heap
-     *
+     * <pre>{@code
      * Example config:
      * {
-     *             "comment": "Add TrustedDirectory configuration to the context attributes",
-     *             "name": "FetchTrustedDirectoryFilter",
-     *             "type": "FetchTrustedDirectoryFilter",
-     *             "config": {
-     *               "trustedDirectoryService": "TrustedDirectoriesService"
-     *             }
+     *      "comment": "Add TrustedDirectory configuration to the context attributes",
+     *      "name": "FetchTrustedDirectoryFilter",
+     *      "type": "FetchTrustedDirectoryFilter",
+     *      "config": {
+     *        "trustedDirectoryService": "TrustedDirectoriesService"
+     *      }
      * }
+     * }</pre>
      */
     public static class Heaplet extends GenericHeaplet {
         @Override

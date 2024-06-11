@@ -15,13 +15,17 @@
  */
 package com.forgerock.sapi.gateway.jwks;
 
+import java.net.MalformedURLException;
+import java.net.URI;
 import java.net.URL;
+import java.util.Objects;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWK;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jwk.JWKSetParser;
 import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 
 /**
  * JwkSetService which fetches JWKSet data from a REST endpoint, implementation is delegated to {@link JWKSetParser}
@@ -35,13 +39,19 @@ public class RestJwkSetService implements JwkSetService {
     }
 
     @Override
-    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URL jwkStoreUrl) {
-        return jwkSetParser.jwkSetAsync(jwkStoreUrl);
+    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet(URI jwkSetUri) {
+        try {
+            final URL jwkSetUrl = Objects.requireNonNull(jwkSetUri, "jwkSetUri cannot be null").toURL();
+            return jwkSetParser.jwkSetAsync(jwkSetUrl);
+        } catch (MalformedURLException e) {
+            return Promises.newExceptionPromise(new FailedToLoadJWKException("jwksSetUri is not a valid URL", e));
+        }
+
     }
 
     @Override
-    public Promise<JWK, FailedToLoadJWKException> getJwk(URL jwkStoreUrl, String keyId) {
-        return getJwkSet(jwkStoreUrl).then(JwkSetService.findJwkByKeyId(keyId));
+    public Promise<JWK, FailedToLoadJWKException> getJwk(URI jwkSetUri, String keyId) {
+        return getJwkSet(jwkSetUri).then(JwkSetService.findJwkByKeyId(keyId));
     }
 
 }

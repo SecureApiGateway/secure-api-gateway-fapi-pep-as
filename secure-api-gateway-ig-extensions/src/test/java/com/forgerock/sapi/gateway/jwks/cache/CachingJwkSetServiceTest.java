@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.jwks.cache;
 
-import java.net.URL;
+import java.net.URI;
 
 import org.forgerock.json.jose.jwk.JWKSet;
 
@@ -24,7 +24,7 @@ import org.forgerock.json.jose.jwk.JWKSet;
  */
 public class CachingJwkSetServiceTest extends BaseCachingJwkSetServiceTest {
     @Override
-    protected Cache<URL, JWKSet> createSimpleCache() {
+    protected Cache<URI, JWKSet> createSimpleCache() {
         return new HashMapCache<>();
     }
 }

@@ -102,9 +102,9 @@
       "capture" : [ "response", "request" ]
     },
     {
-      "name": "FetchApiClientResourcesChain",
+      "name": "ValidateApiClientMtlsCertChain",
       "type": "ChainOfFilters",
-      "comment": "This filter chain will set the apiClient, apiClientJwkSet and trustedDirectory attributes in the context based on the client_id of the access_token",
+      "comment": "This filter chain validates the ApiClient's MTLS cert using the Trusted Directory, it first fetches all of the resources it needs to perform the validation",
       "config" : {
         "filters": [
           {
@@ -120,7 +120,7 @@
             "name": "FetchTrustedDirectoryFilter",
             "type": "FetchTrustedDirectoryFilter",
             "config": {
-              "trustedDirectoryService": "TrustedDirectoriesService"
+              "trustedDirectoryService": "TrustedDirectoryService"
             }
           },
           {
@@ -195,7 +195,6 @@
       "config" : {
         "url" : "https://&{identity.platform.fqdn}/am",
         "realm" : "/&{am.realm}",
-        "version" : "7.3.0",
         "agent" : {
           "username" : "ig-agent",
           "passwordSecretId" : "ig.agent.password"
@@ -286,21 +285,80 @@
       }
     },
     {
+      "name": "TrustManager-OB",
+      "type": "TrustManager",
+      "config": {
+        "keystore": {
+          "type": "KeyStore",
+          "config": {
+            "url": "file://&{ig.instance.dir}&{ig.truststore.path}",
+            "type": "PKCS12",
+            "passwordSecretId": "ig.truststore.password",
+            "secretsProvider": "SystemAndEnvSecretStore-IAM"
+          }
+        }
+      }
+    },
+    {
+      "name": "OBClientHandler",
+      "type": "ClientHandler",
+      "capture": "all",
+      "config": {
+        "tls": {
+          "type": "ClientTlsOptions",
+          "config": {
+            "trustManager": "TrustManager-OB"
+          }
+        }
+      }
+    },
+    {
       "name": "JwkSetService",
       "type": "CaffeineCachingJwkSetService",
       "config": {
-        "handler": "ClientHandler",
+        "handler": "OBClientHandler",
         "maxCacheEntries": 500,
         "expireAfterWriteDuration": "24 hours"
       }
     },
     {
-      "name": "TrustedDirectoriesService",
-      "type": "TrustedDirectoriesService",
+      "name": "TrustedDirectoryService",
+      "type": "StaticTrustedDirectoryService",
       "comment": "Used to obtain meta information about a trusted directory by look up using the 'iss' field value",
       "config": {
-        "enableIGTestTrustedDirectory": "${security.enableTestTrustedDirectory}",
-        "SecureApiGatewayJwksUri": "https://&{ig.fqdn}/jwkms/testdirectory/jwks"
+        "trustedDirectories": [
+          {
+            "name": "Open Banking Test Directory",
+            "type": "TrustedDirectory",
+            "config": {
+              "directoryJwksUri": "https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks",
+              "issuer": "OpenBanking Ltd",
+              "softwareStatementJwksUriClaimName": "software_jwks_endpoint",
+              "softwareStatementOrgIdClaimName": "org_id",
+              "softwareStatementOrgNameClaimName": "org_name",
+              "softwareStatementSoftwareIdClaimName": "software_id",
+              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
+              "softwareStatementRolesClaimName": "software_roles",
+              "softwareStatementClientNameClaimName": "software_client_name"
+            }
+          },
+          {
+            "name": "Secure API Gateway Test Directory",
+            "type": "TrustedDirectory",
+            "config": {
+              "directoryJwksUri": "https://&{ig.fqdn}/jwkms/testdirectory/jwks",
+              "issuer": "test-publisher",
+              "softwareStatementJwksClaimName": "software_jwks",
+              "softwareStatementOrgIdClaimName": "org_id",
+              "softwareStatementOrgNameClaimName": "org_name",
+              "softwareStatementSoftwareIdClaimName": "software_id",
+              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
+              "softwareStatementRolesClaimName": "software_roles",
+              "softwareStatementClientNameClaimName": "software_client_name",
+              "disabled": "${!security.enableTestTrustedDirectory}"
+            }
+          }
+        ]
       }
     },
     {
