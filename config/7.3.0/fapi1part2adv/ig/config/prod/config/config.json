@@ -334,7 +334,7 @@
             "name": "Secure API Gateway Test Directory",
             "type": "TrustedDirectory",
             "config": {
-              "directoryJwksUri": "https://&{ig.fqdn}/jwkms/testdirectory/jwks",
+              "directoryJwksUri": "https://&{trusteddir.fqdn}/jwkms/testdirectory/jwks",
               "issuer": "test-publisher",
               "softwareStatementJwksClaimName": "software_jwks",
               "softwareStatementOrgIdClaimName": "org_id",
