@@ -336,7 +336,7 @@
             "config": {
               "directoryJwksUri": "https://&{trusteddir.fqdn}/jwkms/testdirectory/jwks",
               "issuer": "test-publisher",
-              "softwareStatementJwksClaimName": "software_jwks",
+              "softwareStatementJwksUriClaimName": "software_jwks_endpoint",
               "softwareStatementOrgIdClaimName": "org_id",
               "softwareStatementOrgNameClaimName": "org_name",
               "softwareStatementSoftwareIdClaimName": "software_id",
