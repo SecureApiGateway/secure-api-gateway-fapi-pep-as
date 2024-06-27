@@ -30,72 +30,8 @@ import org.forgerock.util.Reject;
  */
 public class ApiClient {
 
-    public static class ApiClientBuilder {
-        private String oAuth2ClientId;
-        private String softwareClientId;
-        private String clientName;
-        private URI jwksUri;
-        private JWKSet jwks;
-        private List<String> roles;
-        private SignedJwt softwareStatementAssertion;
-        private ApiClientOrganisation organisation;
-        private boolean deleted;
-
-        public ApiClientBuilder setOAuth2ClientId(String oAuth2ClientId) {
-            this.oAuth2ClientId = oAuth2ClientId;
-            return this;
-        }
-
-        public ApiClientBuilder setSoftwareClientId(String softwareClientId) {
-            this.softwareClientId = softwareClientId;
-            return this;
-        }
-
-        public ApiClientBuilder setClientName(String clientName) {
-            this.clientName = clientName;
-            return this;
-        }
-
-        public ApiClientBuilder setJwksUri(URI jwksUri) {
-            this.jwksUri = jwksUri;
-            return this;
-        }
-
-        public ApiClientBuilder setJwks(JWKSet jwks){
-            this.jwks = jwks;
-            return this;
-        }
-
-        public ApiClientBuilder setSoftwareStatementAssertion(SignedJwt softwareStatementAssertion) {
-            this.softwareStatementAssertion = softwareStatementAssertion;
-            return this;
-        }
-
-        public ApiClientBuilder setOrganisation(ApiClientOrganisation organisation) {
-            this.organisation = organisation;
-            return this;
-        }
-
-        public ApiClientBuilder setDeleted(boolean deleted) {
-            this.deleted = deleted;
-            return this;
-        }
-
-        public ApiClientBuilder setRoles(List<String> roles){
-            this.roles = roles;
-            return this;
-        }
-
-        public ApiClient build() {
-            Reject.ifNull(oAuth2ClientId, "oAuth2ClientId must be configured");
-            Reject.ifNull(softwareClientId, "softwareClientId must be configured");
-            Reject.ifNull(clientName, "clientName must be configured");
-            Reject.ifNull(softwareStatementAssertion, "softwareStatementAssertion must be configured");
-            Reject.ifNull(organisation, "organisation must be configured");
-            Reject.ifNull(roles, "roles must be configured");
-            Reject.unless(jwksUri == null ^ jwks == null, "Exactly one of jwksUri or jwks must be configured");
-            return new ApiClient(oAuth2ClientId, softwareClientId, clientName, jwksUri, jwks, softwareStatementAssertion, organisation, roles, deleted);
-        }
+    public static ApiClientBuilder builder() {
+        return new ApiClientBuilder();
     }
 
     /**
@@ -137,24 +73,25 @@ public class ApiClient {
     private final ApiClientOrganisation organisation;
 
     /**
-     * The roles allowed to be performed by this apiClient.
+     * The roles allowed to be performed by this ApiClient.
      */
     private final List<String> roles;
 
+    /**
+     * Whether the ApiClient has been marked as deleted in the datastore.
+     */
     private final boolean deleted;
 
-    private ApiClient(String oAuth2ClientId, String softwareClientId, String clientName, URI jwksUri, JWKSet jwks,
-            SignedJwt softwareStatementAssertion, ApiClientOrganisation organisation, List<String> roles,
-            boolean deleted) {
-        this.oAuth2ClientId = oAuth2ClientId;
-        this.softwareClientId = softwareClientId;
-        this.clientName = clientName;
-        this.jwksUri = jwksUri;
-        this.jwks = jwks;
-        this.softwareStatementAssertion = softwareStatementAssertion;
-        this.organisation = organisation;
-        this.roles = roles;
-        this.deleted = deleted;
+    private ApiClient(ApiClientBuilder builder) {
+        this.oAuth2ClientId = builder.oAuth2ClientId;
+        this.softwareClientId = builder.softwareClientId;
+        this.clientName = builder.clientName;
+        this.jwksUri = builder.jwksUri;
+        this.jwks = builder.jwks;
+        this.softwareStatementAssertion = builder.softwareStatementAssertion;
+        this.organisation = builder.organisation;
+        this.roles = builder.roles;
+        this.deleted = builder.deleted;
     }
 
     public String getOAuth2ClientId() {
@@ -219,5 +156,73 @@ public class ApiClient {
                 ", roles=" + roles +
                 ", deleted=" + deleted +
                 '}';
+    }
+
+    public static class ApiClientBuilder {
+        private String oAuth2ClientId;
+        private String softwareClientId;
+        private String clientName;
+        private URI jwksUri;
+        private JWKSet jwks;
+        private List<String> roles;
+        private SignedJwt softwareStatementAssertion;
+        private ApiClientOrganisation organisation;
+        private boolean deleted;
+
+        public ApiClientBuilder oAuth2ClientId(String oAuth2ClientId) {
+            this.oAuth2ClientId = oAuth2ClientId;
+            return this;
+        }
+
+        public ApiClientBuilder softwareClientId(String softwareClientId) {
+            this.softwareClientId = softwareClientId;
+            return this;
+        }
+
+        public ApiClientBuilder clientName(String clientName) {
+            this.clientName = clientName;
+            return this;
+        }
+
+        public ApiClientBuilder jwksUri(URI jwksUri) {
+            this.jwksUri = jwksUri;
+            return this;
+        }
+
+        public ApiClientBuilder jwks(JWKSet jwks){
+            this.jwks = jwks;
+            return this;
+        }
+
+        public ApiClientBuilder softwareStatementAssertion(SignedJwt softwareStatementAssertion) {
+            this.softwareStatementAssertion = softwareStatementAssertion;
+            return this;
+        }
+
+        public ApiClientBuilder organisation(ApiClientOrganisation organisation) {
+            this.organisation = organisation;
+            return this;
+        }
+
+        public ApiClientBuilder deleted(boolean deleted) {
+            this.deleted = deleted;
+            return this;
+        }
+
+        public ApiClientBuilder roles(List<String> roles){
+            this.roles = roles;
+            return this;
+        }
+
+        public ApiClient build() {
+            Reject.ifNull(oAuth2ClientId, "oAuth2ClientId must be configured");
+            Reject.ifNull(softwareClientId, "softwareClientId must be configured");
+            Reject.ifNull(clientName, "clientName must be configured");
+            Reject.ifNull(softwareStatementAssertion, "softwareStatementAssertion must be configured");
+            Reject.ifNull(organisation, "organisation must be configured");
+            Reject.ifNull(roles, "roles must be configured");
+            Reject.unless(jwksUri == null ^ jwks == null, "Exactly one of jwksUri or jwks must be configured");
+            return new ApiClient(this);
+        }
     }
 }

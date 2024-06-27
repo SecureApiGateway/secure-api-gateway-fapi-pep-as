@@ -45,23 +45,23 @@ public class IdmApiClientDecoder {
      */
     public ApiClient decode(JsonValue apiClientJson) {
         try {
-            final ApiClientBuilder apiClientBuilder = new ApiClientBuilder()
-                    .setClientName(apiClientJson.get("name").as(this::requiredField).asString())
-                    .setOAuth2ClientId(apiClientJson.get("oauth2ClientId").as(this::requiredField).asString())
-                    .setSoftwareClientId(apiClientJson.get("id").as(this::requiredField).asString())
-                    .setDeleted(apiClientJson.get("deleted").as(this::requiredField).asBoolean())
-                    .setSoftwareStatementAssertion(apiClientJson.get("ssa").as(this::requiredField).as(this::decodeSsa))
-                    .setOrganisation(apiClientJson.get("apiClientOrg").as(this::requiredField).as(this::decodeApiClientOrganisation))
-                    .setRoles(apiClientJson.get("roles").as(this::requiredField).as(this::decodeRoles));
+            final ApiClientBuilder apiClientBuilder = ApiClient.builder()
+                    .clientName(apiClientJson.get("name").as(this::requiredField).asString())
+                    .oAuth2ClientId(apiClientJson.get("oauth2ClientId").as(this::requiredField).asString())
+                    .softwareClientId(apiClientJson.get("id").as(this::requiredField).asString())
+                    .deleted(apiClientJson.get("deleted").as(this::requiredField).asBoolean())
+                    .softwareStatementAssertion(apiClientJson.get("ssa").as(this::requiredField).as(this::decodeSsa))
+                    .organisation(apiClientJson.get("apiClientOrg").as(this::requiredField).as(this::decodeApiClientOrganisation))
+                    .roles(apiClientJson.get("roles").as(this::requiredField).as(this::decodeRoles));
 
             final JsonValue jwksUri = apiClientJson.get("jwksUri");
             if (jwksUri.isNotNull()) {
-                apiClientBuilder.setJwksUri(jwksUri.as(jwks -> URI.create(jwks.asString())));
+                apiClientBuilder.jwksUri(jwksUri.as(jwks -> URI.create(jwks.asString())));
             }
 
             final JsonValue jwks = apiClientJson.get("jwks");
             if (jwks.isNotNull()){
-                apiClientBuilder.setJwks(this.decodeJwks(jwks));
+                apiClientBuilder.jwks(this.decodeJwks(jwks));
             }
             return apiClientBuilder.build();
         } catch (JsonValueException jve) {
