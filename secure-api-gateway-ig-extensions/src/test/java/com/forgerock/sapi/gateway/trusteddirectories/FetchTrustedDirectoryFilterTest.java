@@ -52,7 +52,7 @@ public class FetchTrustedDirectoryFilterTest {
         ssaClaims.setIssuer(issuer);
         final SignedJwt ssaSignedJwt = new SignedJwt(new JwsHeader(), ssaClaims, new byte[0], new byte[0]);
 
-        return ApiClientTest.createBuilderWithJwks().setSoftwareStatementAssertion(ssaSignedJwt).build();
+        return ApiClientTest.createBuilderWithJwks().softwareStatementAssertion(ssaSignedJwt).build();
     }
 
     @Test

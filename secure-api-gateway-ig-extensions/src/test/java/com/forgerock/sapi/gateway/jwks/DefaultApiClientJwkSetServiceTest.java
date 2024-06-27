@@ -119,7 +119,7 @@ class DefaultApiClientJwkSetServiceTest {
         final JwtClaimsSet claimsSet = new JwtClaimsSet();
         claimsSet.setClaim(misconfiguredDirectory.getSoftwareStatementJwksClaimName(), json(object(field("keys", "should be a list"))));
 
-        final ApiClient apiClient = ApiClientTest.createBuilderWithJwks().setSoftwareStatementAssertion(new SignedJwt(new JwsHeader(), claimsSet, new byte[0], new byte[0])).build();
+        final ApiClient apiClient = ApiClientTest.createBuilderWithJwks().softwareStatementAssertion(new SignedJwt(new JwsHeader(), claimsSet, new byte[0], new byte[0])).build();
 
         final Promise<JWKSet, FailedToLoadJWKException> jwkSetPromise = apiClientJwkSetService.getJwkSet(apiClient, misconfiguredDirectory);
 

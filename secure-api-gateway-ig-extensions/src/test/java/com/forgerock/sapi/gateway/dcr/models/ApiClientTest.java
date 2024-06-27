@@ -72,24 +72,24 @@ public class ApiClientTest {
     @Test
     public void failToBuildIfMandatoryFieldIsMissing() {
         assertEquals("oAuth2ClientId must be configured",
-                assertThrows(NullPointerException.class, () -> new ApiClientBuilder().build()).getMessage());
+                assertThrows(NullPointerException.class, () -> ApiClient.builder().build()).getMessage());
     }
 
     @Test
     public void failToBuildIfJwksAndJwksUriFieldsAreMissing() {
         assertEquals("Exactly one of jwksUri or jwks must be configured",
                 assertThrows(IllegalArgumentException.class,
-                        () -> createBuilderWithJwks().setJwks(null).setJwksUri(null).build()).getMessage());
+                        () -> createBuilderWithJwks().jwks(null).jwksUri(null).build()).getMessage());
     }
 
     @Test
     public void failToBuildIfJwksAndJwksUriFieldsAreBothSet() {
         assertEquals("Exactly one of jwksUri or jwks must be configured",
-                assertThrows(IllegalArgumentException.class, () -> createBuilderWithJwks().setJwksUri(JWKS_URI).build()).getMessage());
+                assertThrows(IllegalArgumentException.class, () -> createBuilderWithJwks().jwksUri(JWKS_URI).build()).getMessage());
     }
 
     public static ApiClient createApiClientWithJwksUri(URI jwksUri) {
-        return createBuilderWithJwks().setJwks(null).setJwksUri(jwksUri).build();
+        return createBuilderWithJwks().jwks(null).jwksUri(jwksUri).build();
     }
 
     public static ApiClient createApiClientWithSoftwareStatementJwks(JWKSet jwkSet, String softwareStatementJwksClaimName) {
@@ -99,18 +99,18 @@ public class ApiClientTest {
         }
 
         final ApiClientBuilder builder = createBuilderWithJwks();
-        builder.setSoftwareStatementAssertion(new SignedJwt(new JwsHeader(), claimsSet, new byte[0], new byte[0]));
+        builder.softwareStatementAssertion(new SignedJwt(new JwsHeader(), claimsSet, new byte[0], new byte[0]));
         return builder.build();
     }
 
     public static ApiClientBuilder createBuilderWithJwks() {
-        return new ApiClientBuilder().setClientName(CLIENT_NAME)
-                                     .setOAuth2ClientId(OAUTH2_CLIENT_ID)
-                                     .setSoftwareClientId(SOFTWARE_CLIENT_ID)
-                                     .setSoftwareStatementAssertion(EMPTY_SSA)
-                                     .setJwksUri(null)
-                                     .setRoles(ROLES)
-                                     .setJwks(JWK_SET)
-                                     .setOrganisation(API_CLIENT_ORGANISATION);
+        return ApiClient.builder().clientName(CLIENT_NAME)
+                                  .oAuth2ClientId(OAUTH2_CLIENT_ID)
+                                  .softwareClientId(SOFTWARE_CLIENT_ID)
+                                  .softwareStatementAssertion(EMPTY_SSA)
+                                  .jwksUri(null)
+                                  .roles(ROLES)
+                                  .jwks(JWK_SET)
+                                  .organisation(API_CLIENT_ORGANISATION);
     }
 }
