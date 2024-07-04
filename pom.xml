@@ -46,7 +46,7 @@
     </parent>
 
     <properties>
-        <openig.version>2024.3.0</openig.version>
+        <openig.version>2024.6.0</openig.version>
         <nimbus-jose.version>9.39.1</nimbus-jose.version>
         <bouncy-castle.version>1.77</bouncy-castle.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
