@@ -21,7 +21,7 @@
 
     <groupId>com.forgerock.sapi.gateway</groupId>
     <artifactId>secure-api-gateway-core</artifactId>
-    <version>3.1.0</version>
+    <version>3.1.1-SNAPSHOT</version>
 
     <packaging>pom</packaging>
     <name>secure-api-gateway-core</name>
@@ -75,7 +75,7 @@
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
         <url>https://github.com/SecureApiGateway/secure-api-gateway-core.git</url>
-        <tag>v3.1.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <repositories>
