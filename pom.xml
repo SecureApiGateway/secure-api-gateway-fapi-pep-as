@@ -21,7 +21,7 @@
 
     <groupId>com.forgerock.sapi.gateway</groupId>
     <artifactId>secure-api-gateway-core</artifactId>
-    <version>3.0.1-SNAPSHOT</version>
+    <version>3.1.0</version>
 
     <packaging>pom</packaging>
     <name>secure-api-gateway-core</name>
