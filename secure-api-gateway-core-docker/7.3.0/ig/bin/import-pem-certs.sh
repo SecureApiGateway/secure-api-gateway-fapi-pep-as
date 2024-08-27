@@ -22,7 +22,6 @@ set -e
 set -o pipefail
 
 IG_DEFAULT_TRUSTSTORE=${IG_DEFAULT_TRUSTSTORE:-$JAVA_HOME/lib/security/cacerts}
-# If a $IG_PEM_TRUSTSTORE is provided, import it into the truststore. Otherwise, do nothing
 if [ -f "$IG_DEFAULT_TRUSTSTORE" ]; then
     TRUSTSTORE_PATH="${TRUSTSTORE_PATH:-/home/forgerock/igtruststore}"
     TRUSTSTORE_PASSWORD="${TRUSTSTORE_PASSWORD:-changeit}"
@@ -30,6 +29,7 @@ if [ -f "$IG_DEFAULT_TRUSTSTORE" ]; then
     cp ${IG_DEFAULT_TRUSTSTORE} ${TRUSTSTORE_PATH}
     # Calculate the number of certs in the PEM file
     if [ -f "$IG_PEM_TRUSTSTORE" ]; then
+    # If a $IG_PEM_TRUSTSTORE is provided, import it into the truststore. Otherwise, do nothing
       CERTS=$(grep 'END CERTIFICATE' $IG_PEM_TRUSTSTORE| wc -l)
       echo "Found (${CERTS}) certificates in $IG_PEM_TRUSTSTORE"
       echo "Importing (${CERTS}) certificates into ${TRUSTSTORE_PATH}"
