@@ -1,5 +1,5 @@
 {
-   "name": "Kubernetes endpoints",
+   "name": "98 - Kubernetes endpoints",
    "condition": "${find(request.uri.path, '^/kube')}",
    "handler": {
       "type": "DispatchHandler",
