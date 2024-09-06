@@ -15,6 +15,8 @@
  */
 package com.forgerock.sapi.gateway.dcr.service.idm;
 
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.util.List;
 
@@ -27,6 +29,7 @@ import org.forgerock.json.jose.jws.SignedJwt;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient.ApiClientBuilder;
 import com.forgerock.sapi.gateway.dcr.models.ApiClientOrganisation;
+import com.forgerock.sapi.gateway.jwks.JwkSetService;
 
 /**
  * Decodes an {@link ApiClient} from a {@link JsonValue} returned by IDM
@@ -34,8 +37,17 @@ import com.forgerock.sapi.gateway.dcr.models.ApiClientOrganisation;
 public class IdmApiClientDecoder {
 
     /**
+     * JwkSetService used to obtain the ApiClient's {@link JWKSet} when it is stored in a remote location.
+     */
+    private final JwkSetService jwkSetService;
+
+    public IdmApiClientDecoder(final JwkSetService jwkSetService) {
+        this.jwkSetService = requireNonNull(jwkSetService, "jwkSetService must be provided");
+    }
+
+    /**
      * Decodes a json into an ApiClient.
-     *
+     * <p>
      * This method will throw a RuntimeException if decoding fails, for example if a required field is missing or if
      * there is a datatype mismatch.
      *
@@ -54,14 +66,15 @@ public class IdmApiClientDecoder {
                     .organisation(apiClientJson.get("apiClientOrg").as(this::requiredField).as(this::decodeApiClientOrganisation))
                     .roles(apiClientJson.get("roles").as(this::requiredField).as(this::decodeRoles));
 
-            final JsonValue jwksUri = apiClientJson.get("jwksUri");
-            if (jwksUri.isNotNull()) {
-                apiClientBuilder.jwksUri(jwksUri.as(jwks -> URI.create(jwks.asString())));
+            final JsonValue jwksUriValue = apiClientJson.get("jwksUri");
+            if (jwksUriValue.isNotNull()) {
+                apiClientBuilder.withUriJwksSupplier(jwksUriValue.as(jwks -> URI.create(jwks.asString())),
+                                                     jwkSetService);
             }
 
             final JsonValue jwks = apiClientJson.get("jwks");
             if (jwks.isNotNull()){
-                apiClientBuilder.jwks(this.decodeJwks(jwks));
+                apiClientBuilder.withEmbeddedJwksSupplier(this.decodeJwks(jwks));
             }
             return apiClientBuilder.build();
         } catch (JsonValueException jve) {

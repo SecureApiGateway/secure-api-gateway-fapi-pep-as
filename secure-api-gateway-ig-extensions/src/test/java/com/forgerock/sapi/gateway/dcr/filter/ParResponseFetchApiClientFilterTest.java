@@ -36,14 +36,13 @@ import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.nimbusds.jose.JWSAlgorithm;
 
 public class ParResponseFetchApiClientFilterTest extends BaseResponsePathFetchApiClientFilterTest {
 
     @Override
-    protected ResponsePathFetchApiClientFilter createFilter(ApiClientService apiClientService) {
+    protected ResponsePathFetchApiClientFilter createFilter() {
         final HeapImpl heap = new HeapImpl(Name.of("heap"));
         heap.put("apiClientService", apiClientService);
         final JsonValue config = json(object(field("apiClientService", "apiClientService")));
@@ -64,7 +63,7 @@ public class ParResponseFetchApiClientFilterTest extends BaseResponsePathFetchAp
             throw new RuntimeException(e);
         }
         final Form form = new Form();
-        form.putSingle("request", CryptoUtils.createEncodedJwtString(Map.of("client_id", clientId), JWSAlgorithm.PS256));
+        form.putSingle("request", CryptoUtils.createEncodedJwtString(Map.of("client_id", CLIENT_ID), JWSAlgorithm.PS256));
         request.setEntity(form);
         return request;
     }

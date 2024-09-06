@@ -15,63 +15,72 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
-import static com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilterTest.createApiClientService;
-import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.createIdmApiClientWithJwks;
-import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.verifyIdmClientDataMatchesApiClientObject;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.json;
+import static org.forgerock.util.promise.Promises.newExceptionPromise;
+import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
 
-import org.forgerock.http.Client;
 import org.forgerock.http.Filter;
-import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
-import org.forgerock.openig.handler.Handlers;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientServiceTest.MockGetApiClientIdmHandler;
+import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
+import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 import com.forgerock.sapi.gateway.util.TestHandlers.FixedResponseHandler;
 
+@ExtendWith(MockitoExtension.class)
 public abstract class BaseResponsePathFetchApiClientFilterTest {
-    static final String idmBaseUri = "http://localhost/openidm/managed";
-    static final String clientId = "9999";
+
+    @Mock
+    protected ApiClient testApiClient;
+
+    @Mock
+    protected ApiClientService apiClientService;
+
+    protected static final String CLIENT_ID = "9999";
+
     private static AttributesContext createContext() {
         return new AttributesContext(new RootContext("root"));
     }
 
-    protected Filter createFilter(Handler idmResponseHandler) {
-        return createFilter(createApiClientService(new Client(idmResponseHandler), idmBaseUri));
-    }
-
-    protected abstract Filter createFilter(ApiClientService apiClientService);
+    protected abstract Filter createFilter();
 
     @Test
     void fetchApiClientForSuccessResponse() throws Exception {
-        final JsonValue idmClientData = createIdmApiClientWithJwks(clientId);
-        final MockGetApiClientIdmHandler idmResponseHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmClientData);
-        callFilterValidateSuccessBehaviour(idmClientData, createFilter(idmResponseHandler));
+        callFilterValidateSuccessBehaviour(createFilter());
     }
 
-    protected void callFilterValidateSuccessBehaviour(JsonValue idmClientData, Filter filter) throws Exception {
+    protected void callFilterValidateSuccessBehaviour(Filter filter) throws Exception {
+        // Mock the success response for the ApiClientService call
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
+
         final Consumer<AttributesContext> successBehaviourValidator = ctxt -> {
             // Verify that the context was updated with the apiClient data
             final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
             assertNotNull(apiClient, "apiClient was not found in context");
-            verifyIdmClientDataMatchesApiClientObject(idmClientData, apiClient);
+            assertThat(apiClient).isSameAs(testApiClient);
         };
         callFilter(filter, successBehaviourValidator);
     }
@@ -98,13 +107,10 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     @Test
     void doesNotFetchApiClientForErrorResponses() throws InterruptedException, TimeoutException {
-        final JsonValue idmClientData = createIdmApiClientWithJwks(clientId);
-        final MockGetApiClientIdmHandler idmResponseHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmClientData);
-        final Filter filter = createFilter(idmResponseHandler);
         final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, createRequest(),
-                new FixedResponseHandler(new Response(Status.BAD_GATEWAY)));
+        final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(),
+                                                                                              new FixedResponseHandler(new Response(Status.BAD_GATEWAY)));
 
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
@@ -113,14 +119,11 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     }
 
     void returnsErrorResponseWhenClientIdParamNotFound(Request request, Response upstreamResponse) throws Exception {
-        final JsonValue idmClientData = createIdmApiClientWithJwks(clientId);
-        final MockGetApiClientIdmHandler idmResponseHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmClientData);
-        final Filter filter = createFilter(idmResponseHandler);
         final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         request.setUri("/authorize");
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(upstreamResponse);
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, upstreamHandler);
+        final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, request, upstreamHandler);
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.BAD_REQUEST);
@@ -132,11 +135,13 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     @Test
     void returnsErrorResponseWhenApiClientServiceReturnsException() throws Exception {
-        final Filter filter = createFilter(Handlers.INTERNAL_SERVER_ERROR);
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+                newExceptionPromise(new ApiClientServiceException(ApiClientServiceException.ErrorCode.SERVER_ERROR, "Unexpected error")));
+
         final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, createRequest(), upstreamHandler);
+        final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.INTERNAL_SERVER_ERROR);
@@ -147,16 +152,18 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         assertThrows(IllegalStateException.class, () -> FetchApiClientFilter.getApiClientFromContext(context));
     }
 
-    @Test
-    void returnsUnauthorisedResponseWhenApiClientHasBeenDeleted() throws Exception {
-        final JsonValue deletedApiClient = createIdmApiClientWithJwks(clientId).put("deleted", true);
-        final MockGetApiClientIdmHandler idmResponseHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, deletedApiClient);
-        final Filter filter = createFilter(idmResponseHandler);
+    @ParameterizedTest
+    @EnumSource(value = ErrorCode.class, names = {"NOT_FOUND", "DELETED"})
+    void returnsUnauthorisedResponseWhenApiClientHasBeenDeleted(ErrorCode errorCode) throws Exception {
+        // Mock error response from ApiClientService
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+                newExceptionPromise(new ApiClientServiceException(errorCode,
+                                                                  "ApiClient " + CLIENT_ID + " does not exist")));
 
-        final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
-
+        final AttributesContext context = createContext();
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, createRequest(), upstreamHandler);
+
+        final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);
         final Response response = responsePromise.getOrThrow(1, TimeUnit.SECONDS);
 
         assertThat(response.getStatus()).isEqualTo(Status.UNAUTHORIZED);

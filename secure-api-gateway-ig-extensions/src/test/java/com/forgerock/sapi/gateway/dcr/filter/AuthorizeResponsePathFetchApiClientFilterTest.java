@@ -23,8 +23,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.net.URISyntaxException;
 
-import org.forgerock.http.Client;
-import org.forgerock.http.Handler;
+import org.forgerock.http.Filter;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
@@ -35,15 +34,11 @@ import org.forgerock.openig.heap.Name;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoder;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientServiceTest.MockGetApiClientIdmHandler;
-
 class AuthorizeResponsePathFetchApiClientFilterTest extends BaseResponsePathFetchApiClientFilterTest {
 
-    protected ResponsePathFetchApiClientFilter createFilter(ApiClientService apiClientService) {
+
+    @Override
+    protected Filter createFilter() {
         final HeapImpl heap = new HeapImpl(Name.of("heap"));
         heap.put("apiClientService", apiClientService);
         final JsonValue config = json(object(field("apiClientService", "apiClientService")));
@@ -58,7 +53,7 @@ class AuthorizeResponsePathFetchApiClientFilterTest extends BaseResponsePathFetc
     protected Request createRequest() {
         final Request request = new Request();
         try {
-            request.setUri("/authorize?client_id=" + clientId);
+            request.setUri("/authorize?client_id=" + CLIENT_ID);
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
@@ -87,17 +82,14 @@ class AuthorizeResponsePathFetchApiClientFilterTest extends BaseResponsePathFetc
 
         @Test
         void successfullyCreatesFilterWithRequiredConfigOnly() throws Exception {
-            final JsonValue idmApiClientData = IdmApiClientDecoderTest.createIdmApiClientWithJwksUri(clientId);
-            final Handler idmClientHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmApiClientData);
-
             final HeapImpl heap = new HeapImpl(Name.of("heap"));
-            heap.put("IdmApiClientService", new IdmApiClientService(new Client(idmClientHandler), idmBaseUri, new IdmApiClientDecoder()));
+            heap.put("IdmApiClientService", apiClientService);
 
             final JsonValue config = json(object(field("apiClientService", "IdmApiClientService")));
             final ResponsePathFetchApiClientFilter filter = (ResponsePathFetchApiClientFilter) new AuthorizeResponseFetchApiClientFilterHeaplet().create(Name.of("test"), config, heap);
 
             // Test the filter created by the Heaplet
-            callFilterValidateSuccessBehaviour(idmApiClientData, filter);
+            callFilterValidateSuccessBehaviour(filter);
         }
     }
 }

@@ -42,11 +42,6 @@ import org.slf4j.LoggerFactory;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.jwks.ApiClientJwkSetService;
-import com.forgerock.sapi.gateway.jwks.DefaultApiClientJwkSetService;
-import com.forgerock.sapi.gateway.jwks.JwkSetService;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectory;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 
 /**
  * Filter to validate that the client's MTLS transport certificate is valid when making a request to an Authorisation
@@ -82,31 +77,15 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
     private final boolean certificateIsMandatory;
 
     /**
-     * Service which retrieves {@link TrustedDirectory} configuration
-     */
-    private final TrustedDirectoryService trustedDirectoryService;
-
-    /**
-     * Service which retrieves the {@link org.forgerock.json.jose.jwk.JWKSet} for the {@link ApiClient}
-     */
-    private final ApiClientJwkSetService apiClientJwkSetService;
-
-    /**
      * Validator which ensures that the client's mTLS certificate belongs to the ApiClient's {@link org.forgerock.json.jose.jwk.JWKSet}
      */
     private final TransportCertValidator transportCertValidator;
 
-    public ResponsePathTransportCertValidationFilter(TrustedDirectoryService trustedDirectoryService,
-                                                     ApiClientJwkSetService apiClientJwkSetService,
-                                                     CertificateRetriever certificateRetriever,
+    public ResponsePathTransportCertValidationFilter(CertificateRetriever certificateRetriever,
                                                      TransportCertValidator transportCertValidator,
                                                      boolean certificateIsMandatory) {
-        Reject.ifNull(trustedDirectoryService, "trustedDirectoryService must be provided");
-        Reject.ifNull(apiClientJwkSetService, "apiClientJwkSetService must be provided");
         Reject.ifNull(certificateRetriever, "certificateRetriever must be provided");
         Reject.ifNull(transportCertValidator, "transportCertValidator must be provided");
-        this.trustedDirectoryService = trustedDirectoryService;
-        this.apiClientJwkSetService = apiClientJwkSetService;
         this.certificateRetriever = certificateRetriever;
         this.transportCertValidator = transportCertValidator;
         this.certificateIsMandatory = certificateIsMandatory;
@@ -147,13 +126,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
     private Promise<Response, NeverThrowsException> validateApiClientTransportCert(ApiClient apiClient,
                                                                                    X509Certificate clientCertificate,
                                                                                    Response response) {
-        final TrustedDirectory trustedDirectory = trustedDirectoryService.getTrustedDirectoryConfiguration(apiClient);
-        if (trustedDirectory == null) {
-            logger.error("Failed to get trusted directory for apiClient: {}", apiClient);
-            return Promises.newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
-        }
-
-        return apiClientJwkSetService.getJwkSet(apiClient, trustedDirectory).then(jwkSet -> {
+        return apiClient.getJwkSet().then(jwkSet -> {
             try {
                 transportCertValidator.validate(clientCertificate, jwkSet);
             } catch (CertificateException ce) {
@@ -170,7 +143,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
     }
 
     /**
-     * Creates an error response conforming to spec: https://www.rfc-editor.org/rfc/rfc6749#section-5.2
+     * Creates an error response conforming to spec: <a href="https://www.rfc-editor.org/rfc/rfc6749#section-5.2">rfc6749</a>
      *
      * @param message String error message to use in the error_description response field
      * @return Response object communicating an error as per the spec
@@ -185,8 +158,6 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      * <p>
      * Mandatory fields:
      * <p>
-     *  - trustedDirectoryService: the name of a {@link TrustedDirectoryService} object on the heap
-     *  - jwkSetService: the name of the service (defined in config on the heap) that can obtain JWK Sets from a jwk set url
      *  - transportCertValidator: the name of a {@link TransportCertValidator} object on the heap to use to validate the certs
      *  - certificateRetriever: a {@link CertificateRetriever} object heap reference used to retrieve the client's
      *                          certificate to validate.
@@ -198,8 +169,6 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      *           "comment": "Validate the client's MTLS transport cert",
      *           "config": {
      *             "certificateRetriever": "HeaderCertificateRetriever",
-     *             "trustedDirectoryService": "TrustedDirectoriesService",
-     *             "jwkSetService": "OBJwkSetService",
      *             "transportCertValidator": "TransportCertValidator"
      *           }
      * }
@@ -215,20 +184,15 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
 
         @Override
         public Object create() throws HeapException {
-            final TrustedDirectoryService trustedDirectoryService = config.get("trustedDirectoryService")
-                    .as(requiredHeapObject(heap, TrustedDirectoryService.class));
-
-            final JwkSetService jwkSetService = config.get("jwkSetService").as(requiredHeapObject(heap, JwkSetService.class));
-            final ApiClientJwkSetService apiClientJwkSetService = new DefaultApiClientJwkSetService(jwkSetService);
-
             final TransportCertValidator transportCertValidator = config.get("transportCertValidator").required()
                     .as(requiredHeapObject(heap, TransportCertValidator.class));
 
             final CertificateRetriever certificateRetriever = config.get("certificateRetriever")
                     .as(requiredHeapObject(heap, CertificateRetriever.class));
 
-            return new ResponsePathTransportCertValidationFilter(trustedDirectoryService, apiClientJwkSetService,
-                    certificateRetriever, transportCertValidator, certificateIsMandatory);
+            return new ResponsePathTransportCertValidationFilter(certificateRetriever,
+                                                                 transportCertValidator,
+                                                                 certificateIsMandatory);
 
         }
     }
