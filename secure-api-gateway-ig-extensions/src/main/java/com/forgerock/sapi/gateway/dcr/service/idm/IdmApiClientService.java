@@ -16,10 +16,13 @@
 package com.forgerock.sapi.gateway.dcr.service.idm;
 
 import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientOrganisationService.DEFAULT_API_CLIENT_ORG_OBJ_NAME;
+import static java.util.Objects.requireNonNull;
 import static org.forgerock.json.JsonValue.array;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
+import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
+import static org.forgerock.util.Reject.checkNotBlank;
 import static org.forgerock.util.promise.NeverThrowsException.neverThrownAsync;
 
 import java.net.URI;
@@ -41,11 +44,12 @@ import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.forgerock.sapi.gateway.dcr.models.ApiClient;
+import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
+import com.forgerock.sapi.gateway.jwks.JwkSetService;
 
 /**
  * ApiClientService implementation which manages ApiClient data in IDM
@@ -102,10 +106,10 @@ public class IdmApiClientService implements ApiClientService {
                               String apiClientOrgManagedObjName, IdmApiClientDecoder idmApiClientDecoder) {
 
         this.idmManagedObjectsBaseUri = sanitizeBaseUri(idmManagedObjectsBaseUri);
-        this.apiClientManagedObjName = Reject.checkNotBlank(apiClientManagedObjName, "apiClientManagedObjName must be provided");
-        this.apiClientOrgManagedObjName = Reject.checkNotBlank(apiClientOrgManagedObjName, "apiClientOrgManagedObjName must be provided");
-        this.httpClient = Reject.checkNotNull(httpClient, "httpClient must be provided");
-        this.idmApiClientDecoder = Reject.checkNotNull(idmApiClientDecoder, "idmApiClientDecoder must be provided");
+        this.apiClientManagedObjName = checkNotBlank(apiClientManagedObjName, "apiClientManagedObjName must be provided");
+        this.apiClientOrgManagedObjName = checkNotBlank(apiClientOrgManagedObjName, "apiClientOrgManagedObjName must be provided");
+        this.httpClient = requireNonNull(httpClient, "httpClient must be provided");
+        this.idmApiClientDecoder = requireNonNull(idmApiClientDecoder, "idmApiClientDecoder must be provided");
 
         // Query for the all the apiClient fields and the full apiClientOrg relationship object
         this.apiClientFieldsValue = apiClientOrgManagedObjName + "/*,*";
@@ -120,7 +124,7 @@ public class IdmApiClientService implements ApiClientService {
     }
 
     private static String sanitizeBaseUri(String idmApiClientBaseUri) {
-        Reject.checkNotBlank(idmApiClientBaseUri, "idmManagedObjectsBaseUri must be provided");
+        checkNotBlank(idmApiClientBaseUri, "idmManagedObjectsBaseUri must be provided");
         // Strip any trailing slash
         if (idmApiClientBaseUri.endsWith("/")) {
             return idmApiClientBaseUri.substring(0, idmApiClientBaseUri.length() - 1);
@@ -282,8 +286,15 @@ public class IdmApiClientService implements ApiClientService {
     public static class Heaplet extends BaseIdmServiceHeaplet {
         @Override
         public Object create() throws HeapException {
-            return new IdmApiClientService(createHttpClient(), getIdmManagedObjectsBaseUri(),
-                    getApiClientManagedObjName(), getApiClientOrgManagedObjName(), new IdmApiClientDecoder());
+            return new IdmApiClientService(createHttpClient(),
+                                           getIdmManagedObjectsBaseUri(),
+                                           getApiClientManagedObjName(),
+                                           getApiClientOrgManagedObjName(),
+                                           new IdmApiClientDecoder(getJwkSetService()));
+        }
+
+        private JwkSetService getJwkSetService() throws HeapException {
+            return config.get("jwkSetService").as(requiredHeapObject(heap, JwkSetService.class));
         }
 
     }

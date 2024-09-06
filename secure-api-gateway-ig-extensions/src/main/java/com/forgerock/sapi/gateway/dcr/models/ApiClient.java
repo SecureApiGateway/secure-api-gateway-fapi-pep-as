@@ -15,13 +15,20 @@
  */
 package com.forgerock.sapi.gateway.dcr.models;
 
+import static java.util.Collections.unmodifiableList;
+import static java.util.Objects.requireNonNull;
+
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
+import java.util.function.Supplier;
 
+import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jws.SignedJwt;
-import org.forgerock.util.Reject;
+import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
+
+import com.forgerock.sapi.gateway.jwks.JwkSetService;
 
 /**
  * Data object which represents a registered OAuth2.0 client, this class is immutable.
@@ -47,20 +54,14 @@ public class ApiClient {
     private final String softwareClientId;
 
     /**
-     * Name of the client
+     * Name of the client.
      */
     private final String clientName;
 
     /**
-     * The URI of the JWKS which contains the certificates which can be used by this ApiClient for transport and
-     * signing purposes.
+     * Supplier of the client's JWKSet.
      */
-    private final URI jwksUri;
-
-    /**
-     * The JWK Set for this client
-     */
-    private final JWKSet jwks;
+    private final Supplier<Promise<JWKSet, FailedToLoadJWKException>> jwkSetSupplier;
 
     /**
      * The Software Statement Assertions (SSA), which is a signed JWT containing the Software Statement registered.
@@ -86,11 +87,10 @@ public class ApiClient {
         this.oAuth2ClientId = builder.oAuth2ClientId;
         this.softwareClientId = builder.softwareClientId;
         this.clientName = builder.clientName;
-        this.jwksUri = builder.jwksUri;
-        this.jwks = builder.jwks;
+        this.jwkSetSupplier = builder.jwkSetSupplier;
         this.softwareStatementAssertion = builder.softwareStatementAssertion;
         this.organisation = builder.organisation;
-        this.roles = builder.roles;
+        this.roles = unmodifiableList(builder.roles);
         this.deleted = builder.deleted;
     }
 
@@ -106,12 +106,8 @@ public class ApiClient {
         return clientName;
     }
 
-    public URI getJwksUri() {
-        return jwksUri;
-    }
-
-    public JWKSet getJwks() {
-        return jwks;
+    public Promise<JWKSet, FailedToLoadJWKException> getJwkSet() {
+        return jwkSetSupplier.get();
     }
 
     public SignedJwt getSoftwareStatementAssertion() {
@@ -131,26 +127,11 @@ public class ApiClient {
     }
 
     @Override
-    public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        final ApiClient apiClient = (ApiClient) o;
-        return deleted == apiClient.deleted && Objects.equals(oAuth2ClientId, apiClient.oAuth2ClientId) && Objects.equals(softwareClientId, apiClient.softwareClientId) && Objects.equals(clientName, apiClient.clientName) && Objects.equals(jwksUri, apiClient.jwksUri) && Objects.equals(jwks, apiClient.jwks) && Objects.equals(softwareStatementAssertion, apiClient.softwareStatementAssertion) && Objects.equals(organisation, apiClient.organisation) && Objects.equals(roles, apiClient.roles);
-    }
-
-    @Override
-    public int hashCode() {
-        return Objects.hash(oAuth2ClientId, softwareClientId, clientName, jwksUri, jwks, softwareStatementAssertion, organisation, roles, deleted);
-    }
-
-    @Override
     public String toString() {
         return "ApiClient{" +
                 "oAuth2ClientId='" + oAuth2ClientId + '\'' +
                 ", softwareClientId='" + softwareClientId + '\'' +
                 ", clientName='" + clientName + '\'' +
-                ", jwksUri=" + jwksUri +
-                ", jwks=" + jwks +
                 ", softwareStatementAssertion=" + softwareStatementAssertion +
                 ", organisation=" + organisation +
                 ", roles=" + roles +
@@ -162,12 +143,14 @@ public class ApiClient {
         private String oAuth2ClientId;
         private String softwareClientId;
         private String clientName;
-        private URI jwksUri;
-        private JWKSet jwks;
         private List<String> roles;
         private SignedJwt softwareStatementAssertion;
         private ApiClientOrganisation organisation;
         private boolean deleted;
+        private Supplier<Promise<JWKSet, FailedToLoadJWKException>> jwkSetSupplier;
+
+        public ApiClientBuilder() {
+        }
 
         public ApiClientBuilder oAuth2ClientId(String oAuth2ClientId) {
             this.oAuth2ClientId = oAuth2ClientId;
@@ -184,13 +167,29 @@ public class ApiClient {
             return this;
         }
 
-        public ApiClientBuilder jwksUri(URI jwksUri) {
-            this.jwksUri = jwksUri;
+        /**
+         * Configures the jwkSetSupplier to use an embedded JWKS.
+         *
+         * @param jwkSet the JWKSet for the supplier to return
+         * @return the builder
+         */
+        public ApiClientBuilder withEmbeddedJwksSupplier(JWKSet jwkSet) {
+            requireNonNull(jwkSet, "jwkSet must be provided");
+            this.jwkSetSupplier = () -> Promises.newResultPromise(jwkSet);
             return this;
         }
 
-        public ApiClientBuilder jwks(JWKSet jwks){
-            this.jwks = jwks;
+        /**
+         * Configures the jwkSetSupplier to retrieve the {@link JWKSet} using the {@link JwkSetService}.
+         *
+         * @param jwksUri the location of the {@link JWKSet}
+         * @param jwkSetService the service to use to retrieve the {@link JWKSet}
+         * @return the builder
+         */
+        public ApiClientBuilder withUriJwksSupplier(URI jwksUri, JwkSetService jwkSetService) {
+            requireNonNull(jwksUri, "jwksUri must be provided");
+            requireNonNull(jwkSetService, "jwkSetService must be provided");
+            this.jwkSetSupplier = () -> jwkSetService.getJwkSet(jwksUri);
             return this;
         }
 
@@ -215,13 +214,13 @@ public class ApiClient {
         }
 
         public ApiClient build() {
-            Reject.ifNull(oAuth2ClientId, "oAuth2ClientId must be configured");
-            Reject.ifNull(softwareClientId, "softwareClientId must be configured");
-            Reject.ifNull(clientName, "clientName must be configured");
-            Reject.ifNull(softwareStatementAssertion, "softwareStatementAssertion must be configured");
-            Reject.ifNull(organisation, "organisation must be configured");
-            Reject.ifNull(roles, "roles must be configured");
-            Reject.unless(jwksUri == null ^ jwks == null, "Exactly one of jwksUri or jwks must be configured");
+            requireNonNull(oAuth2ClientId, "oAuth2ClientId must be configured");
+            requireNonNull(softwareClientId, "softwareClientId must be configured");
+            requireNonNull(clientName, "clientName must be configured");
+            requireNonNull(softwareStatementAssertion, "softwareStatementAssertion must be configured");
+            requireNonNull(organisation, "organisation must be configured");
+            requireNonNull(roles, "roles must be configured");
+            requireNonNull(jwkSetSupplier, "jwkSetSupplier must be configured - please call withUriJwksSupplier or withEmbeddedJwksSupplier");
             return new ApiClient(this);
         }
     }

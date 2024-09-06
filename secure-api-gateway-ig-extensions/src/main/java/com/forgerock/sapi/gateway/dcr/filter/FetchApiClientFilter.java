@@ -17,7 +17,9 @@ package com.forgerock.sapi.gateway.dcr.filter;
 
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
+import static org.forgerock.json.JsonValue.object;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
+import static org.forgerock.util.promise.Promises.newResultPromise;
 
 import java.util.Map;
 
@@ -34,22 +36,21 @@ import org.forgerock.services.context.Context;
 import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
-import org.forgerock.util.promise.Promises;
 import org.forgerock.util.promise.ResultHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Fetches {@link ApiClient} data from IDM using the client_id identified from the access_token provided with this request.
  * The {@link ApiClient} retrieved is then made accessible via the AttributesContext as key: "apiClient", other filters
  * in the chain can then access this data using the context.
- *
+ * <p>
  * This filter relies on the OAuth2Context being present, therefore it must be installed after a filter which adds this
  * context, such as OAuth2ResourceServerFilter.
  */
@@ -64,6 +65,7 @@ public class FetchApiClientFilter implements Filter {
      * The default claim to use to extract the client_id from the access_token
      */
     private static final String DEFAULT_ACCESS_TOKEN_CLIENT_ID_CLAIM = "aud";
+
     private final Logger logger = LoggerFactory.getLogger(getClass());
 
     /**
@@ -117,7 +119,7 @@ public class FetchApiClientFilter implements Filter {
         final Map<String, Object> info = oAuth2Context.getAccessToken().getInfo();
         if (!info.containsKey(accessTokenClientIdClaim)) {
             logger.error("Access token is missing required \"{}\" claim", accessTokenClientIdClaim);
-            return Promises.newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
+            return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
         }
         final String clientId = (String)info.get(accessTokenClientIdClaim);
 
@@ -131,7 +133,8 @@ public class FetchApiClientFilter implements Filter {
         // Handles the case where the client has a valid access token but their ApiClient has been deleted from the data store
         if (ex.getErrorCode() == ErrorCode.DELETED || ex.getErrorCode() == ErrorCode.NOT_FOUND) {
             logger.warn("Failed to get ApiClient due to: {}", ex.getErrorCode(), ex);
-            return Promises.newResultPromise(new Response(Status.UNAUTHORIZED).setEntity(json(field("error", "client registration is invalid"))));
+            return newResultPromise(new Response(Status.UNAUTHORIZED).setEntity(json(object(field("error",
+                                                                                                  "client registration is invalid")))));
         } else {
             return handleUnexpectedException(ex);
         }
@@ -139,7 +142,7 @@ public class FetchApiClientFilter implements Filter {
 
     private Promise<Response, NeverThrowsException> handleUnexpectedException(Exception ex) {
         logger.error("Failed to get ApiClient from idm due to an unexpected exception", ex);
-        return Promises.newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
+        return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
     }
 
     /**
@@ -150,7 +153,7 @@ public class FetchApiClientFilter implements Filter {
      *
      * Optional config:
      * - accessTokenClientIdClaim: name of the claim used to extract the client_id from the access_token, defaults to "aud"
-     *
+     * <p>
      * Example config:
      * {
      *           "comment": "Add ApiClient data to the context attributes",

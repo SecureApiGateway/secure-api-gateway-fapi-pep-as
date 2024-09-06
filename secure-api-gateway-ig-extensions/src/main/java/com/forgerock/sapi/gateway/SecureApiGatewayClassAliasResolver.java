@@ -40,7 +40,6 @@ import com.forgerock.sapi.gateway.fapi.FapiInteractionIdTracingFilter;
 import com.forgerock.sapi.gateway.fapi.v1.FapiAdvancedDCRValidationFilter;
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiAuthorizeRequestValidationFilter;
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiParRequestValidationFilter;
-import com.forgerock.sapi.gateway.jwks.FetchApiClientJwksFilter;
 import com.forgerock.sapi.gateway.jwks.RestJwkSetService;
 import com.forgerock.sapi.gateway.jwks.cache.caffeine.CaffeineCachingJwkSetService;
 import com.forgerock.sapi.gateway.jws.RsaJwtSignatureValidator;
@@ -48,8 +47,8 @@ import com.forgerock.sapi.gateway.jws.signer.CompactSerializationJwsSigner;
 import com.forgerock.sapi.gateway.metrics.RouteMetricsFilter;
 import com.forgerock.sapi.gateway.metrics.TokenEndpointMetricsContextSupplier;
 import com.forgerock.sapi.gateway.mtls.AddCertificateToAttributesContextFilter;
-import com.forgerock.sapi.gateway.mtls.DefaultTransportCertValidator;
 import com.forgerock.sapi.gateway.mtls.ContextCertificateRetriever;
+import com.forgerock.sapi.gateway.mtls.DefaultTransportCertValidator;
 import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.ParEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
@@ -57,7 +56,6 @@ import com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter;
 import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilter;
 import com.forgerock.sapi.gateway.trusteddirectories.StaticTrustedDirectoryService;
 import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryHeaplet;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 
 public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
     private static final Map<String, Class<?>> ALIASES = new HashMap<>();
@@ -69,7 +67,6 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("RsaJwtSignatureValidator", RsaJwtSignatureValidator.class);
         ALIASES.put("FetchApiClientFilter", FetchApiClientFilter.class);
         ALIASES.put("FetchTrustedDirectoryFilter", FetchTrustedDirectoryFilter.class);
-        ALIASES.put("FetchApiClientJwksFilter", FetchApiClientJwksFilter.class);
         ALIASES.put("TransportCertValidationFilter", TransportCertValidationFilter.class);
         ALIASES.put("DefaultTransportCertValidator", DefaultTransportCertValidator.class);
         ALIASES.put("RegistrationRequestJwtSignatureValidationFilter", RegistrationRequestJwtSignatureValidationFilter.class);

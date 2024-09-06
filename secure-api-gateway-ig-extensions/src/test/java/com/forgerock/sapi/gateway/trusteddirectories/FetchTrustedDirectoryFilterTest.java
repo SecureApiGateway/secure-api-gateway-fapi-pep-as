@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.json.JsonValue;
+import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jws.JwsHeader;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.json.jose.jwt.JwtClaimsSet;
@@ -52,7 +53,7 @@ public class FetchTrustedDirectoryFilterTest {
         ssaClaims.setIssuer(issuer);
         final SignedJwt ssaSignedJwt = new SignedJwt(new JwsHeader(), ssaClaims, new byte[0], new byte[0]);
 
-        return ApiClientTest.createBuilderWithJwks().softwareStatementAssertion(ssaSignedJwt).build();
+        return ApiClientTest.createBuilder(new JWKSet()).softwareStatementAssertion(ssaSignedJwt).build();
     }
 
     @Test
