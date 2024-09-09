@@ -24,7 +24,7 @@
       "port": 8080,
       "vertx": {
         "maxInitialLineLength": 8192,
-        "maxHeaderSize": 16384
+        "maxTotalHeadersSize": 24576
       }
     }
   ],
