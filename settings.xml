@@ -1,0 +1,21 @@
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 https://maven.apache.org/xsd/settings-1.0.0.xsd">
+    <servers>
+        <server>
+            <id>forgerock-internal-releases</id>
+            <username>${env.FR_ARTIFACTORY_USER}</username>
+            <password>${env.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD}</password>
+        </server>
+        <server>
+            <id>forgerock-internal-snapshot</id>
+            <username>${env.FR_ARTIFACTORY_USER}</username>
+            <password>${env.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD}</password>
+        </server>
+        <server>
+            <id>maven.forgerock.org-community</id>
+            <username>${env.FR_ARTIFACTORY_USER}</username>
+            <password>${env.FR_ARTIFACTORY_USER_ENCRYPTED_PASSWORD}</password>
+        </server>
+    </servers>
+</settings>
