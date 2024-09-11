@@ -37,8 +37,12 @@ ifndef igLatest
 	$(warning no igLatest true|false supplied; false assumed)
 	$(eval igLatest=false)
 endif
+ifndef igLatestVersion
+	$(warning no igLatestVersion supplied; 2024.6.0 assumed)
+	$(eval igLatestVersion=2024.6.0)
+endif
 	@if [ "${igLatest}" = "true" ]; then \
-	    mvn -U install -Dopenig.version=2023.11.0; \
+	    mvn -U install -Dopenig.version=${igLatestVersion}; \
 	else \
 		mvn -U install; \
 	fi;
