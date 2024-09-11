@@ -14,7 +14,7 @@ ifndef setlatest
 endif
 ifndef dockerArgs
 	$(warning no dockerArgs supplied;)
-	$(eval dockerArgs="")
+	$(eval dockerArgs=)
 endif
 	@if [ "${setlatest}" = "true" ]; then \
 		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
@@ -39,8 +39,9 @@ endif
 build-java:
 ifndef additionalArgs
 	$(warning no additionalArgs supplied;)
-	$(eval additionalArgs="")
+	$(eval additionalArgs=)
 endif
+
 	mvn -U install ${additionalArgs};
 
 copy-java-dependencies:
