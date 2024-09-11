@@ -13,8 +13,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 #
-
-FROM gcr.io/forgerock-io/ig:2024.6.0
+ARG base_image=gcr.io/forgerock-io/ig:2024.6.0
+FROM $base_image
 # Switching back to forgerock user, app will run as this
 USER forgerock
 # Create dir where secrets can be mounted into

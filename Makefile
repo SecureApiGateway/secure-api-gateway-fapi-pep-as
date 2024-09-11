@@ -12,11 +12,17 @@ ifndef setlatest
 	$(warning no setlatest true|false supplied; false assumed)
 	$(eval setlatest=false)
 endif
+ifneq (,$(findstring openig.version,$(additionalArgs)))
+	$(eval dockerArgs="--build-arg base_image=gcr.io/forgerock-io/ig/docker-build:latest")
+else
+	$(eval dockerArgs="")
+endif
+
 	@if [ "${setlatest}" = "true" ]; then \
-		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
+		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
 		docker push ${repo}/securebanking/${service} --all-tags; \
     else \
-   		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${TAG}; \
+   		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG}; \
    		docker push ${repo}/securebanking/${service}:${TAG}; \
    	fi;
 conf:
@@ -33,19 +39,11 @@ endif
 	./bin/config.sh init --env ${env} --igmode $${IG_MODE}
 
 build-java:
-ifndef igLatest
-	$(warning no igLatest true|false supplied; false assumed)
-	$(eval igLatest=false)
+ifndef additionalArgs
+	$(warning no additionalArgs supplied;)
+	$(eval additionalArgs="")
 endif
-ifndef igLatestVersion
-	$(warning no igLatestVersion supplied; 2024.6.0 assumed)
-	$(eval igLatestVersion=2024.6.0)
-endif
-	@if [ "${igLatest}" = "true" ]; then \
-	    mvn -U install -Dopenig.version=${igLatestVersion}; \
-	else \
-		mvn -U install; \
-	fi;
+	mvn -U install ${additionalArgs};
 
 copy-java-dependencies:
 	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
