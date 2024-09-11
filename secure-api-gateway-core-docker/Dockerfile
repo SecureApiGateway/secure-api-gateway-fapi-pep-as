@@ -29,5 +29,5 @@ COPY --chown=forgerock:root 7.3.0/ig/lib /opt/ig/lib
 RUN rm -f /opt/ig/lib/bcprov-jdk18on-1.74.jar
 COPY --chown=forgerock:root 7.3.0/ig/scripts /var/ig/scripts/
 COPY --chown=forgerock:root 7.3.0/ig/config /var/ig/config/
-
+COPY --chown=forgetock:root ../pom.xml /var/ig/config/
 
