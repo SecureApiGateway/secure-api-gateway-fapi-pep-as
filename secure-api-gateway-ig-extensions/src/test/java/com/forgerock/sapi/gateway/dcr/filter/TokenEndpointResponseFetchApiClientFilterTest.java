@@ -45,7 +45,7 @@ import com.nimbusds.jose.JWSAlgorithm;
 public class TokenEndpointResponseFetchApiClientFilterTest extends BaseResponsePathFetchApiClientFilterTest {
 
     @Override
-    protected Filter createFilter(ApiClientService apiClientService) {
+    protected Filter createFilter() {
         final HeapImpl heap = new HeapImpl(Name.of("heap"));
         heap.put("apiClientService", apiClientService);
         final JsonValue config = json(object(field("apiClientService", "apiClientService")));
@@ -64,7 +64,7 @@ public class TokenEndpointResponseFetchApiClientFilterTest extends BaseResponseP
 
     @Override
     protected Response createValidUpstreamResponse() {
-        return ResponsePathTransportCertValidationFilterTest.createResponseWithAccessToken(clientId);
+        return ResponsePathTransportCertValidationFilterTest.createResponseWithAccessToken(CLIENT_ID);
     }
 
     @Test

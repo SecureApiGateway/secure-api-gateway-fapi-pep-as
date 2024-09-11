@@ -124,14 +124,6 @@
             }
           },
           {
-            "comment": "Add the JWKS for the ApiClient to the context attributes.apiClientJwkSet",
-            "name": "FetchApiClientJwksFilter",
-            "type": "FetchApiClientJwksFilter",
-            "config": {
-              "jwkSetService": "JwkSetService"
-            }
-          },
-          {
             "comment": "Validate the MTLS transport cert",
             "name": "TransportCertValidationFilter",
             "type": "TransportCertValidationFilter",
@@ -388,7 +380,8 @@
       "type": "IdmApiClientService",
       "config": {
         "clientHandler": "IDMClientHandler",
-        "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}"
+        "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}",
+        "jwkSetService": "JwkSetService"
       }
     },
     {

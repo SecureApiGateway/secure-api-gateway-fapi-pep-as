@@ -101,7 +101,7 @@ public class ResponsePathFetchApiClientFilter implements Filter {
      */
     public static ResponsePathFetchApiClientFilter createFilterWithResponseClientIdRetriever(ApiClientService apiClientService,
                                                                                               Function<Response, Promise<String, NeverThrowsException>> responseClientIdRetriever) {
-        return new ResponsePathFetchApiClientFilter(requireNonNull(apiClientService, "apiClientService must be provide"),
+        return new ResponsePathFetchApiClientFilter(requireNonNull(apiClientService, "apiClientService must be provided"),
                                                     null,
                                                     requireNonNull(responseClientIdRetriever, "responseClientIdRetriever must be provided"));
 

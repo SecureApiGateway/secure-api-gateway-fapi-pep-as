@@ -15,20 +15,24 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
-import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.createIdmApiClientWithJwks;
-import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.verifyIdmClientDataMatchesApiClientObject;
+import static com.forgerock.sapi.gateway.util.JsonUtils.assertJsonEquals;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
+import static org.forgerock.util.promise.Promises.newExceptionPromise;
+import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
 
-import org.forgerock.http.Client;
 import org.forgerock.http.Handler;
 import org.forgerock.http.oauth2.AccessTokenInfo;
 import org.forgerock.http.oauth2.OAuth2Context;
@@ -44,143 +48,73 @@ import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter.Heaplet;
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoder;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientServiceTest.MockGetApiClientIdmHandler;
+import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
+import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 
 /**
  * Unit tests for {@link FetchApiClientFilter}.
- * <p>
- * IDM behaviour is simulated using Handlers installed as the httpClient within the Filter.
- * See {@link MockGetApiClientIdmHandler} for an example Handler which returns mocked ApiClient data.
  */
+@ExtendWith(MockitoExtension.class)
 class FetchApiClientFilterTest {
 
-    @Test
-    void fetchApiClientUsingMockedIdmResponseWithAllFields() throws Exception {
-        final String clientId = "1234-5678-9101";
-        final JsonValue idmClientData = IdmApiClientDecoderTest.createIdmApiClientWithJwksUri(clientId);
-        testFetchingApiClient(clientId, idmClientData);
+    private static final String DEFAULT_CLIENT_ID_CLAIM = "aud";
+
+    private static final String CLIENT_ID = "1234-5678-9101";
+
+    @Mock
+    private ApiClientService apiClientService;
+
+    @Mock
+    private ApiClient testApiClient;
+
+    private FetchApiClientFilter filter;
+
+    @BeforeEach
+    void beforeEach() {
+        this.filter = new FetchApiClientFilter(apiClientService, DEFAULT_CLIENT_ID_CLAIM);
     }
 
     @Test
-    void fetchApiClientUsingMockedIdmResponseWithMandatoryFieldsOnly() throws Exception {
-        final String clientId = "9999";
-        final JsonValue idmClientData = createIdmApiClientWithJwks(clientId);
-        testFetchingApiClient(clientId, idmClientData);
+    void shouldFetchApiClientUsingOAuth2ClientId() throws Exception {
+        callFilterValidateSuccessBehaviour(filter);
     }
 
-    private static void testFetchingApiClient(String clientId, JsonValue idmClientData) throws Exception {
-        final MockGetApiClientIdmHandler idmResponseHandler = new MockGetApiClientIdmHandler("http://localhost/openidm/managed", clientId, idmClientData);
-        final String clientIdClaim = "aud";
-        final AccessTokenInfo accessToken = createAccessToken(clientIdClaim, clientId);
-        final FetchApiClientFilter filter = new FetchApiClientFilter(createApiClientService(new Client(idmResponseHandler), "http://localhost/openidm/managed"), clientIdClaim);
-        callFilterValidateSuccessBehaviour(accessToken, idmClientData, filter);
+    private void callFilterValidateSuccessBehaviour(FetchApiClientFilter filter) throws Exception {
+        callFilterValidateSuccessBehaviour(filter, DEFAULT_CLIENT_ID_CLAIM);
     }
 
-    public static ApiClientService createApiClientService(Client client, String idmBaseUri) {
-        return new IdmApiClientService(client, idmBaseUri, new IdmApiClientDecoder());
-    }
+    private void callFilterValidateSuccessBehaviour(FetchApiClientFilter filter, String clientIdClaim) throws Exception {
+        final AccessTokenInfo accessToken = createAccessToken(clientIdClaim, CLIENT_ID);
 
-    @Test
-    void failsWhenNoOAuth2ContextIsFound() {
-        final FetchApiClientFilter filter = new FetchApiClientFilter(createApiClientService(new Client(Handlers.FORBIDDEN), "notUsed"), "aud");
-        assertThrows(IllegalArgumentException.class, () -> filter.filter(new RootContext("root"), new Request(), Handlers.FORBIDDEN),
-                "No context of type org.forgerock.http.oauth2.OAuth2Context found");
-    }
-
-    @Test
-    void returnsErrorResponseWhenUnableToDetermineClientId() throws Exception{
-        final FetchApiClientFilter filter = new FetchApiClientFilter(createApiClientService(new Client(Handlers.FORBIDDEN), "notUsed"), "aud");
-        final AccessTokenInfo accessTokenWithoutAudClaim = new AccessTokenInfo(json(object()), "token", Set.of("scope1"), 0L);
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(new OAuth2Context(new RootContext("root"), accessTokenWithoutAudClaim), new Request(), Handlers.FORBIDDEN);
-
-        final Response response = responsePromise.get(1, TimeUnit.SECONDS);
-        assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
-    }
-
-    @Test
-    void returnsErrorResponseWhenApiClientServiceReturnsException() throws Exception {
-        // Mock IDM returning 500 response
-        final String clientIdClaim = "client_id";
-        final FetchApiClientFilter filter = new FetchApiClientFilter(createApiClientService(new Client(Handlers.INTERNAL_SERVER_ERROR), "http://localhost/openidm"), clientIdClaim);
-        final OAuth2Context context = new OAuth2Context(new RootContext("root"), createAccessToken(clientIdClaim, "1234"));
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), Handlers.FORBIDDEN);
-
-        final Response response = responsePromise.get(1, TimeUnit.SECONDS);
-        assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
-    }
-
-    @Nested
-    class HeapletTests {
-        @Test
-        void failsToConstructIfApiClientServiceIsMissing() {
-            final HeapException heapException = assertThrows(HeapException.class, () -> new Heaplet().create(Name.of("test"),
-                    json(object()), new HeapImpl(Name.of("heap"))), "Invalid object declaration");
-            assertEquals(heapException.getCause().getMessage(), "/apiClientService: Expecting a value");
-        }
-
-        @Test
-        void successfullyCreatesFilterWithRequiredConfigOnly() throws Exception {
-            final String idmBaseUri = "http://idm/managed";
-            final String clientId = "999999999";
-            final JsonValue idmApiClientData = IdmApiClientDecoderTest.createIdmApiClientWithJwksUri(clientId);
-            final Handler idmClientHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmApiClientData);
-
-            final HeapImpl heap = new HeapImpl(Name.of("heap"));
-            heap.put("IdmApiClientService", new IdmApiClientService(new Client(idmClientHandler), idmBaseUri, new IdmApiClientDecoder()));
-
-            final JsonValue config = json(object(field("apiClientService", "IdmApiClientService")));
-            final FetchApiClientFilter filter = (FetchApiClientFilter) new Heaplet().create(Name.of("test"), config, heap);
-
-
-            // optional config: accessTokenClientIdClaim will be defaulted to aud
-            final AccessTokenInfo accessToken = createAccessToken("aud", clientId);
-            // Test the filter created by the Heaplet
-            callFilterValidateSuccessBehaviour(accessToken, idmApiClientData, filter);
-        }
-
-        @Test
-        void successfullyCreatesFilterWithAllOptionalConfigSupplied() throws Exception {
-            final String idmBaseUri = "http://idm/managed";
-            final String clientId = "999999999";
-            final JsonValue idmApiClientData = IdmApiClientDecoderTest.createIdmApiClientWithJwksUri(clientId);
-            final Handler idmClientHandler = new MockGetApiClientIdmHandler(idmBaseUri, clientId, idmApiClientData);
-
-            final HeapImpl heap = new HeapImpl(Name.of("heap"));
-            heap.put("IdmApiClientService", new IdmApiClientService(new Client(idmClientHandler), idmBaseUri, new IdmApiClientDecoder()));
-
-            final String clientIdClaim = "client_id";
-            final JsonValue config = json(object(field("apiClientService", "IdmApiClientService"),
-                                                 field("accessTokenClientIdClaim", clientIdClaim)));
-            final FetchApiClientFilter filter = (FetchApiClientFilter) new Heaplet().create(Name.of("test"), config, heap);
-
-            final AccessTokenInfo accessToken = createAccessToken(clientIdClaim, clientId);
-            // Test the filter created by the Heaplet
-            callFilterValidateSuccessBehaviour(accessToken, IdmApiClientDecoderTest.createIdmApiClientWithJwksUri(clientId), filter);
-        }
-    }
-
-    private static void callFilterValidateSuccessBehaviour(AccessTokenInfo accessToken, JsonValue idmClientData,
-                                                          FetchApiClientFilter filter) throws Exception {
+        // Mock the success response for the ApiClientService call
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
 
         final BiConsumer<Response, AttributesContext> successBehaviourValidator = (response, ctxt) -> {
             // Verify we hit the end of the chain and got the NO_CONTENT response
             assertEquals(Status.NO_CONTENT, response.getStatus());
 
-            // Verify that the context was updated with the apiClient data
+            // Verify that the context was updated with the testApiClient data
             final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
             assertNotNull(apiClient, "apiClient was not found in context");
-            verifyIdmClientDataMatchesApiClientObject(idmClientData, apiClient);
+            assertThat(apiClient).isSameAs(testApiClient);
         };
         callFilter(accessToken, filter, successBehaviourValidator);
+    }
+
+    private static AccessTokenInfo createAccessToken(String clientIdClaim, String clientId) {
+        return new AccessTokenInfo(json(object(field(clientIdClaim, clientId))), "token", Set.of("scope1"), 0L);
     }
 
     private static void callFilter(AccessTokenInfo accessToken, FetchApiClientFilter filter,
@@ -198,7 +132,108 @@ class FetchApiClientFilterTest {
         responseAndContextValidator.accept(response, attributesContext);
     }
 
-    private static AccessTokenInfo createAccessToken(String clientIdClaim, String clientId) {
-        return new AccessTokenInfo(json(object(field(clientIdClaim, clientId))), "token", Set.of("scope1"), 0L);
+    @Test
+    void failsWhenNoOAuth2ContextIsFound() {
+        final RootContext context = new RootContext("root");
+        assertThrows(IllegalArgumentException.class,
+                     () -> filter.filter(context, new Request(), Handlers.FORBIDDEN),
+                     "No context of type org.forgerock.http.oauth2.OAuth2Context found");
     }
+
+    @Test
+    void returnsErrorResponseWhenUnableToDetermineClientId() throws Exception{
+        final AccessTokenInfo accessTokenWithoutAudClaim = new AccessTokenInfo(json(object()), "token", Set.of("scope1"), 0L);
+        final OAuth2Context context = new OAuth2Context(new RootContext("root"), accessTokenWithoutAudClaim);
+
+        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), Handlers.FORBIDDEN);
+
+        final Response response = responsePromise.get(1, TimeUnit.SECONDS);
+        assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = ErrorCode.class, names = {"NOT_FOUND", "DELETED"})
+    void returnsErrorResponseWhenApiClientIsNotFound(ErrorCode errorCode) throws Exception{
+        // Mock error response from ApiClientService
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+                newExceptionPromise(new ApiClientServiceException(errorCode,
+                                                                  "ApiClient " + CLIENT_ID + " does not exist")));
+
+        final AccessTokenInfo accessToken = createAccessToken(DEFAULT_CLIENT_ID_CLAIM, CLIENT_ID);
+        final OAuth2Context context = new OAuth2Context(new RootContext("root"), accessToken);
+
+        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), Handlers.FORBIDDEN);
+
+        final Response response = responsePromise.get(1, TimeUnit.SECONDS);
+        assertEquals(Status.UNAUTHORIZED, response.getStatus());
+        try {
+            assertJsonEquals(json(object(field("error", "client registration is invalid"))),
+                             json(response.getEntity().getJson()));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    @Test
+    void returnsErrorResponseWhenApiClientServiceReturnsUnexpectedException() throws Exception {
+        // Mock unexpected error response from ApiClientService
+        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+                newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Unexpected error")));
+
+        final AccessTokenInfo accessToken = createAccessToken(DEFAULT_CLIENT_ID_CLAIM, CLIENT_ID);
+        final OAuth2Context context = new OAuth2Context(new RootContext("root"), accessToken);
+
+        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, new Request(), Handlers.FORBIDDEN);
+
+        final Response response = responsePromise.get(1, TimeUnit.SECONDS);
+        assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
+    }
+
+    @Nested
+    class HeapletTests {
+        @Test
+        void failsToConstructIfApiClientServiceIsMissing() {
+            final HeapException heapException = assertThrows(HeapException.class,
+                                                             () -> new Heaplet().create(Name.of("test"),
+                                                                                        json(object()),
+                                                                                        new HeapImpl(Name.of("heap"))),
+                                                             "Invalid object declaration");
+            assertEquals(heapException.getCause().getMessage(), "/apiClientService: Expecting a value");
+        }
+
+        @Test
+        void successfullyCreatesFilterWithRequiredConfigOnly() throws Exception {
+            final HeapImpl heap = new HeapImpl(Name.of("heap"));
+            heap.put("IdmApiClientService", apiClientService);
+
+            // Only configure apiClientService, the accessTokenClientIdClaim will be defaulted to aud
+            final JsonValue config = json(object(field("apiClientService", "IdmApiClientService")));
+            final FetchApiClientFilter filter = (FetchApiClientFilter) new Heaplet().create(Name.of("test"),
+                                                                                            config,
+                                                                                            heap);
+
+            // Test the filter created by the Heaplet
+            callFilterValidateSuccessBehaviour(filter);
+        }
+
+        @Test
+        void successfullyCreatesFilterWithAllOptionalConfigSupplied() throws Exception {
+            final HeapImpl heap = new HeapImpl(Name.of("heap"));
+            heap.put("IdmApiClientService", apiClientService);
+
+            // Supply a custom clientIdClaim value
+            final String clientIdClaim = "client_id";
+            final JsonValue config = json(object(field("apiClientService", "IdmApiClientService"),
+                                                 field("accessTokenClientIdClaim", clientIdClaim)));
+
+            final FetchApiClientFilter filter = (FetchApiClientFilter) new Heaplet().create(Name.of("test"),
+                                                                                            config,
+                                                                                            heap);
+
+            // Test the filter created by the Heaplet
+            callFilterValidateSuccessBehaviour(filter, clientIdClaim);
+        }
+    }
+
+
 }

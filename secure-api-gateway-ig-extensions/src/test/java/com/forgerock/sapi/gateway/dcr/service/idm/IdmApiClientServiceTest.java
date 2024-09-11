@@ -15,6 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.service.idm;
 
+import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.EMBEDDED_JWKS_JSON_VALUE;
 import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.createIdmApiClientWithJwks;
 import static com.forgerock.sapi.gateway.dcr.service.idm.IdmApiClientDecoderTest.verifyIdmClientDataMatchesApiClientObject;
 import static com.forgerock.sapi.gateway.util.JsonUtils.assertJsonEquals;
@@ -56,18 +57,20 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.Mockito;
 
 import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
 import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
+import com.forgerock.sapi.gateway.jwks.JwkSetService;
 
 public class IdmApiClientServiceTest {
 
     private static final String TEST_IDM_BASE_URI = "http://localhost/openidm/managed";
     private static final String TEST_CLIENT_ID = "9999";
-    private static final IdmApiClientDecoder IDM_API_CLIENT_DECODER = new IdmApiClientDecoder();
+    private static final IdmApiClientDecoder IDM_API_CLIENT_DECODER = new IdmApiClientDecoder(Mockito.mock(JwkSetService.class));
 
     @Test
     void testGetApiClient() throws Exception {
@@ -78,7 +81,7 @@ public class IdmApiClientServiceTest {
         final Promise<ApiClient, ApiClientServiceException> apiClientPromise = apiClientService.getApiClient(TEST_CLIENT_ID);
         final ApiClient apiClient = apiClientPromise.get(1, TimeUnit.MILLISECONDS);
 
-        verifyIdmClientDataMatchesApiClientObject(idmClientData, apiClient);
+        verifyIdmClientDataMatchesApiClientObject(idmClientData, apiClient, JWKSet.parse(EMBEDDED_JWKS_JSON_VALUE));
     }
 
     @Test
@@ -207,7 +210,7 @@ public class IdmApiClientServiceTest {
         final Promise<ApiClient, ApiClientServiceException> apiClientPromise = apiClientService.createApiClient(TEST_CLIENT_ID, softwareStatement);
         final ApiClient apiClient = apiClientPromise.get(1, TimeUnit.MILLISECONDS);
 
-        verifyIdmClientDataMatchesApiClientObject(createApiClientResponseData, apiClient);
+        verifyIdmClientDataMatchesApiClientObject(createApiClientResponseData, apiClient, JWKSet.parse(EMBEDDED_JWKS_JSON_VALUE));
     }
 
     // Json payload that we expected IDM to recv for a Create or Update operation
@@ -285,7 +288,7 @@ public class IdmApiClientServiceTest {
 
         final Promise<ApiClient, ApiClientServiceException> apiClientPromise = apiClientService.deleteApiClient(TEST_CLIENT_ID);
         final ApiClient apiClient = apiClientPromise.get(1, TimeUnit.MILLISECONDS);
-        verifyIdmClientDataMatchesApiClientObject(idmApiClientResponseData, apiClient, true);
+        verifyIdmClientDataMatchesApiClientObject(idmApiClientResponseData, apiClient, JWKSet.parse(EMBEDDED_JWKS_JSON_VALUE),true);
     }
 
     @Test
@@ -306,7 +309,7 @@ public class IdmApiClientServiceTest {
         final Promise<ApiClient, ApiClientServiceException> apiClientPromise = apiClientService.updateApiClient(TEST_CLIENT_ID, softwareStatement);
         final ApiClient apiClient = apiClientPromise.get(1, TimeUnit.MILLISECONDS);
 
-        verifyIdmClientDataMatchesApiClientObject(idmResponseData, apiClient);
+        verifyIdmClientDataMatchesApiClientObject(idmResponseData, apiClient, JWKSet.parse(EMBEDDED_JWKS_JSON_VALUE));
     }
 
 
