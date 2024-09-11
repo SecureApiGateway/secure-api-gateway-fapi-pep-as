@@ -37,12 +37,12 @@ endif
 	./bin/config.sh init --env ${env} --igmode $${IG_MODE}
 
 build-java:
-ifndef additionalArgs
-	$(warning no additionalArgs supplied;)
-	$(eval additionalArgs=)
+ifndef mavenArgs
+	$(warning no mavenArgs supplied;)
+	$(eval mavenArgs=)
 endif
 
-	mvn -U install ${additionalArgs};
+	mvn -U install ${mavenArgs};
 
 copy-java-dependencies:
 	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
