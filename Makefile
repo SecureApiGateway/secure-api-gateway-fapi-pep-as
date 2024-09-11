@@ -33,7 +33,15 @@ endif
 	./bin/config.sh init --env ${env} --igmode $${IG_MODE}
 
 build-java:
-	mvn -U install
+ifndef igLatest
+	$(warning no igLatest true|false supplied; false assumed)
+	$(eval igLatest=false)
+endif
+	@if [ "${igLatest}" = "true" ]; then \
+	    mvn -U install; -Dopenig.version=2023.11.0 \
+	else \
+		mvn -U install; \
+	fi;
 
 copy-java-dependencies:
 	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
