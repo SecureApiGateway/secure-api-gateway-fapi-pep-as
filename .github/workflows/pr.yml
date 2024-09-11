@@ -9,7 +9,8 @@ on:
 jobs:
   run_pr-template:
     name: PR - Build and Deploy
-    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-pr.yml@main
+    # NOTE: Revert before merging
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-pr.yml@1472-use-latest-ig-in-sapig
     secrets: inherit
     with:
       componentName: secure-api-gateway-core
