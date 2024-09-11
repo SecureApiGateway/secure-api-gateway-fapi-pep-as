@@ -12,12 +12,10 @@ ifndef setlatest
 	$(warning no setlatest true|false supplied; false assumed)
 	$(eval setlatest=false)
 endif
-ifneq (,$(findstring openig.version,$(additionalArgs)))
-	$(eval dockerArgs="--build-arg base_image=gcr.io/forgerock-io/ig/docker-build:latest")
-else
+ifndef dockerArgs
+	$(warning no dockerArgs supplied;)
 	$(eval dockerArgs="")
 endif
-
 	@if [ "${setlatest}" = "true" ]; then \
 		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
 		docker push ${repo}/securebanking/${service} --all-tags; \
