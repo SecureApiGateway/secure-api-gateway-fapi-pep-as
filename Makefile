@@ -12,11 +12,15 @@ ifndef setlatest
 	$(warning no setlatest true|false supplied; false assumed)
 	$(eval setlatest=false)
 endif
+ifndef dockerArgs
+	$(warning no dockerArgs supplied;)
+	$(eval dockerArgs=)
+endif
 	@if [ "${setlatest}" = "true" ]; then \
-		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
+		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
 		docker push ${repo}/securebanking/${service} --all-tags; \
     else \
-   		docker build secure-api-gateway-core-docker -t ${repo}/securebanking/${service}:${TAG}; \
+   		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG}; \
    		docker push ${repo}/securebanking/${service}:${TAG}; \
    	fi;
 conf:
@@ -33,7 +37,12 @@ endif
 	./bin/config.sh init --env ${env} --igmode $${IG_MODE}
 
 build-java:
-	mvn -U install
+ifndef mavenArgs
+	$(warning no mavenArgs supplied;)
+	$(eval mavenArgs=)
+endif
+
+	mvn -U install ${mavenArgs};
 
 copy-java-dependencies:
 	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib

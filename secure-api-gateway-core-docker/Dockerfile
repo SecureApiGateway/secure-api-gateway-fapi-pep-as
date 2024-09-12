@@ -14,7 +14,8 @@
 # limitations under the License.
 #
 
-FROM gcr.io/forgerock-io/ig:2024.6.0
+ARG base_image=gcr.io/forgerock-io/ig:2024.6.0
+FROM ${base_image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
 # Create dir where secrets can be mounted into
@@ -28,5 +29,3 @@ COPY --chown=forgerock:root 7.3.0/ig/lib /opt/ig/lib
 RUN rm -f /opt/ig/lib/bcprov-jdk18on-1.74.jar
 COPY --chown=forgerock:root 7.3.0/ig/scripts /var/ig/scripts/
 COPY --chown=forgerock:root 7.3.0/ig/config /var/ig/config/
-
-
