@@ -9,7 +9,6 @@ on:
 jobs:
   run_pr-template:
     name: PR - Build and Deploy
-    # Revert before merging
     uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-pr.yml@main
     secrets: inherit
     with:
