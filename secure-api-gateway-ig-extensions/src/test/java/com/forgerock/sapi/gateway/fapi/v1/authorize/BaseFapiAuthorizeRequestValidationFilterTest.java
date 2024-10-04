@@ -54,7 +54,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
 
     protected final BaseFapiAuthorizeRequestValidationFilter filter;
     protected final Context context = new RootContext("test");
-    private final RSASSASigner jwtSigner = new RSASSASigner(CryptoUtils.generateRsaKeyPair().getPrivate());
+    private final JWTSigner jwtSigner = new JWTSigner();
     protected TestSuccessResponseHandler successResponseHandler;
 
     public BaseFapiAuthorizeRequestValidationFilterTest(BaseFapiAuthorizeRequestValidationFilter filter) {
@@ -126,7 +126,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "payments",
                 "response_type", "jwt"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -142,7 +142,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "payments",
                 "response_type", "jwt"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -158,7 +158,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "client_id", "client-123",
                 "response_type", "jwt"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -174,7 +174,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "client_id", "client-123",
                 "response_type", "jwt"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -190,7 +190,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "nonce", "adsaddas",
                 "state", state,
                 "client_id", "client-123"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -206,7 +206,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "nonce", "adsaddas",
                 "state", state,
                 "client_id", "client-123"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         request.getHeaders().add("Accept", HttpMediaTypes.APPLICATION_TEXT);
@@ -228,13 +228,12 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "openid payments",
                 "response_type", "code id_token"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
 
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
         validateSuccessResponse(responsePromise);
-        validateHandlerReceivedRequestWithStateParam(state);
     }
 
     @Test
@@ -244,7 +243,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "nonce", "sdffdsdfdssfd",
                 "scope", "openid payments",
                 "response_type", "code id_token"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         // state param in URI but NOT in jwt claims
         final Request request = createRequest(signedRequestJwt, "state-12334");
@@ -266,13 +265,12 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "scope", "openid payments",
                 "response_type", "code",
                 "response_mode", jwtResponseMode));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
 
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
         validateSuccessResponse(responsePromise);
-        validateHandlerReceivedRequestWithStateParam(state);
     }
 
     @Test
@@ -284,7 +282,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "openid payments",
                 "response_type", "code"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -302,7 +300,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "scope", "openid payments",
                 "response_type", "code",
                 "response_mode", "not-supported"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -319,7 +317,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "payments",
                 "response_type", "code id_token"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -336,7 +334,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
                 "state", state,
                 "scope", "payments",
                 "response_type", "id_token"));
-        final String signedRequestJwt = createSignedRequestJwt(requestClaims);
+        final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);
@@ -376,11 +374,5 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     protected void validateHandlerReceivedRequestWithoutStateParam() {
         final Request processedRequest = successResponseHandler.getProcessedRequests().get(0);
         assertNull(getRequestState(processedRequest));
-    }
-
-    private String createSignedRequestJwt(JWTClaimsSet claimsSet) throws JOSEException {
-        final SignedJWT signedJWT = new SignedJWT(new Builder(JWSAlgorithm.PS256).keyID("test-kid").build(), claimsSet);
-        signedJWT.sign(jwtSigner);
-        return signedJWT.serialize();
     }
 }

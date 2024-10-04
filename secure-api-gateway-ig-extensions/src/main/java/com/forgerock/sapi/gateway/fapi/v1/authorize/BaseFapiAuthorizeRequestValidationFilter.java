@@ -15,6 +15,12 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ASSERTION;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ASSERTION_TYPE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ID;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REQUEST;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REQUEST_URI;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
@@ -105,7 +111,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
             // exist in the request jwt. AM however doesn't apply this rule and returns state in the resulting redirect
             //
             // The solution is to remove it from the request sent to AM so that there is no state supplied.
-            return removeStateFromRequestIfNotInRequestJwt(request, requestJwtClaimSet)
+            return removeParamsFromRequest(request)
                     .thenAsync(noResult -> {
                         logger.info("Authorize request is FAPI compliant");
                         return next.handle(context, request);
@@ -162,7 +168,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
         return null;
     }
 
-    private Promise<JwtClaimsSet, NeverThrowsException> getRequestJwtClaimSet(Request request) {
+    protected Promise<JwtClaimsSet, NeverThrowsException> getRequestJwtClaimSet(Request request) {
         return getParamFromRequest(request, REQUEST_JWT_PARAM_NAME).then(requestJwtString -> {
             if (requestJwtString == null) {
                 logger.info("authorize request must have a request JWT parameter");
@@ -178,16 +184,11 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
         });
     }
 
-    protected Promise<Void, NeverThrowsException> removeStateFromRequestIfNotInRequestJwt(Request request, JwtClaimsSet requestJwtClaimSet) {
-        if (!requestJwtHasClaim(STATE_PARAM_NAME, requestJwtClaimSet)) {
-            return getParamFromRequest(request, STATE_PARAM_NAME).thenOnResult(stateParam -> {
-                if (stateParam != null) {
-                    logger.info("Removing state request parameter as no state claim in request jwt");
-                    removeStateParamFromRequest(request);
-                }
-            }).thenDiscardResult();
-        }
-        return Promises.newVoidResultPromise();
+    protected Promise<Void, NeverThrowsException> removeParamsFromRequest(Request request) {
+        List<String> allowedParamNames = List.of(CLIENT_ID, CLIENT_ASSERTION, CLIENT_ASSERTION_TYPE, REQUEST_URI, REQUEST);
+        return removeNonMatchingParamsFromRequest(request, allowedParamNames).thenOnResult((removedParams)->{
+            logger.info("Removed {} params from the request", removedParams.size());
+        }).thenDiscardResult();
     }
 
     /**
@@ -201,19 +202,20 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
     protected abstract Promise<String, NeverThrowsException> getParamFromRequest(Request request, String paramName);
 
     /**
-     * Removes the state parameter from the Request.
-     * <p>
-     * See removeStateFromRequestIfNotInRequestJwt for usage, this is required to work around an issue in AM
-     *
-     * @param request Request the HTTP Request to remove the state param from.
-     */
-    protected abstract void removeStateParamFromRequest(Request request);
-
-    /**
      * Checks if the claim exists in the requestJwtClaimSet
      */
     protected boolean requestJwtHasClaim(String claimName, JwtClaimsSet requestJwtClaims) {
         return requestJwtClaims.getClaim(claimName) != null;
     }
+
+    /**
+     * Implementation which removes parameter values that don't match an entry in paramNamesToKeep from the
+     * Request's Parameters
+     * @param request the request from which to remove the HTTP Request's query parameters
+     * @param paramNamesToKeep the list of HTTP Request parameters to keep
+     * @return Promise<List<String>, NeverThrowsException> which returns the list of parameter names that were removed
+     */
+    protected abstract Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request,
+            List<String> paramNamesToKeep);
 
 }

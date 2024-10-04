@@ -15,6 +15,7 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.forgerock.http.Handler;
@@ -43,8 +44,18 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         // Allow /authorize requests that are for PAR to continue, request JWT is supplied and validated when calling /par endpoint
         if (isAuthorizeParRequest(request)) {
-            logger.debug("/authorize request is for a /par request, skipping request JWT validation");
-            return next.handle(context, request);
+            logger.debug("/authorize request is for a /par request no validation of ");
+
+            // Should be ignoring and not returning state if it only exists as a http request parameter and does not
+            // exist in the request jwt. AM however doesn't apply this rule and returns state in the resulting redirect
+            //
+            // The solution is to remove it from the request sent to AM so that there is no state supplied.
+            return removeParamsFromRequest(request)
+                    .thenAsync(noResult -> {
+                        logger.info("Authorize request is FAPI compliant");
+                        return next.handle(context, request);
+                    });
+
         }
         return super.filter(context, request, next);
     }
@@ -69,6 +80,33 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
         return Promises.newResultPromise(getParamFromRequestQuery(request, paramName));
     }
 
+    /**
+     * Implementation which removes parameter values that don't match an entry in paramNamesToKeep from the HTTP
+     * Request's Query Parameters
+     * @param request the request from which to remove the HTTP Request's query parameters
+     * @param paramNamesToKeep the list of HTTP Request parameters to keep
+     */
+    @Override
+    protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request, List<String> paramNamesToKeep) {
+        final Form existingQueryParams = request.getQueryParams();
+        List<String> namesToRemove = new ArrayList<>();
+        existingQueryParams.keySet().forEach((paramName)->{
+            if ( !paramNamesToKeep.contains(paramName)){
+                namesToRemove.add(paramName);
+            }
+        });
+
+        namesToRemove.forEach((paramToRemove) ->{
+            List<String> response = existingQueryParams.remove(paramToRemove);
+            if(response != null){
+                logger.debug("Removed http request parameter {}", paramToRemove);
+            }
+        });
+
+        existingQueryParams.toRequestQuery(request);
+        return Promises.newResultPromise(namesToRemove);
+    }
+
     private String getParamFromRequestQuery(Request request, String paramName) {
         logger.debug("Obtaining query param with name '{}' from request", paramName);
         final List<String> value = request.getQueryParams().get(paramName);
@@ -82,17 +120,6 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
         }
         logger.debug("Value of query param '{}' is '{}'", paramName, value);
         return value.get(0);
-    }
-
-    /**
-     * Removes the state parameter from the Request's Query parameters
-     * @param request Request the HTTP Request to remove the state param from.
-     */
-    @Override
-    protected void removeStateParamFromRequest(Request request) {
-        final Form existingQueryParams = request.getQueryParams();
-        existingQueryParams.remove(STATE_PARAM_NAME);
-        existingQueryParams.toRequestQuery(request);
     }
 
     public static class Heaplet extends GenericHeaplet {

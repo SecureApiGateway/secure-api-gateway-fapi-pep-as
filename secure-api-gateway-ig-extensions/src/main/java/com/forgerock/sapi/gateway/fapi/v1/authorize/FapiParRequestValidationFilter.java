@@ -16,6 +16,8 @@
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.forgerock.http.protocol.Form;
 import org.forgerock.http.protocol.Request;
@@ -23,6 +25,7 @@ import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 
 /**
  * Validates that a request made to the OAuth2.0 /par (Pushed Authorization Request) endpoint is FAPI compliant.
@@ -53,13 +56,28 @@ public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestVali
     }
 
     @Override
-    protected void removeStateParamFromRequest(Request request) {
+    protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request,
+            List<String> paramNamesToKeep) {
         try {
-            final Form form = request.getEntity().getForm();
-            form.remove(STATE_PARAM_NAME);
+            final Form form =  request.getEntity().getForm();
+            List<String> paramsToRemove = new ArrayList<>();
+            form.keySet().forEach((formParamKey)-> {
+                if (!paramNamesToKeep.contains(formParamKey)) {
+                    paramsToRemove.add(formParamKey);
+                }
+            });
+
+            paramsToRemove.forEach((paramToRemove)->{
+                List<String> result = form.remove(paramToRemove);
+                if(result != null){
+                    logger.debug("Removed form parameter '{}' from PAR request", paramToRemove);
+                }
+            });
             request.setEntity(form);
+            return Promises.newResultPromise(paramsToRemove);
         } catch (IOException e) {
-            logger.warn("Failed to remove state param from /par request form due to exception", e);
+            logger.warn("Failed to remove param from /par request form due to exception", e);
+            return Promises.newResultPromise(List.of());
         }
     }
 
