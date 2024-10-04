@@ -21,4 +21,5 @@ public class AuthorizeRequestParameterNames {
     public final static String CLIENT_ID = "client_id";
     public final static String REQUEST_URI = "request_uri";
     public final static String REQUEST = "request";
+    public final static String SCOPE = "scope";
 }

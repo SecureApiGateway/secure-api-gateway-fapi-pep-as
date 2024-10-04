@@ -20,6 +20,7 @@ import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNam
 import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ID;
 import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REQUEST;
 import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REQUEST_URI;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.SCOPE;
 
 import java.util.Arrays;
 import java.util.List;
@@ -185,7 +186,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
     }
 
     protected Promise<Void, NeverThrowsException> removeParamsFromRequest(Request request) {
-        List<String> allowedParamNames = List.of(CLIENT_ID, CLIENT_ASSERTION, CLIENT_ASSERTION_TYPE, REQUEST_URI, REQUEST);
+        List<String> allowedParamNames = List.of(CLIENT_ID, CLIENT_ASSERTION, CLIENT_ASSERTION_TYPE, REQUEST_URI, REQUEST, SCOPE);
         return removeNonMatchingParamsFromRequest(request, allowedParamNames).thenOnResult((removedParams)->{
             logger.info("Removed {} params from the request", removedParams.size());
         }).thenDiscardResult();
