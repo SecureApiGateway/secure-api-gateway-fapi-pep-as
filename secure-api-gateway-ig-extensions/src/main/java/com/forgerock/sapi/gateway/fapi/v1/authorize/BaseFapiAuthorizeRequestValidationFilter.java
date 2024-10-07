@@ -69,6 +69,11 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
 
+    // List of parameters to keep on the http request - all others will be removed and should be taken from the provided
+    // JAR object
+    private static final List<String> ALLOWED_HTML_PARAMETER_NAMES = List.of(CLIENT_ID, CLIENT_ASSERTION,
+            CLIENT_ASSERTION_TYPE, REQUEST_URI, REQUEST, SCOPE, RESPONSE_TYPE);
+
     /**
      * Factory capable of producing OAuth2.0 compliant HTTP Responses for error conditions.
      */
@@ -109,10 +114,8 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
                 return Promises.newResultPromise(responseTypeValidationErrorResponse);
             }
 
-            // Should be ignoring and not returning state if it only exists as a http request parameter and does not
-            // exist in the request jwt. AM however doesn't apply this rule and returns state in the resulting redirect
-            //
-            // The solution is to remove it from the request sent to AM so that there is no state supplied.
+            // Remove parameters that should be ignored from the http request - parameters should only be read from
+            // the JAR object
             return removeParamsFromRequest(request)
                     .thenAsync(noResult -> {
                         logger.info("Authorize request is FAPI compliant");
@@ -186,10 +189,50 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
         });
     }
 
+    /**
+     * Because FAPI requires the use of a JWT-Secured Authorized Request (JAR) in accordance with RFC 9101. That rfc
+     * states in
+     * <a href="https://www.rfc-editor.org/rfc/rfc9101.html#name-request-parameter-assembly-">section 6.3 of the RFC"
+     * </a> that;
+     *
+     * <pre>  The authorization server MUST extract the set of authorization request parameters from the Request Object
+     * value. The authorization server MUST only use the parameters in the Request Object, even if the same parameter is
+     * provided in the query parameter. The client ID values in the client_id request parameter and in the Request
+     * Object client_id claim MUST be identical. The authorization server then validates the request, as specified in
+     * OAuth 2.0 [RFC6749].
+     *
+     * If the Client ID check or the request validation fails, then the authorization server MUST return an error to
+     * the client in response to the authorization request, as specified in Section 5.2 of [RFC6749] (OAuth 2.0). </pre>
+     *
+     * This means that any parameters supplied with the request (both /par and /authorize requests) should ignore any
+     * parameters provided with the request, and use only the parameters supplied in the JAR object. The exceptions to
+     * the rule are those elements of the request required for the client authorization method, e.g. {@code client_id}
+     * for {@code tls_client_auth} type requests and {@code client_assertion} and {@code client_assertion_type} for
+     * {@code private_key_jwt} requests.
+     *
+     * <p>This method removes all parameters except the following;
+     *   <ul>
+     *       <li>{@code client_id}</li>
+     *       <li>{@code client_assertion}</li>
+     *       <li>{@code client_assertion_type}</li>
+     *       <li>{@code request_uri}</li>
+     *       <li>{@code request}</li>
+     *   </ul>
+     * </p>
+     *
+     * <p>Due to issues in AM, this method will also leave the following parameters, although it shouldn't have to;
+     * <ul>
+     *     <li>{@code scope}</li>
+     *     <li>{@code response_type}</li>
+     * </ul>
+     * </p>
+     *
+     *
+     * @param request the request from which all non authorization method parameters are to be removed
+     * @return a Promise that will resolve when the method has completed
+     */
     protected Promise<Void, NeverThrowsException> removeParamsFromRequest(Request request) {
-        List<String> allowedParamNames = List.of(CLIENT_ID, CLIENT_ASSERTION, CLIENT_ASSERTION_TYPE, REQUEST_URI,
-                REQUEST, SCOPE, RESPONSE_TYPE);
-        return removeNonMatchingParamsFromRequest(request, allowedParamNames).thenOnResult((removedParams)->{
+        return removeNonMatchingParamsFromRequest(request, ALLOWED_HTML_PARAMETER_NAMES).thenOnResult((removedParams)->{
             logger.info("Removed {} params from the request", removedParams.size());
         }).thenDiscardResult();
     }

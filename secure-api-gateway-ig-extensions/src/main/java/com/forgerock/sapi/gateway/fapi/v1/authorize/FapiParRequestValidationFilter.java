@@ -58,27 +58,28 @@ public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestVali
     @Override
     protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request,
             List<String> paramNamesToKeep) {
-        try {
-            final Form form =  request.getEntity().getForm();
-            List<String> paramsToRemove = new ArrayList<>();
-            form.keySet().forEach((formParamKey)-> {
-                if (!paramNamesToKeep.contains(formParamKey)) {
-                    paramsToRemove.add(formParamKey);
-                }
-            });
+        return request.getEntity().getFormAsync().then(
+                form -> {
+                    List<String> paramsToRemove = new ArrayList<>();
+                    form.keySet().forEach((formParamKey) -> {
+                        if (!paramNamesToKeep.contains(formParamKey)) {
+                            paramsToRemove.add(formParamKey);
+                        }
+                    });
 
-            paramsToRemove.forEach((paramToRemove)->{
-                List<String> result = form.remove(paramToRemove);
-                if(result != null){
-                    logger.debug("Removed form parameter '{}' from PAR request", paramToRemove);
-                }
-            });
-            request.setEntity(form);
-            return Promises.newResultPromise(paramsToRemove);
-        } catch (IOException e) {
-            logger.warn("Failed to remove param from /par request form due to exception", e);
-            return Promises.newResultPromise(List.of());
-        }
+                    paramsToRemove.forEach((paramToRemove) -> {
+                        List<String> result = form.remove(paramToRemove);
+                        if (result != null) {
+                            logger.debug("Removed form parameter '{}' from PAR request", paramToRemove);
+                        }
+                    });
+                    request.setEntity(form);
+                    return paramsToRemove;
+                }, ioe -> {
+                    logger.warn("Failed to remove param from /par request form due to exception", ioe);
+                    List<String> emptyList = new ArrayList<>();
+                    return emptyList;
+                });
     }
 
     public static class Heaplet extends GenericHeaplet {

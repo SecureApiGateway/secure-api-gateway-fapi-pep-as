@@ -31,8 +31,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 
 class FapiAuthorizeRequestValidationFilterTest extends BaseFapiAuthorizeRequestValidationFilterTest {
 
-    private JWTSigner jwtSigner = new JWTSigner();
-
     FapiAuthorizeRequestValidationFilterTest() throws HeapException {
         super((FapiAuthorizeRequestValidationFilter) new Heaplet().create());
     }

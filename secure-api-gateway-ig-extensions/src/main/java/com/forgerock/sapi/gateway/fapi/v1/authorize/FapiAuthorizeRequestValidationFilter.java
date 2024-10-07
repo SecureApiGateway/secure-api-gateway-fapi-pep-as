@@ -16,6 +16,7 @@
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.forgerock.http.Handler;
@@ -46,10 +47,8 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
         if (isAuthorizeParRequest(request)) {
             logger.debug("/authorize request is for a /par request no validation of ");
 
-            // Should be ignoring and not returning state if it only exists as a http request parameter and does not
-            // exist in the request jwt. AM however doesn't apply this rule and returns state in the resulting redirect
-            //
-            // The solution is to remove it from the request sent to AM so that there is no state supplied.
+            // Remove parameters that should be ignored from the http request - parameters should only be read from
+            // the JAR object
             return removeParamsFromRequest(request)
                     .thenAsync(noResult -> {
                         logger.info("Authorize request is FAPI compliant");
@@ -83,25 +82,26 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
     /**
      * Implementation which removes parameter values that don't match an entry in paramNamesToKeep from the HTTP
      * Request's Query Parameters
-     * @param request the request from which to remove the HTTP Request's query parameters
+     *
+     * @param request          the request from which to remove the HTTP Request's query parameters
      * @param paramNamesToKeep the list of HTTP Request parameters to keep
      */
     @Override
-    protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request, List<String> paramNamesToKeep) {
-        final Form existingQueryParams = request.getQueryParams();
-        List<String> namesToRemove = new ArrayList<>();
-        existingQueryParams.keySet().forEach((paramName)->{
-            if ( !paramNamesToKeep.contains(paramName)){
-                namesToRemove.add(paramName);
-            }
-        });
+    protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request,
+            List<String> paramNamesToKeep) {
 
-        namesToRemove.forEach((paramToRemove) ->{
-            List<String> response = existingQueryParams.remove(paramToRemove);
-            if(response != null){
-                logger.debug("Removed http request parameter {}", paramToRemove);
+        final Form existingQueryParams = request.getQueryParams();
+
+        List<String> namesToRemove = new ArrayList<>();
+        Iterator<String> iterator = existingQueryParams.keySet().iterator();
+        while (iterator.hasNext()) {
+            String formParamKey = iterator.next();
+            if (!paramNamesToKeep.contains(formParamKey)) {
+                namesToRemove.add(formParamKey);
+                iterator.remove();
+                logger.debug("Removed form parameter '{}' from PAR request", formParamKey);
             }
-        });
+        }
 
         existingQueryParams.toRequestQuery(request);
         return Promises.newResultPromise(namesToRemove);
