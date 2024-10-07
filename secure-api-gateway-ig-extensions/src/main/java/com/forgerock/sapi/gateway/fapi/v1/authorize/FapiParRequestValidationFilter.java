@@ -17,6 +17,7 @@ package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 
 import org.forgerock.http.protocol.Form;
@@ -60,21 +61,18 @@ public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestVali
             List<String> paramNamesToKeep) {
         return request.getEntity().getFormAsync().then(
                 form -> {
-                    List<String> paramsToRemove = new ArrayList<>();
-                    form.keySet().forEach((formParamKey) -> {
-                        if (!paramNamesToKeep.contains(formParamKey)) {
-                            paramsToRemove.add(formParamKey);
+                    List<String> paramsRemoved = new ArrayList<>();
+                    Iterator<String> itt = form.keySet().iterator();
+                    while(itt.hasNext()){
+                        String key = itt.next();
+                        if(!paramNamesToKeep.contains(key)){
+                            itt.remove();
+                            paramsRemoved.add(key);
+                            logger.debug("Removed form parameter '{}' from PAR request", itt);
                         }
-                    });
-
-                    paramsToRemove.forEach((paramToRemove) -> {
-                        List<String> result = form.remove(paramToRemove);
-                        if (result != null) {
-                            logger.debug("Removed form parameter '{}' from PAR request", paramToRemove);
-                        }
-                    });
+                    }
                     request.setEntity(form);
-                    return paramsToRemove;
+                    return paramsRemoved;
                 }, ioe -> {
                     logger.warn("Failed to remove param from /par request form due to exception", ioe);
                     List<String> emptyList = new ArrayList<>();
