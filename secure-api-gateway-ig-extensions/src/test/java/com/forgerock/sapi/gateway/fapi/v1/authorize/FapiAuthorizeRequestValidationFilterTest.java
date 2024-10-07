@@ -16,6 +16,8 @@
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
@@ -25,6 +27,7 @@ import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.Test;
 
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiAuthorizeRequestValidationFilter.Heaplet;
+import com.nimbusds.jwt.JWTClaimsSet;
 
 class FapiAuthorizeRequestValidationFilterTest extends BaseFapiAuthorizeRequestValidationFilterTest {
 
@@ -35,8 +38,11 @@ class FapiAuthorizeRequestValidationFilterTest extends BaseFapiAuthorizeRequestV
     @Test
     void succeedsForAuthorizeRequestsUsingPar() throws Exception {
         // Test calling /authorize with a request_uri of a previously submitted /par request
+        final String state = UUID.randomUUID().toString();
+        final String nonce = UUID.randomUUID().toString();
         final Request request = new Request();
-        request.setUri("https://localhost/am/authorize?request_uri=ref-to-par-req");
+        request.setMethod("GET");
+        request.setUri("https://localhost/am/authorize?request_uri=ref-to-par-req" + "&state=" + state + "&nonce=" + nonce);
         request.setMethod("GET");
 
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, successResponseHandler);

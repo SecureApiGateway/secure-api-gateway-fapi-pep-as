@@ -16,6 +16,9 @@
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 import org.forgerock.http.protocol.Form;
 import org.forgerock.http.protocol.Request;
@@ -23,6 +26,7 @@ import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
+import org.forgerock.util.promise.Promises;
 
 /**
  * Validates that a request made to the OAuth2.0 /par (Pushed Authorization Request) endpoint is FAPI compliant.
@@ -53,14 +57,27 @@ public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestVali
     }
 
     @Override
-    protected void removeStateParamFromRequest(Request request) {
-        try {
-            final Form form = request.getEntity().getForm();
-            form.remove(STATE_PARAM_NAME);
-            request.setEntity(form);
-        } catch (IOException e) {
-            logger.warn("Failed to remove state param from /par request form due to exception", e);
-        }
+    protected Promise<List<String>, NeverThrowsException> removeNonMatchingParamsFromRequest(Request request,
+            List<String> paramNamesToKeep) {
+        return request.getEntity().getFormAsync().then(
+                form -> {
+                    List<String> paramsRemoved = new ArrayList<>();
+                    Iterator<String> itt = form.keySet().iterator();
+                    while(itt.hasNext()){
+                        String key = itt.next();
+                        if(!paramNamesToKeep.contains(key)){
+                            itt.remove();
+                            paramsRemoved.add(key);
+                            logger.debug("Removed form parameter '{}' from PAR request", itt);
+                        }
+                    }
+                    request.setEntity(form);
+                    return paramsRemoved;
+                }, ioe -> {
+                    logger.warn("Failed to remove param from /par request form due to exception", ioe);
+                    List<String> emptyList = new ArrayList<>();
+                    return emptyList;
+                });
     }
 
     public static class Heaplet extends GenericHeaplet {
