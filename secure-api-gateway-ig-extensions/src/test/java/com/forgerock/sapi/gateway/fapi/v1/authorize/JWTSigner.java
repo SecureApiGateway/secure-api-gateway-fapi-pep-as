@@ -23,9 +23,19 @@ import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
+/**
+ * Class used to sign a jwt using an RSASASigner initialized with a newly created RSA private key
+ */
 public class JWTSigner {
     private final RSASSASigner jwtSigner = new RSASSASigner(CryptoUtils.generateRsaKeyPair().getPrivate());
 
+    /**
+     * Creates a Signed JWT in the JWS Compact Serialisation format
+     * @see <a href="https://datatracker.ietf.org/doc/html/rfc7515#section-7.1">here</a>
+     * @param claimsSet the claims to be included in the signed jwt
+     * @return a JWS Compact Serialized signed JWT
+     * @throws JOSEException when the jwt can't be signed
+     */
     String createSignedRequestJwt(JWTClaimsSet claimsSet) throws JOSEException {
         final SignedJWT signedJWT = new SignedJWT(new JWSHeader.Builder(JWSAlgorithm.PS256).keyID("test-kid").build(), claimsSet);
         signedJWT.sign(jwtSigner);

@@ -22,4 +22,5 @@ public class AuthorizeRequestParameterNames {
     public final static String REQUEST_URI = "request_uri";
     public final static String REQUEST = "request";
     public final static String SCOPE = "scope";
+    public final static String RESPONSE_TYPE = "response_type";
 }
