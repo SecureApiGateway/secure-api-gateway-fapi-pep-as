@@ -15,8 +15,8 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
+import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
 
 import org.forgerock.http.protocol.Request;
@@ -27,7 +27,6 @@ import org.forgerock.util.promise.Promise;
 import org.junit.jupiter.api.Test;
 
 import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiAuthorizeRequestValidationFilter.Heaplet;
-import com.nimbusds.jwt.JWTClaimsSet;
 
 class FapiAuthorizeRequestValidationFilterTest extends BaseFapiAuthorizeRequestValidationFilterTest {
 
@@ -63,5 +62,10 @@ class FapiAuthorizeRequestValidationFilterTest extends BaseFapiAuthorizeRequestV
     protected String getRequestState(Request request) {
         final List<String> state = request.getQueryParams().get("state");
         return state != null ? state.get(0) : null;
+    }
+
+    @Override
+    protected HashMap<String, Object> getEndpointSpecificMapOfClaims() {
+        return getCommonMapOfClaims();
     }
 }

@@ -15,12 +15,20 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ID;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.NONCE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REDIRECT_URI;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.RESPONSE_MODE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.RESPONSE_TYPE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.SCOPE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.STATE;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
@@ -41,20 +49,21 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
 import com.forgerock.sapi.gateway.common.rest.HttpMediaTypes;
-import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
-import com.nimbusds.jose.JOSEException;
-import com.nimbusds.jose.JWSAlgorithm;
-import com.nimbusds.jose.JWSHeader.Builder;
-import com.nimbusds.jose.crypto.RSASSASigner;
 import com.nimbusds.jwt.JWTClaimsSet;
-import com.nimbusds.jwt.SignedJWT;
 
 public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
 
     protected final BaseFapiAuthorizeRequestValidationFilter filter;
     protected final Context context = new RootContext("test");
+
+    protected final String VALID_SCOPE_CLAIMS = "openid payments";
+    protected final String VALID_NONCE_CLAIM = "lkfhfgufdjlkdsfj";
+    protected final String VALID_RESPONSE_TYPE_CLAIM = "code id_token";
+    protected final String VALID_REDIRECT_URI_CLAIM = "https://test-tpp.com/redirect";
+    protected final String VALID_CLIENT_ID_CLAIM = "client-123";
     private final JWTSigner jwtSigner = new JWTSigner();
+
     protected TestSuccessResponseHandler successResponseHandler;
 
     public BaseFapiAuthorizeRequestValidationFilterTest(BaseFapiAuthorizeRequestValidationFilter filter) {
@@ -121,11 +130,10 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenRequestJwtIsMissingRedirectUriClaim() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "payments",
-                "response_type", "jwt"));
+        final Map<String, Object> claimsMap = getEndpointSpecificMapOfClaims();
+        claimsMap.remove(REDIRECT_URI);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(claimsMap);
+
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -133,6 +141,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
 
         validateErrorResponse(responsePromise, "Request JWT must have a 'redirect_uri' claim");
     }
+
 
     @Test
     void failsWhenRequestJwtIsMissingClientIdClaim() throws Exception {
@@ -222,12 +231,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void succeedsForValidRequest() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "openid payments",
-                "response_type", "code id_token"));
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(getEndpointSpecificMapOfClaims());
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -238,11 +242,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
 
     @Test
     void succeedsForValidRequestWithoutStateClaim() throws Exception {
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "scope", "openid payments",
-                "response_type", "code id_token"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(STATE);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         // state param in URI but NOT in jwt claims
@@ -258,13 +260,10 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @ValueSource(strings = {"jwt", "query.jwt", "fragment.jwt", "form_post.jwt"})
     void succeedsForValidRequestUsingJarm(String jwtResponseMode) throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "openid payments",
-                "response_type", "code",
-                "response_mode", jwtResponseMode));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.put(RESPONSE_TYPE, "code");
+        jarClaims.put(RESPONSE_MODE, jwtResponseMode);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -276,12 +275,11 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenResponseTypesCodeMissingResponseMode() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "openid payments",
-                "response_type", "code"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.put(RESPONSE_TYPE, "code");
+        jarClaims.remove(RESPONSE_MODE);
+
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -293,13 +291,11 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenResponseTypeCodeInvalidResponseMode() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "openid payments",
-                "response_type", "code",
-                "response_mode", "not-supported"));
+        Map<String, Object> validClaims = getEndpointSpecificMapOfClaims();
+        validClaims.put(RESPONSE_TYPE, "code");
+        validClaims.put(RESPONSE_MODE, "not-supported");
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(validClaims);
+
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -311,12 +307,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenResponseTypeCodeIdDoesNotHaveOpenIdScope() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "payments",
-                "response_type", "code id_token"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.put(SCOPE, "payments");
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -328,12 +321,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenResponseTypeIsInvalid() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("client_id", "client-123",
-                "redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "payments",
-                "response_type", "id_token"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.put(RESPONSE_TYPE, "id_token");
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -344,7 +334,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
 
     protected abstract Request createRequest(String requestJwt, String state) throws Exception;
 
-    private void validateErrorResponse(Promise<Response, NeverThrowsException> responsePromise, String expectedErrorMessage) throws IOException {
+    void validateErrorResponse(Promise<Response, NeverThrowsException> responsePromise, String expectedErrorMessage) throws IOException {
         final Response response = BaseFapiAuthorizeRequestValidationFilterTest.getResponse(responsePromise);
         assertEquals(Status.BAD_REQUEST, response.getStatus());
 
@@ -364,12 +354,29 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
         assertTrue(successResponseHandler.hasBeenInteractedWith());
     }
 
-    private void validateHandlerReceivedRequestWithStateParam(String expectedState) {
-        final Request processedRequest = successResponseHandler.getProcessedRequests().get(0);
-        assertEquals(expectedState, getRequestState(processedRequest));
-    }
-
     protected abstract String getRequestState(Request request);
+
+    /**
+     * Get the default required JAR claims for the JAR request. The required claims will be different for the par and
+     * the authorize endpoint.
+     * @return {@code Map<String, String>} containing the default claims for the PAR or authorize request
+     */
+    protected abstract HashMap<String, Object> getEndpointSpecificMapOfClaims();
+
+    /**
+     * Get a valid set of claims common to both par and authorize endpoints
+     * @return {@code Map<String, String>} containing a valid set of claims common to the par and authorize endpoints
+     */
+    protected HashMap<String, Object> getCommonMapOfClaims(){
+        HashMap<String, Object> validMapOfClaims = new HashMap<>(Map.of(
+                SCOPE, VALID_SCOPE_CLAIMS,
+                NONCE, VALID_NONCE_CLAIM,
+                RESPONSE_TYPE, VALID_RESPONSE_TYPE_CLAIM,
+                REDIRECT_URI, VALID_REDIRECT_URI_CLAIM,
+                CLIENT_ID, VALID_CLIENT_ID_CLAIM
+        ));
+        return validMapOfClaims;
+    }
 
     protected void validateHandlerReceivedRequestWithoutStateParam() {
         final Request processedRequest = successResponseHandler.getProcessedRequests().get(0);

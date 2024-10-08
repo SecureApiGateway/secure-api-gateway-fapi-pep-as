@@ -63,8 +63,6 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
     private static final Set<String> RESPONSE_TYPE_CODE = Set.of("code");
     private static final Set<String> RESPONSE_TYPE_CODE_ID_TOKEN = Set.of("code", "id_token");
     private static final Set<String> VALID_HTTP_REQUEST_METHODS = Set.of("POST", "GET");
-    private static final List<String> REQUIRED_REQUEST_JWT_CLAIMS = List.of("scope", "nonce", "response_type", "redirect_uri", "client_id");
-    protected static final String STATE_PARAM_NAME = "state";
     private static final String REQUEST_JWT_PARAM_NAME = "request";
 
     protected final Logger logger = LoggerFactory.getLogger(getClass());
@@ -90,6 +88,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
                 final String errorDescription = "Request must have a 'request' parameter the value of which must be a signed jwt";
                 return Promises.newResultPromise(errorResponseFactory.invalidRequestErrorResponse(acceptHeader, errorDescription));
             }
+
             // Spec covering the necessity of these fields to exist in the authorization request:
             // scope - The FAPI Advanced part 1 spec, section 5.2.2.1 states that
             //   "if it is desired to provide the  authenticated user's identifier to the client
@@ -102,7 +101,7 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
             // FAPI Advanced Part 1, part 5.2.2.3
             //   "1. shall require the nonce parameter defined in Section 3.1.2.1 of OIDC in the authentication request"
             // (see https://openid.net/specs/openid-financial-api-part-1-1_0.html#client-requesting-openid-scope)
-            for (String requiredClaim : REQUIRED_REQUEST_JWT_CLAIMS) {
+            for (String requiredClaim : getRequiredRequestJwtClaims()) {
                 if (!requestJwtHasClaim(requiredClaim, requestJwtClaimSet)) {
                     String errorDescription = "Request JWT must have a '" + requiredClaim + "' claim";
                     return Promises.newResultPromise(errorResponseFactory.invalidRequestErrorResponse(acceptHeader, errorDescription));
@@ -114,6 +113,12 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
                 return Promises.newResultPromise(responseTypeValidationErrorResponse);
             }
 
+            final Response endpointSpecificClaimsChecksResponse = checkEndpointSpecificClaims(acceptHeader,
+                    requestJwtClaimSet);
+            if(endpointSpecificClaimsChecksResponse != null){
+                return Promises.newResultPromise(endpointSpecificClaimsChecksResponse);
+            }
+
             // Remove parameters that should be ignored from the http request - parameters should only be read from
             // the JAR object
             return removeParamsFromRequest(request)
@@ -123,6 +128,8 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
                     });
         });
     }
+
+
 
     /**
      * Applies validation logic relating to the response_type
@@ -246,6 +253,21 @@ public abstract class BaseFapiAuthorizeRequestValidationFilter implements Filter
      * does not exist or fails to be retrieved due to an exception.
      */
     protected abstract Promise<String, NeverThrowsException> getParamFromRequest(Request request, String paramName);
+
+
+    /**
+     * Returns a list of the required claims that must be present in the request JWT
+     * @return String<List> which contains the list of claims
+     */
+    protected abstract List<String> getRequiredRequestJwtClaims();
+
+    /**
+     * Check specific claim combinations specific to the request type. Handled by the child implementations
+     * @param acceptHeader - used to determine the media type of the response
+     * @param requestJwtClaimSet - the claims found in the JAR object of the request
+     * @return Response - null if no checks failed, or contains an error response if a check failed.
+     */
+    protected abstract Response checkEndpointSpecificClaims(Header acceptHeader, JwtClaimsSet requestJwtClaimSet);
 
     /**
      * Checks if the claim exists in the requestJwtClaimSet

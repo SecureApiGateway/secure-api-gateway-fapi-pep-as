@@ -15,14 +15,22 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ID;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.NONCE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REDIRECT_URI;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.RESPONSE_TYPE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.SCOPE;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
 import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Form;
+import org.forgerock.http.protocol.Header;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
+import org.forgerock.json.jose.jwt.JwtClaimsSet;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.Context;
@@ -40,6 +48,8 @@ import org.forgerock.util.promise.Promises;
 public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeRequestValidationFilter {
 
     private static final String REQUEST_URI_PARAM_NAME = "request_uri";
+    private static final List<String> REQUIRED_REQUEST_JWT_CLAIMS = List.of(SCOPE, NONCE, RESPONSE_TYPE, REDIRECT_URI,
+            CLIENT_ID);
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
@@ -77,6 +87,16 @@ public class FapiAuthorizeRequestValidationFilter extends BaseFapiAuthorizeReque
     @Override
     protected Promise<String, NeverThrowsException> getParamFromRequest(Request request, String paramName) {
         return Promises.newResultPromise(getParamFromRequestQuery(request, paramName));
+    }
+
+    @Override
+    protected List<String> getRequiredRequestJwtClaims() {
+        return REQUIRED_REQUEST_JWT_CLAIMS;
+    }
+
+    @Override
+    protected Response checkEndpointSpecificClaims(Header acceptHeader, JwtClaimsSet requestJwtClaimSet) {
+        return null;
     }
 
     /**

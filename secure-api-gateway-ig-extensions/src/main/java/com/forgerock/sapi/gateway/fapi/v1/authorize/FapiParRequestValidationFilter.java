@@ -15,18 +15,26 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1.authorize;
 
-import java.io.IOException;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CLIENT_ID;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CODE_CHALLENGE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.CODE_CHALLENGE_METHOD;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.NONCE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.REDIRECT_URI;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.RESPONSE_TYPE;
+import static com.forgerock.sapi.gateway.common.jwt.AuthorizeRequestParameterNames.SCOPE;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
-import org.forgerock.http.protocol.Form;
+import org.forgerock.http.protocol.Header;
 import org.forgerock.http.protocol.Request;
+import org.forgerock.http.protocol.Response;
+import org.forgerock.json.jose.jwt.JwtClaimsSet;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
-import org.forgerock.util.promise.Promises;
 
 /**
  * Validates that a request made to the OAuth2.0 /par (Pushed Authorization Request) endpoint is FAPI compliant.
@@ -37,6 +45,11 @@ import org.forgerock.util.promise.Promises;
  * <a href="https://datatracker.ietf.org/doc/html/rfc9126#name-pushed-authorization-reques">OAuth 2.0 Pushed Authorization Requests</a>
  */
 public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestValidationFilter {
+
+    private static final List<String> REQUIRED_REQUEST_JWT_CLAIMS = List.of(SCOPE, NONCE, RESPONSE_TYPE, REDIRECT_URI,
+            CLIENT_ID, CODE_CHALLENGE, CODE_CHALLENGE_METHOD);
+
+    private static final String VALID_CODE_CHALLENGE_METHOD = "S256";
 
     /**
      * Retrieves parameters from the HTTP Request's Form
@@ -54,6 +67,26 @@ public class FapiParRequestValidationFilter extends BaseFapiAuthorizeRequestVali
                     logger.warn("Failed to extract data from /par request due to exception", ioe);
                     return null;
                 });
+    }
+
+    @Override
+    protected List<String> getRequiredRequestJwtClaims() {
+        return REQUIRED_REQUEST_JWT_CLAIMS;
+    }
+
+    /**
+     * For the PAR endpoint we need to check that the CODE_CHALLENGE_METHOD is S256
+     * @param acceptHeader - determines response media type
+     * @param requestJwtClaimSet - the claims found in the JAR object
+     */
+    @Override
+    protected Response checkEndpointSpecificClaims(Header acceptHeader, JwtClaimsSet requestJwtClaimSet) {
+        String codeChallengeMethod = requestJwtClaimSet.get(CODE_CHALLENGE_METHOD).asString();
+        if(!codeChallengeMethod.equals(VALID_CODE_CHALLENGE_METHOD)) {
+            return errorResponseFactory.invalidRequestErrorResponse(acceptHeader, "Request JWT must have a " +
+                    "'code_challenge_method' claim of S256");
+        }
+        return null;
     }
 
     @Override
