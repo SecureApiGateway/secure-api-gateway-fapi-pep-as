@@ -57,6 +57,14 @@
           }
         },
         {
+          "name": "ErrorResponseFilter",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ErrorResponseFilter.groovy"
+          }
+        },
+        {
           "name": "ParResponseFetchApiClientFilter",
           "type": "ParResponseFetchApiClientFilter",
           "comment": "Add ApiClient data to the context attributes",

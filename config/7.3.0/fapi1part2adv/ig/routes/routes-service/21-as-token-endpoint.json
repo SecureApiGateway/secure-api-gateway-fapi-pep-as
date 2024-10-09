@@ -74,6 +74,14 @@
           }
         },
         {
+          "name": "ErrorResponseFilter",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ErrorResponseFilter.groovy"
+          }
+        },
+        {
           "name": "TokenEndpointResponseFetchApiClientFilter",
           "type": "TokenEndpointResponseFetchApiClientFilter",
           "comment": "Fetches the ApiClient and adds it to the attributes context if the AS returns with a success response",
