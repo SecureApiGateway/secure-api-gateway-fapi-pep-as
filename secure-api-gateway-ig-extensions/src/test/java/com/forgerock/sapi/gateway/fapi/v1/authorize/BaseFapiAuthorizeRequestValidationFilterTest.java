@@ -146,11 +146,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenRequestJwtIsMissingClientIdClaim() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "scope", "payments",
-                "response_type", "jwt"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(CLIENT_ID);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -162,11 +160,10 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenRequestJwtIsMissingScopeClaim() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("redirect_uri", "https://test-tpp.com/redirect",
-                "nonce", "sdffdsdfdssfd",
-                "state", state,
-                "client_id", "client-123",
-                "response_type", "jwt"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(SCOPE);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
+
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -178,11 +175,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenRequestJwtIsMissingNonceClaim() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("redirect_uri", "https://test-tpp.com/redirect",
-                "scope", "sdffdsdfdssfd",
-                "state", state,
-                "client_id", "client-123",
-                "response_type", "jwt"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(NONCE);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -194,11 +189,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWhenRequestJwtIsMissingResponseTypeClaim() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("redirect_uri", "https://test-tpp.com/redirect",
-                "scope", "sdffdsdfdssfd",
-                "nonce", "adsaddas",
-                "state", state,
-                "client_id", "client-123"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(RESPONSE_TYPE);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
@@ -210,11 +203,9 @@ public abstract class BaseFapiAuthorizeRequestValidationFilterTest {
     @Test
     void failsWithTextResponseWhenAcceptHeaderIsConfigured() throws Exception {
         final String state = UUID.randomUUID().toString();
-        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(Map.of("redirect_uri", "https://test-tpp.com/redirect",
-                "scope", "sdffdsdfdssfd",
-                "nonce", "adsaddas",
-                "state", state,
-                "client_id", "client-123"));
+        HashMap<String, Object> jarClaims = getEndpointSpecificMapOfClaims();
+        jarClaims.remove(RESPONSE_TYPE);
+        final JWTClaimsSet requestClaims = JWTClaimsSet.parse(jarClaims);
         final String signedRequestJwt = jwtSigner.createSignedRequestJwt(requestClaims);
 
         final Request request = createRequest(signedRequestJwt, state);
