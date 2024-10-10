@@ -11,11 +11,11 @@ SCRIPT_NAME = "[ErrorResponseFilter] - "
 
 logger.debug(SCRIPT_NAME + "Running...")
 
-return next.handle(context, request).thenOnResult {
+return next.handle(context, request).thenAsync {
     response -> {
         if(response.status.isClientError()){
             logger.debug("{} Response has status {} - which is a Client Error", SCRIPT_NAME, response.status)
-            response.entity.getJsonAsync().then(errorResponse -> {
+            return response.entity.getJsonAsync().then(errorResponse -> {
                 logger.debug("{} Response has body {}", SCRIPT_NAME, errorResponse)
                 try {
                     if(errorResponse.error_description.equals("code_verifier parameter required")){
@@ -33,7 +33,9 @@ return next.handle(context, request).thenOnResult {
                 } catch (e){
                     logger.debug("{} error casting json body to be ErrorResponse. Exception: {}" SCRIPT_NAME, e)
                 }
+                return response
             })
         }
+        return response;
     }
 };
