@@ -36,6 +36,6 @@ return next.handle(context, request).thenAsync {
                 return response
             })
         }
-        return response;
+        return newResultPromise(response);
     }
 };
