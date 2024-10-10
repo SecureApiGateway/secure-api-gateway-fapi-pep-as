@@ -37,6 +37,14 @@
           "comment": "Ensure authorize request object is FAPI compliant"
         },
         {
+          "name": "ErrorResponseFilter",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ErrorResponseFilter.groovy"
+          }
+        },
+        {
           "name": "AuthorizeResponseFetchApiClientFilter",
           "type": "AuthorizeResponseFetchApiClientFilter",
           "comment": "Add ApiClient data to the context attributes",
