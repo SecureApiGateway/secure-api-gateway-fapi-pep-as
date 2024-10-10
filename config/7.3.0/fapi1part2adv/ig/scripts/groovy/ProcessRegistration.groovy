@@ -212,7 +212,7 @@ switch (method.toUpperCase()) {
                             return newResultPromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
                         }
                         return next.handle(context, request)
-                                .thenOnResult(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
+                                   .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
                     })
         } else {
             // Verify against the software_jwks which is a JWKSet embedded within the software_statement
@@ -244,7 +244,7 @@ switch (method.toUpperCase()) {
                 return newResultPromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
             }
             return next.handle(context, request)
-                    .thenOnResult(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
+                       .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
         }
 
     case "DELETE":
@@ -253,11 +253,12 @@ switch (method.toUpperCase()) {
     case "GET":
         rewriteUriToAccessExistingAmRegistration()
         return next.handle(context, request)
-                .thenOnResult(response -> {
+                .thenAsync(response -> {
                     var apiClient = attributes.apiClient
                     if (apiClient && apiClient.softwareStatementAssertion) {
-                        addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
+                        return addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
                     }
+                    return newResultPromise(request)
                 })
     default:
         logger.debug(SCRIPT_NAME + "Method not supported")
@@ -379,14 +380,17 @@ private void rewriteUriToAccessExistingAmRegistration() {
     request.uri.setRawQuery("client_id=" + apiClientId)
 }
 
-private void addSoftwareStatementToResponse(response, softwareStatementAssertion) {
+private Promise addSoftwareStatementToResponse(response, softwareStatementAssertion) {
     if (response.status.isSuccessful()) {
-        var registrationResponse = response.getEntity().getJson()
-        if (!registrationResponse["software_statement"]) {
-            registrationResponse["software_statement"] = softwareStatementAssertion.build()
-        }
-        response.entity.setJson(registrationResponse)
+        return response.getEntity().getJsonAsync().then(json -> {
+            if (!json["software_statement"]) {
+                json["software_statement"] = softwareStatementAssertion.build()
+            }
+            response.entity.setJson(json)
+            return response
+        })
     }
+    return newResultPromise(response)
 }
 
 private boolean tlsClientCertExistsInJwkSet(jwkSet) {
