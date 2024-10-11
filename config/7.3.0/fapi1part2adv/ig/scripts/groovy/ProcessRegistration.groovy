@@ -258,7 +258,7 @@ switch (method.toUpperCase()) {
                     if (apiClient && apiClient.softwareStatementAssertion) {
                         return addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
                     }
-                    return newResultPromise(request)
+                    return newResultPromise(response)
                 })
     default:
         logger.debug(SCRIPT_NAME + "Method not supported")
