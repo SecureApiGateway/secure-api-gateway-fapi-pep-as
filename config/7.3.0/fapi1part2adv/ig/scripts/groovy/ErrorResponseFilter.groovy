@@ -33,9 +33,9 @@ return next.handle(context, request).thenAsync {
                 } catch (e){
                     logger.debug("{} error casting json body to be ErrorResponse. Exception: {}" SCRIPT_NAME, e)
                 }
-                return response
+                return newResultPromise(response)
             })
         }
-        return newResultPromise(response);
+        return newResultPromise(response)
     }
 };
