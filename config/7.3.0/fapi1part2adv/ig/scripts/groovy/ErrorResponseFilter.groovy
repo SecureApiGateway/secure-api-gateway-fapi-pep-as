@@ -13,7 +13,9 @@ logger.debug(SCRIPT_NAME + "Running...")
 
 return next.handle(context, request).thenAsync {
     response -> {
-        if(response.status.isClientError()){
+        def mediaTypes = response.getHeaders().getAll("content-type")
+        logger.debug("{} response content type is {}", mediaTypes[0])
+        if(response.status.isClientError() && mediaTypes[0].contains("application/json")){
             logger.debug("{} Response has status {} - which is a Client Error", SCRIPT_NAME, response.status)
             return response.entity.getJsonAsync().then(errorResponse -> {
                 logger.debug("{} Response has body {}", SCRIPT_NAME, errorResponse)
@@ -36,6 +38,6 @@ return next.handle(context, request).thenAsync {
                 return response
             })
         }
-        return newResultPromise(response);
+        return newResultPromise(response)
     }
 };
