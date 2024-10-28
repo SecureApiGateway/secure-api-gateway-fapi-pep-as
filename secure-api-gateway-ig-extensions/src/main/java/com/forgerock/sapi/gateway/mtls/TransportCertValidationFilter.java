@@ -23,7 +23,6 @@ import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.Objects;
 
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
@@ -33,11 +32,11 @@ import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
-import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
@@ -45,7 +44,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 
 /**
  * Filter to validate that the client's MTLS transport certificate is valid.

@@ -2,11 +2,12 @@ import org.forgerock.json.jose.jwk.JWKSet
 import org.forgerock.json.jose.jwk.JWK
 import com.forgerock.sapi.gateway.common.jwt.ClaimsSetFacade
 import com.forgerock.sapi.gateway.common.jwt.JwtException
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement
+import org.forgerock.openig.fapi.dcr.RegistrationRequest
+import org.forgerock.openig.fapi.dcr.SoftwareStatement
 import com.forgerock.securebanking.uk.gateway.jwks.*
 import com.nimbusds.jose.jwk.RSAKey
 import com.securebanking.gateway.dcr.ErrorResponseFactory
+import org.forgerock.json.jose.exceptions.FailedToLoadJWKException
 
 import java.security.SignatureException
 
@@ -63,12 +64,6 @@ switch (method.toUpperCase()) {
         logger.debug(SCRIPT_NAME + "required registrationRequest is present")
 
         RegistrationRequest registrationRequest = attributes.registrationRequest
-        if (! registrationRequest.signatureHasBeenValidated() ){
-            logger.error(SCRIPT_NAME + "registrationResponse signature has not been validated. " +
-                    "RegistrationRequestJwtSignatureValidatorFilter must be run prior to this script")
-            return new Response(Status.INTERNAL_SERVER_ERROR)
-        }
-        logger.debug(SCRIPT_NAME + "required registrationRequest signatures have been validated")
 
         def SCOPE_ACCOUNTS = "accounts"
         def SCOPE_PAYMENTS = "payments"
@@ -81,15 +76,8 @@ switch (method.toUpperCase()) {
             return errorResponseFactory.invalidClientMetadataErrorResponse("No client certificate for registration")
         }
 
-        if (registrationRequest.hasExpired()){
-            logger.debug(SCRIPT_NAME + "Registration request JWT has expired")
-            return errorResponseFactory.invalidClientMetadataErrorResponse("registration request jwt has expired")
-        }
-        logger.debug(SCRIPT_NAME + "registrationRequest is still valid");
-
-        ClaimsSetFacade regRequestClaimsSet = registrationRequest.getClaimsSet()
-        Optional<List<String>> optionalResponseTypes = regRequestClaimsSet.getOptionalStringListClaim("response_types")
-        if(optionalResponseTypes.isEmpty()){
+        List<String> responseTypes = registrationRequest.getResponseTypes()
+        if(responseTypes == null || responseTypes.isEmpty()){
             logger.debug(SCRIPT_NAME + "No response_types claim in registration request. Setting default response_types " +
                     "to " + defaultResponseTypes)
             registrationRequest.setResponseTypes([defaultResponseTypes])
@@ -98,8 +86,6 @@ switch (method.toUpperCase()) {
             //   "The authorization server MAY reject or
             //   replace any of the client's requested metadata values submitted
             //   during the registration and substitute them with suitable values."
-
-            def responseTypes = optionalResponseTypes.get()
             for (String responseType : responseTypes) {
                 if (!supportedResponseTypes.contains(responseType)){
                     logger.debug(SCRIPT_NAME + "response_types claim does not include supported types. " +
@@ -109,20 +95,13 @@ switch (method.toUpperCase()) {
                 }
             }
         }
-        logger.debug("{}response_types claim value is {}", SCRIPT_NAME, optionalResponseTypes.get())
+        logger.debug("{}response_types claim value is {}", SCRIPT_NAME, registrationRequest.getResponseTypes())
 
         // Check token_endpoint_auth_methods. OB Spec says this MUST be defined with 1..1 cardinality in the
         // registration request.
-        String tokenEndpointAuthMethod
-        try {
-            tokenEndpointAuthMethod = regRequestClaimsSet.getStringClaim("token_endpoint_auth_method")
-        } catch (JwtException jwtException){
-            String errorDescription = "registration request jwt must have a 'token_endpoint_auth_method' claim"
-            logger.info("{}{}", SCRIPT_NAME, errorDescription)
-            return errorResponseFactory.invalidClientMetadataErrorResponse(errorDescription)
-        }
+        String tokenEndpointAuthMethod = registrationRequest.getTokenEndpointAuthMethod()
 
-        if (!tokenEndpointAuthMethodsSupported.contains(tokenEndpointAuthMethod)){
+        if (tokenEndpointAuthMethod == null || !tokenEndpointAuthMethodsSupported.contains(tokenEndpointAuthMethod)){
             String errorDescription = "token_endpoint_auth_method claim must be one of: " +
                     tokenEndpointAuthMethodsSupported
             logger.info("{}{}", SCRIPT_NAME, errorDescription)
@@ -132,40 +111,28 @@ switch (method.toUpperCase()) {
 
 
         // AM should reject this case??
-        if (tokenEndpointAuthMethod.equals("tls_client_auth") && !regRequestClaimsSet.getStringClaim("tls_client_auth_subject_dn")) {
+        if (tokenEndpointAuthMethod.equals("tls_client_auth") && registrationRequest.getMetadata("tls_client_auth_subject_dn").isNull()) {
             return errorResponseFactory.invalidClientMetadataErrorResponse("tls_client_auth_subject_dn must be provided to use tls_client_auth")
         }
 
         SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement()
-        logger.debug(SCRIPT_NAME + "Got ssa [" + softwareStatement + "]")
+        logger.debug(SCRIPT_NAME + "Got ssa [" + softwareStatement.getSoftwareStatementAssertion().build() + "]")
 
-        // This is OB specific
-        // Validate the issuer claim for the registration matches the SSA software_id
-        // NOTE: At this stage we do not know if the SSA is valid, it is assumed the SSAVerifier filter will run after
-        //       this filter and raise an error if the SSA is invalid.
-        String registrationIssuer = registrationRequest.getIssuer()
-        String ssaSoftwareId = softwareStatement.getSoftwareId()
-        logger.debug("{}registrationIssuer is {}, ssaSoftwareId is {}", SCRIPT_NAME, registrationIssuer, ssaSoftwareId)
-        if (registrationIssuer == null || ssaSoftwareId == null || registrationIssuer != ssaSoftwareId) {
-            return errorResponseFactory.invalidClientMetadataErrorResponse("invalid issuer claim")
-        }
 
-        def apiClientOrgId = softwareStatement.getOrgId()
-        def apiClientOrgName = softwareStatement.getOrgName() !=null ? softwareStatement.getOrgName() : apiClientOrgId
+        def apiClientOrgId = softwareStatement.getOrganisationId()
+        def apiClientOrgName = softwareStatement.getOrganisationName() !=null ? softwareStatement.getOrganisationName() : apiClientOrgId
         logger.debug(SCRIPT_NAME + "Inbound details from SSA: apiClientOrgName: {} apiClientOrgCertId: {}",
                 apiClientOrgName,
                 apiClientOrgId
         )
 
         // ToDo: Why is this here?
-        String subject_type
-        try{
-            subject_type = regRequestClaimsSet.getStringClaim("subject_type");
-        } catch (JwtException jwtException) {
-            logger.debug("subject_type is not set. Setting to 'pairwise'", SCRIPT_NAME)
-            regRequestClaimsSet.setStringClaim("subject_type", "pairwise");
+        String subjectType = registrationRequest.getMetadata("subject_type").asString()
+        if (subjectType == null) {
+            logger.debug("subjectType is not set. Setting to 'pairwise'", SCRIPT_NAME)
+            registrationRequest.setMetadata("subject_type", "pairwise");
         }
-        logger.debug("{} subject_type is '{}'", SCRIPT_NAME, subject_type)
+        logger.debug("{} subject_type is '{}'", SCRIPT_NAME, subjectType)
 
         Response errorResponse = performOpenBankingScopeChecks(errorResponseFactory, registrationRequest)
         if (errorResponse != null) {
@@ -178,7 +145,7 @@ switch (method.toUpperCase()) {
             return errorResponseFactory.invalidRedirectUriErrorResponse(e.getMessage())
         }
 
-        regRequestClaimsSet.setClaim("tls_client_certificate_bound_access_tokens", true)
+        registrationRequest.setMetadata("tls_client_certificate_bound_access_tokens", true)
 
 
         // Put is editing an existing registration, so needs the client_id param in the uri
@@ -186,56 +153,24 @@ switch (method.toUpperCase()) {
             rewriteUriToAccessExistingAmRegistration()
         }
 
-        // Verify that the tls transport cert is registered for the TPP's software statement
-        if ( softwareStatement.hasJwksUri() ) {
-            URI softwareStatementJwksUri = softwareStatement.getJwksUri();
-            regRequestClaimsSet.setClaim("jwks_uri", softwareStatementJwksUri.toString());
-
-            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it on
-            // However, this might not be the best place to do that?
-            def regJson = regRequestClaimsSet.build();
-            logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
-            request.setEntity(regJson)
-
-            logger.debug(SCRIPT_NAME + "Checking cert against remote jwks: " + softwareStatementJwksUri)
-            return jwkSetService.getJwkSet(softwareStatementJwksUri)
-                    .thenCatchAsync(e -> {
-                        String errorDescription = "Unable to get jwks from uri: " + softwareStatementJwksUri
-                        logger.warn(SCRIPT_NAME + "Failed to get jwks due to exception: " + errorDescription, e)
-                        return newResultPromise(errorResponseFactory.invalidClientMetadataErrorResponse(errorDescription))
-                    })
-                    .thenAsync(jwkSet -> {
-                        if (!tlsClientCertExistsInJwkSet(jwkSet)) {
-                            String errorDescription = "tls transport cert does not match any certs " +
-                                    "registered in jwks for software statement"
-                            logger.debug("{}{}", SCRIPT_NAME, errorDescription)
-                            return newResultPromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
-                        }
-                        return next.handle(context, request)
-                                   .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
-                    })
-        } else {
-            // Verify against the software_jwks which is a JWKSet embedded within the software_statement
-            // NOTE: this is only suitable for developer testing purposes
-
+        return softwareStatement.getJwkSetLocator().applyAsync(uri -> {
+            registrationRequest.setMetadata("jwks_uri", uri.toString());
+            return jwkSetService.getJwkSet(uri)
+        }, apiClientJwkSet -> {
             if (!allowIgIssuedTestCerts) {
-                String errorDescription = "software_statement must contain software_jwks_endpoint"
-                return errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription)
+                return Promises.newExceptionPromise(new FailedToLoadJWKException("software_statement must contain software_jwks_endpoint"))
             }
-            JWKSet apiClientJwkSet = softwareStatement.getJwksSet()
 
             // We need to set the jwks claim in the registration request because the software statement might not
             // have the jwks in the jwks claim in the software statement. If that were the case it would result in
             // AM being unable to validate client credential jws used in `private_key_jwt` as the
             // `token_endpoint_auth_method`.
-            regRequestClaimsSet.setClaim("jwks", apiClientJwkSet.toJsonValue());
+            registrationRequest.setMetadata("jwks", apiClientJwkSet.toJsonValue())
+            return newResultPromise(apiClientJwkSet)
 
-            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it on
-            // However, this might not be the best place to do that?
-            def regJson = regRequestClaimsSet.build();
-            logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
-            request.setEntity(regJson)
-
+        }).thenCatchAsync(e -> {
+            return newResultPromise(errorResponseFactory.invalidClientMetadataErrorResponse(e.message))
+        }).thenAsync(apiClientJwkSet -> {
             logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks: " + apiClientJwkSet)
             if (!tlsClientCertExistsInJwkSet(apiClientJwkSet)) {
                 String errorDescription = "tls transport cert does not match any certs registered in jwks for software " +
@@ -243,9 +178,16 @@ switch (method.toUpperCase()) {
                 logger.debug("{}{}", SCRIPT_NAME, errorDescription)
                 return newResultPromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
             }
+            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it on
+            // However, this might not be the best place to do that?
+            def regJson = registrationRequest.toJsonValue()
+            logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
+            request.setEntity(regJson)
+
             return next.handle(context, request)
-                       .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getB64EncodedJwtString()))
-        }
+                       .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getSoftwareStatementAssertion()))
+
+        })
 
     case "DELETE":
         rewriteUriToAccessExistingAmRegistration()
@@ -315,25 +257,16 @@ private Response performOpenBankingScopeChecks(ErrorResponseFactory errorRespons
                                                RegistrationRequest registrationRequest) {
     logger.debug("{}performing OpenBanking Scope tests", SCRIPT_NAME)
 
-    ClaimsSetFacade registrationRequestClaims = registrationRequest.getClaimsSet()
-
-    String requestedScopes;
-    try {
-        requestedScopes = registrationRequestClaims.getStringClaim("scope")
-    } catch (JwtException jwtException) {
-
+    String requestedScopes = registrationRequest.getScope()
+    if (requestedScopes == null) {
         String errorDescription = "The request jwt does not contain the required scopes claim"
         logger.info(SCRIPT_NAME + errorDescription)
         return errorResponseFactory.invalidClientMetadataErrorResponse(errorDescription)
     }
     logger.debug("{}requestedScopes are {}", SCRIPT_NAME, requestedScopes)
 
-    ClaimsSetFacade softwareStatementClaims = registrationRequest.getSoftwareStatement().getClaimsSet()
-
-    List<String> ssaRoles
-    try {
-        ssaRoles = softwareStatementClaims.getRequiredStringListClaim("software_roles")
-    } catch (JwtException jwtException) {
+    List<String> ssaRoles = registrationRequest.getSoftwareStatement().getRoles()
+    if (ssaRoles == null || ssaRoles.isEmpty()) {
         String errorDescription = "The software_statement jwt does not contain a 'software_roles' claim"
         logger.debug(SCRIPT_NAME + errorDescription)
         return errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription)

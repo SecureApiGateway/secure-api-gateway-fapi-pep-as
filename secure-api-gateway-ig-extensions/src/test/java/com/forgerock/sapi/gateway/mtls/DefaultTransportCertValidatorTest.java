@@ -24,7 +24,6 @@ import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 
 import java.security.cert.CertificateException;
-
 import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;

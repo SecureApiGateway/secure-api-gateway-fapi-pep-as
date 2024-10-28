@@ -29,6 +29,10 @@ import org.forgerock.http.oauth2.OAuth2Context;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
@@ -40,10 +44,6 @@ import org.forgerock.util.promise.ResultHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
@@ -123,7 +123,7 @@ public class FetchApiClientFilter implements Filter {
         }
         final String clientId = (String)info.get(accessTokenClientIdClaim);
 
-        return apiClientService.getApiClient(clientId)
+        return apiClientService.get(context, clientId)
                                .thenOnResult(createAddApiClientToContextResultHandler(context, logger))
                                .thenAsync(apiClient -> next.handle(context, request),
                                           this::handleApiClientServiceException, this::handleUnexpectedException);

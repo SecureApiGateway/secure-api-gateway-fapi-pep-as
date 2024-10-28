@@ -22,14 +22,13 @@ import java.util.List;
 import java.util.function.Function;
 
 import org.forgerock.http.protocol.Request;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
-
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 
 /**
  * Responsible for creating a {@link ResponsePathFetchApiClientFilter} that can be used to protect calls to an

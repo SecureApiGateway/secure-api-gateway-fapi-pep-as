@@ -16,10 +16,16 @@
 package com.forgerock.sapi.gateway.dcr.request;
 
 
+import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
 import static java.util.Objects.requireNonNull;
+import static org.forgerock.openig.heap.Keys.CLOCK_HEAP_KEY;
+import static org.forgerock.openig.util.JsonValues.javaDuration;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
+import java.time.Clock;
+import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.forgerock.http.Filter;
@@ -27,6 +33,9 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.openig.fapi.dcr.RegistrationRequestFactory;
+import org.forgerock.openig.fapi.jwks.JwkSetService;
+import org.forgerock.openig.fapi.trusteddirectory.TrustedDirectoryService;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
@@ -37,16 +46,12 @@ import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.forgerock.sapi.gateway.common.jwt.JwtException;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeFormatterFactory;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeNegotiator;
 import com.forgerock.sapi.gateway.common.rest.HttpMediaTypes;
 import com.forgerock.sapi.gateway.dcr.common.ResponseFactory;
-import com.forgerock.sapi.gateway.dcr.common.exceptions.DCRException;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement.Builder;
 import com.forgerock.sapi.gateway.jws.JwtDecoder;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 
 /**
  * A filter class that builds a {@code RegistrationRequest} object that contains a {@code SoftwareStatement} from
@@ -57,8 +62,8 @@ public class RegistrationRequestBuilderFilter implements Filter {
 
     private static final Logger log = LoggerFactory.getLogger(RegistrationRequestBuilderFilter.class);
     private final RegistrationRequestEntitySupplier registrationEntitySupplier;
+    private final RegistrationRequestFactory registrationRequestFactory;
     private final ResponseFactory responseFactory;
-    private final TrustedDirectoryService trustedDirectoryService;
     private final JwtDecoder jwtDecoder;
     private final List<String> RESPONSE_MEDIA_TYPES = List.of(HttpMediaTypes.APPLICATION_JSON);
     private static final Set<String> VALIDATABLE_HTTP_REQUEST_METHODS = Set.of("POST", "PUT");
@@ -67,18 +72,16 @@ public class RegistrationRequestBuilderFilter implements Filter {
      * Constructor
      * @param registrationEntitySupplier - used by the filter to obtain the b64 url encoded registration request string
      *                                   from the request entity
-     * @param trustedDirectoryService used by the filter as part of decoding data from the SSA contained within the
-     *                                registration request JWT
-     * @param jwtDecoder used to decode registration request and SSA JWTs
      * @param responseFactory used to create a suitably formatted response should an error occur while processing the
      *                        registration request
      */
-    public RegistrationRequestBuilderFilter(RegistrationRequestEntitySupplier registrationEntitySupplier,
-                                            TrustedDirectoryService trustedDirectoryService,
-                                            JwtDecoder jwtDecoder, ResponseFactory responseFactory) {
+    public RegistrationRequestBuilderFilter(RegistrationRequestFactory registrationRequestFactory,
+                                            RegistrationRequestEntitySupplier registrationEntitySupplier,
+                                            JwtDecoder jwtDecoder,
+                                            ResponseFactory responseFactory) {
+        this.registrationRequestFactory = requireNonNull(registrationRequestFactory, "registrationRequestFactory must not be null");
         this.registrationEntitySupplier = requireNonNull(registrationEntitySupplier, "registrationEntitySupplier must not be null");
         this.jwtDecoder = requireNonNull(jwtDecoder, "jwtDecoder must not be null");
-        this.trustedDirectoryService = requireNonNull(trustedDirectoryService, "trustedDirectoryService must not be null");
         this.responseFactory = requireNonNull(responseFactory, "responseFactory must not be null");
     }
 
@@ -91,28 +94,30 @@ public class RegistrationRequestBuilderFilter implements Filter {
 
         return this.registrationEntitySupplier.apply(context, request)
                                               .thenAsync(registrationRequestJwt -> {
-            try {
-                final Builder softwareStatementBuilder = new Builder(trustedDirectoryService, jwtDecoder);
-                final RegistrationRequest registrationRequest =
-                        new RegistrationRequest.Builder(softwareStatementBuilder, jwtDecoder)
-                                               .build(registrationRequestJwt);
+                try {
+                    return registrationRequestFactory.createRegistrationRequest(jwtDecoder.getSignedJwt(registrationRequestJwt))
+                                                                           .thenAsync(registrationRequest -> {
+                                                                               context.asContext(AttributesContext.class)
+                                                                                      .getAttributes()
+                                                                                      .put(REGISTRATION_REQUEST_KEY,
+                                                                                           registrationRequest);
 
-                context.asContext(AttributesContext.class).getAttributes()
-                                                          .put(RegistrationRequest.REGISTRATION_REQUEST_KEY,
-                                                               registrationRequest);
+                                                                               log.info("Created context attribute " + REGISTRATION_REQUEST_KEY);
+                                                                               return next.handle(context, request);
+                                                                           }, e -> {
+                                                                               log.error("Failed to create RegistrationRequest object from JWT", e);
+                                                                               return Promises.newResultPromise(responseFactory.getResponse(RESPONSE_MEDIA_TYPES,
+                                                                                                                                            Status.BAD_REQUEST,
+                                                                                                                                            Map.of("error", e.getErrorCode().getCode(),
+                                                                                                                                                   "error_description", e.getErrorDescription())));
+                                                                           });
+                } catch (JwtException e) {
+                    log.info("Failed to understand the Registration Request body: {}", e.getMessage(), e);
+                    return Promises.newResultPromise(responseFactory.getResponse(RESPONSE_MEDIA_TYPES,
+                                                                                 Status.BAD_REQUEST,
+                                                                                 Map.of("invalid_client_metadata", "Invalid registration request JWT")));
+                }
 
-                log.info("Created context attribute " + RegistrationRequest.REGISTRATION_REQUEST_KEY);
-                return next.handle(context, request);
-            } catch (DCRException exception) {
-                log.info("Failed to understand the Registration Request body: {}", exception.getMessage(), exception);
-                return Promises.newResultPromise(responseFactory.getResponse(RESPONSE_MEDIA_TYPES,
-                                                                             Status.BAD_REQUEST,
-                                                                             exception.getErrorFields()));
-            } catch (RuntimeException rte) {
-                log.warn("Caught runtime exception while applying RegistrationRequestEntityValidatorFilter", rte);
-                return Promises.newResultPromise(responseFactory.getInternalServerErrorResponse(request,
-                                                                                                RESPONSE_MEDIA_TYPES));
-            }
         }, ioe -> {
             log.error("Failed to extract request JWT from HTTP Request", ioe);
             return Promises.newResultPromise(responseFactory.getInternalServerErrorResponse(request,
@@ -141,6 +146,16 @@ public class RegistrationRequestBuilderFilter implements Filter {
     public static class Heaplet extends GenericHeaplet {
         @Override
         public Object create() throws HeapException {
+            final Clock clock = heap.get(CLOCK_HEAP_KEY, Clock.class);
+
+            final Duration skewAllowance = config.get("skewAllowance")
+                    .defaultTo("5 seconds")
+                    .as(evaluatedWithHeapProperties())
+                    .as(javaDuration());
+
+            final JwkSetService jwkSetService = config.get("jwkSetService")
+                    .as(requiredHeapObject(heap, JwkSetService.class));
+
             final TrustedDirectoryService trustedDirectoryService = config.get("trustedDirectoryService")
                     .as(requiredHeapObject(heap, TrustedDirectoryService.class));
 
@@ -156,8 +171,8 @@ public class RegistrationRequestBuilderFilter implements Filter {
             final ResponseFactory responseFactory = new ResponseFactory(contentTypeNegotiator,
                     contentTypeFormatterFactory);
 
-            return new RegistrationRequestBuilderFilter(registrationEntitySupplier,
-                    trustedDirectoryService, jwtDecoder, responseFactory);
+            return new RegistrationRequestBuilderFilter(new RegistrationRequestFactory(jwkSetService, trustedDirectoryService, clock, skewAllowance),
+                                                        registrationEntitySupplier, jwtDecoder, responseFactory);
         }
     }
 }

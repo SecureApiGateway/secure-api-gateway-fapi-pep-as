@@ -26,6 +26,8 @@ import org.forgerock.services.context.Context;
  */
 public class ContextUtils {
 
+    public static final String REGISTRATION_REQUEST_KEY = "registrationRequest";
+
     private ContextUtils() {
     }
 

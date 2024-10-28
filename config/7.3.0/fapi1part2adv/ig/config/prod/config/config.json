@@ -9,7 +9,7 @@
       }
     },
     "urls": {
-      "idmManagedObjectsBaseUri": "https://&{identity.platform.fqdn}/openidm/managed"
+      "idmBaseUri": "https://&{identity.platform.fqdn}/openidm"
     },
     "vertxConfig": {
       "maxHeaderSize": 16384,
@@ -101,14 +101,6 @@
             "type": "FetchApiClientFilter",
             "config": {
               "apiClientService": "IdmApiClientService"
-            }
-          },
-          {
-            "comment": "Add TrustedDirectory configuration to the context attributes.trustedDirectory",
-            "name": "FetchTrustedDirectoryFilter",
-            "type": "FetchTrustedDirectoryFilter",
-            "config": {
-              "trustedDirectoryService": "TrustedDirectoryService"
             }
           },
           {
@@ -303,42 +295,72 @@
     },
     {
       "name": "TrustedDirectoryService",
-      "type": "StaticTrustedDirectoryService",
-      "comment": "Used to obtain meta information about a trusted directory by look up using the 'iss' field value",
+      "type": "TrustedDirectoryService",
       "config": {
         "trustedDirectories": [
-          {
-            "name": "Open Banking Test Directory",
-            "type": "TrustedDirectory",
-            "config": {
-              "directoryJwksUri": "https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks",
-              "issuer": "OpenBanking Ltd",
-              "softwareStatementJwksUriClaimName": "software_jwks_endpoint",
-              "softwareStatementOrgIdClaimName": "org_id",
-              "softwareStatementOrgNameClaimName": "org_name",
-              "softwareStatementSoftwareIdClaimName": "software_id",
-              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
-              "softwareStatementRolesClaimName": "software_roles",
-              "softwareStatementClientNameClaimName": "software_client_name"
-            }
-          },
-          {
-            "name": "Secure API Gateway Test Directory",
-            "type": "TrustedDirectory",
-            "config": {
-              "directoryJwksUri": "https://&{trusteddir.fqdn}/jwkms/testdirectory/jwks",
-              "issuer": "test-publisher",
-              "softwareStatementJwksUriClaimName": "software_jwks_endpoint",
-              "softwareStatementOrgIdClaimName": "org_id",
-              "softwareStatementOrgNameClaimName": "org_name",
-              "softwareStatementSoftwareIdClaimName": "software_id",
-              "softwareStatementRedirectUrisClaimName": "software_redirect_uris",
-              "softwareStatementRolesClaimName": "software_roles",
-              "softwareStatementClientNameClaimName": "software_client_name",
-              "disabled": "${!security.enableTestTrustedDirectory}"
-            }
-          }
+          "OpenBankingTestDirectory",
+          "Secure API Gateway Test Directory"
         ]
+      }
+    },
+    {
+      "name": "OpenBankingTestDirectory",
+      "type": "TrustedDirectory",
+      "config": {
+        "issuer": "OpenBanking Ltd",
+        "softwareStatementClaims": {
+          "organisationIdClaimName": "org_id",
+          "organisationNameClaimName": "org_name",
+          "softwareIdClaimName": "software_id",
+          "clientNameClaimName": "software_client_name",
+          "redirectUrisClaimName": "software_redirect_uris",
+          "rolesClaimName": "software_roles",
+          "jwksUriClaimName": "software_jwks_endpoint"
+        },
+        "secretsProvider": {
+          "type": "SecretsProvider",
+          "config": {
+            "stores": [
+              {
+                "type": "JwkSetSecretStore",
+                "config": {
+                  "jwkUrl": "https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks",
+                  "handler": "OBClientHandler"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "Secure API Gateway Test Directory",
+      "type": "TrustedDirectory",
+      "config": {
+        "issuer": "test-publisher",
+        "softwareStatementClaims": {
+          "organisationIdClaimName": "org_id",
+          "organisationNameClaimName": "org_name",
+          "softwareIdClaimName": "software_id",
+          "clientNameClaimName": "software_client_name",
+          "redirectUrisClaimName": "software_redirect_uris",
+          "rolesClaimName": "software_roles",
+          "jwksUriClaimName": "software_jwks_endpoint"
+        },
+        "secretsProvider": {
+          "type": "SecretsProvider",
+          "config": {
+            "stores": [
+              {
+                "type": "JwkSetSecretStore",
+                "config": {
+                  "jwkUrl": "https://&{trusteddir.fqdn}/jwkms/testdirectory/jwks",
+                  "handler": "OBClientHandler"
+                }
+              }
+            ]
+          }
+        }
       }
     },
     {
@@ -364,11 +386,18 @@
       "type": "ContextCertificateRetriever"
     },
     {
+      "name": "IdmService",
+      "type": "IdmService",
+      "config": {
+        "baseEndpoint": "&{urls.idmBaseUri}",
+        "endpointHandler": "IDMClientHandler"
+      }
+    },
+    {
       "name": "IdmApiClientService",
       "type": "IdmApiClientService",
       "config": {
-        "clientHandler": "IDMClientHandler",
-        "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}",
+        "idmService": "IdmService",
         "jwkSetService": "JwkSetService"
       }
     },
@@ -376,8 +405,7 @@
       "name": "IdmApiClientOrganisationService",
       "type": "IdmApiClientOrganisationService",
       "config": {
-        "clientHandler": "IDMClientHandler",
-        "idmManagedObjectsBaseUri": "&{urls.idmManagedObjectsBaseUri}"
+        "idmService": "IdmService"
       }
     }
   ],

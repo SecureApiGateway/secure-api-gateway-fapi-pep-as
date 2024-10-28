@@ -15,6 +15,8 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
+import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
+import static com.forgerock.sapi.gateway.util.ContextUtils.getRequiredAttributeAsType;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
@@ -32,6 +34,13 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonException;
 import org.forgerock.json.JsonValue;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientOrganisationService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.dcr.RegistrationRequest;
+import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
@@ -43,15 +52,6 @@ import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.models.ApiClientOrganisation;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientOrganisationService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Filter to manage {@link ApiClient}s in a data store as part of protecting an OAuth2.0 /register (DCR) endpoint.
@@ -195,7 +195,7 @@ public class ManageApiClientFilter implements Filter {
             return newResultPromise(internalServerErrorResponse("client_id not found"));
         }
         final String clientId = clientIdOptional.get();
-        return apiClientService.getApiClient(clientId)
+        return apiClientService.get(context, clientId)
                                .thenOnResult(apiClient -> storeApiClientInContext(context, apiClient))
                                .then(apiClient -> response,
                                      errorResponseHandler("Failed to get ApiClient"));
@@ -218,7 +218,7 @@ public class ManageApiClientFilter implements Filter {
             if (clientIdOptional.isEmpty()) {
                 return Promises.newResultPromise(internalServerErrorResponse("client_id field not found in registration response"));
             }
-            return apiClientOrganisationService.createApiClientOrganisation(softwareStatement)
+            return apiClientOrganisationService.create(context, softwareStatement)
                                                .thenAsync(apiClientOrg -> createApiClient(context, clientIdOptional.get(), softwareStatement)
                                                                             .then(apiClient -> response,
                                                                                     errorResponseHandler("Failed to create ApiClient")),
@@ -227,8 +227,9 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private static SoftwareStatement extractSoftwareStatement(Context context) {
-        final RegistrationRequest registrationRequest = ContextUtils.getRequiredAttributeAsType(context,
-                RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
+        final RegistrationRequest registrationRequest = getRequiredAttributeAsType(context,
+                                                                                   REGISTRATION_REQUEST_KEY,
+                                                                                   RegistrationRequest.class);
         return registrationRequest.getSoftwareStatement();
     }
 
@@ -255,7 +256,7 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private Promise<ApiClient, ApiClientServiceException> createApiClient(Context context, String oAuth2ClientId, SoftwareStatement softwareStatement) {
-        return apiClientService.createApiClient(oAuth2ClientId, softwareStatement)
+        return apiClientService.create(context, oAuth2ClientId, softwareStatement)
                                .thenOnResult(apiClient -> storeApiClientInContext(context, apiClient));
     }
 
@@ -279,7 +280,7 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private Promise<ApiClient, ApiClientServiceException> updateApiClient(Context context, String oAuth2ClientId, SoftwareStatement softwareStatement) {
-        return apiClientService.updateApiClient(oAuth2ClientId, softwareStatement)
+        return apiClientService.update(context, oAuth2ClientId, softwareStatement)
                                .thenOnResult(apiClient -> storeApiClientInContext(context, apiClient));
     }
 
@@ -301,7 +302,7 @@ public class ManageApiClientFilter implements Filter {
             return newResultPromise(internalServerErrorResponse("client_id not found"));
         }
         final String clientId = clientIdOptional.get();
-        return apiClientService.deleteApiClient(clientId)
+        return apiClientService.delete(context, clientId)
                                .thenOnResult(apiClient -> storeApiClientInContext(context, apiClient))
                                 // Return a 204 No Content response rather than the upstream response as some Authorization Servers (AM for example) return 200 OK
                                .then(apiClient -> new Response(Status.NO_CONTENT), errorResponseHandler("Failed to delete ApiClient"));
@@ -312,9 +313,12 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private Function<ApiClientServiceException, Response, NeverThrowsException> errorResponseHandler(String errorMessage) {
-        return ex -> switch (ex.getErrorCode()) {
-            case DELETED -> unauthorizedErrorResponse(errorMessage);
-            default -> internalServerErrorResponse(errorMessage);
+        return ex -> {
+            logger.info("Handling error response for ApiClientServiceException with message: {}, ex: {}", errorMessage, ex);
+                return switch (ex.getErrorCode()) {
+                case DELETED -> unauthorizedErrorResponse(errorMessage);
+                default -> internalServerErrorResponse(errorMessage);
+                };
         };
     }
     private static Response internalServerErrorResponse(String message) {

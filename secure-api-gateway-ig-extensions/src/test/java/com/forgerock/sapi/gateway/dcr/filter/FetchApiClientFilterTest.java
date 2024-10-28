@@ -25,6 +25,7 @@ import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -40,6 +41,10 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
 import org.forgerock.openig.handler.Handlers;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
@@ -58,10 +63,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter.Heaplet;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 
 /**
  * Unit tests for {@link FetchApiClientFilter}.
@@ -99,7 +100,7 @@ class FetchApiClientFilterTest {
         final AccessTokenInfo accessToken = createAccessToken(clientIdClaim, CLIENT_ID);
 
         // Mock the success response for the ApiClientService call
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
 
         final BiConsumer<Response, AttributesContext> successBehaviourValidator = (response, ctxt) -> {
             // Verify we hit the end of the chain and got the NO_CONTENT response
@@ -155,7 +156,7 @@ class FetchApiClientFilterTest {
     @EnumSource(value = ErrorCode.class, names = {"NOT_FOUND", "DELETED"})
     void returnsErrorResponseWhenApiClientIsNotFound(ErrorCode errorCode) throws Exception{
         // Mock error response from ApiClientService
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(errorCode,
                                                                   "ApiClient " + CLIENT_ID + " does not exist")));
 
@@ -177,7 +178,7 @@ class FetchApiClientFilterTest {
     @Test
     void returnsErrorResponseWhenApiClientServiceReturnsUnexpectedException() throws Exception {
         // Mock unexpected error response from ApiClientService
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Unexpected error")));
 
         final AccessTokenInfo accessToken = createAccessToken(DEFAULT_CLIENT_ID_CLAIM, CLIENT_ID);

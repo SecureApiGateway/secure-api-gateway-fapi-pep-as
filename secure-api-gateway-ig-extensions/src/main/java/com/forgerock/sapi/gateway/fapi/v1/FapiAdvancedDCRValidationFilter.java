@@ -15,7 +15,7 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1;
 
-import static com.forgerock.sapi.gateway.dcr.models.RegistrationRequest.REGISTRATION_REQUEST_KEY;
+import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
 import static com.forgerock.sapi.gateway.util.ContextUtils.getRequiredAttributeAsType;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
@@ -25,7 +25,6 @@ import java.security.cert.X509Certificate;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -36,6 +35,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.jws.JwsAlgorithm;
+import org.forgerock.openig.fapi.dcr.RegistrationRequest;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
@@ -46,13 +46,10 @@ import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.forgerock.sapi.gateway.common.jwt.ClaimsSetFacade;
-import com.forgerock.sapi.gateway.common.jwt.JwtException;
 import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
 import com.forgerock.sapi.gateway.dcr.common.ErrorResponseFactory;
 import com.forgerock.sapi.gateway.dcr.common.Validator;
 import com.forgerock.sapi.gateway.dcr.common.exceptions.ValidationException;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
 import com.forgerock.sapi.gateway.dcr.request.RegistrationRequestBuilderFilter;
 import com.forgerock.sapi.gateway.mtls.CertificateRetriever;
 import com.forgerock.sapi.gateway.mtls.ContextCertificateRetriever;
@@ -316,12 +313,11 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      * @param registrationRequest the RegistrationRequest object to validate
      */
     void validateResponseTypes(RegistrationRequest registrationRequest) {
-        final Optional<List<String>> requestedResponseTypes = registrationRequest.getResponseTypes();
-        if (requestedResponseTypes.isEmpty()) {
+        final List<String> requestedResponseTypes = registrationRequest.getResponseTypes();
+        if (requestedResponseTypes == null || requestedResponseTypes.isEmpty()) {
             throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: response_types");
         }
-        final List<String> responseTypesList = requestedResponseTypes.get();
-        for (String responseTypes : responseTypesList) {
+        for (String responseTypes : requestedResponseTypes) {
             // Convert the request responseTypes String into a set by splitting on whitespace
             final Set<String> responseTypesSet = Set.of(responseTypes.split(" "));
             if (!responseTypesSet.equals(RESPONSE_TYPE_CODE) && !responseTypesSet.equals(RESPONSE_TYPE_CODE_ID_TOKEN)) {
@@ -346,20 +342,15 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      * @param registrationRequest the RegistrationRequest object to validate
      */
     void validateTokenEndpointAuthMethods(RegistrationRequest registrationRequest) {
-        try {
-            final ClaimsSetFacade claimsSet = registrationRequest.getClaimsSet();
-            if (!claimsSet.hasClaim("token_endpoint_auth_method")) {
-                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: token_endpoint_auth_method");
-            }
-            final String tokenEndpointAuthMethod = claimsSet.getStringClaim("token_endpoint_auth_method");
-            if (!supportedTokenEndpointAuthMethods.contains(tokenEndpointAuthMethod)) {
-                throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA,
-                        "token_endpoint_auth_method not supported, must be one of: "
-                                + supportedTokenEndpointAuthMethods.stream().sorted().toList());
-            }
-        } catch (JwtException e) {
-            LOGGER.warn("Unexpected exception thrown processing registration request token_endpoint_auth_method field", e);
-            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "token_endpoint_auth_method field malformed");
+        final String tokenEndpointAuthMethod = registrationRequest.getTokenEndpointAuthMethod();
+        if (tokenEndpointAuthMethod == null) {
+            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: token_endpoint_auth_method");
+        }
+
+        if (!supportedTokenEndpointAuthMethods.contains(tokenEndpointAuthMethod)) {
+            throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA,
+                    "token_endpoint_auth_method not supported, must be one of: "
+                            + supportedTokenEndpointAuthMethods.stream().sorted().toList());
         }
     }
 
@@ -384,16 +375,16 @@ public class FapiAdvancedDCRValidationFilter implements Filter {
      * @param registrationRequest the RegistrationRequest object to validate
      */
     void validateSigningAlgorithmUsed(RegistrationRequest registrationRequest) {
-        final ClaimsSetFacade claimsSet = registrationRequest.getClaimsSet();
         for (String signingFieldName : registrationObjectSigningFieldNames) {
-            if (claimsSet.hasClaim(signingFieldName)) {
+            final JsonValue signingMetadata = registrationRequest.getMetadata(signingFieldName);
+            if (signingMetadata.isNotNull()) {
                 try {
-                    final String signingAlg = claimsSet.getStringClaim(signingFieldName);
+                    final String signingAlg = signingMetadata.asString();
                     if (!supportedSigningAlgorithms.contains(signingAlg)) {
                         throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: "
                                 + signingFieldName + ", must be one of: " + supportedSigningAlgorithms);
                     }
-                } catch (JwtException e) {
+                } catch (RuntimeException e) {
                     throw new ValidationException(DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: "
                             + signingFieldName + ", must be one of: " + supportedSigningAlgorithms);
                 }

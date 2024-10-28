@@ -15,8 +15,8 @@
  */
 package com.forgerock.sapi.gateway.fapi.v1;
 
+import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.convertToPem;
-import static com.forgerock.sapi.gateway.util.CryptoUtils.createEncodedJwtString;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.generateExpiredX509Cert;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.generateRsaKeyPair;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.generateX509Cert;
@@ -36,6 +36,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
@@ -43,7 +44,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 
@@ -54,7 +54,8 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.JsonValueException;
-import org.forgerock.json.jose.jwt.JwtClaimsSet;
+import org.forgerock.openig.fapi.dcr.RegistrationRequest;
+import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -71,29 +72,19 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.common.jwt.ClaimsSetFacade;
 import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
 import com.forgerock.sapi.gateway.dcr.common.Validator;
 import com.forgerock.sapi.gateway.dcr.common.exceptions.ValidationException;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest.Builder;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatementTestFactory;
 import com.forgerock.sapi.gateway.dcr.request.DCRRegistrationRequestBuilderException;
 import com.forgerock.sapi.gateway.fapi.v1.FapiAdvancedDCRValidationFilter.Heaplet;
-import com.forgerock.sapi.gateway.jws.JwtDecoder;
 import com.forgerock.sapi.gateway.mtls.HeaderCertificateRetriever;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryTestFactory;
-import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
-import com.nimbusds.jose.JWSAlgorithm;
 
 class FapiAdvancedDCRValidationFilterTest {
 
     private static final String CERT_HEADER_NAME = "x-cert";
 
     private static final String TEST_CERT_PEM = convertToPem(generateX509Cert(generateRsaKeyPair(), "CN=fapitest"));
-    private static final JwtDecoder JWT_DECODER = new JwtDecoder();
     private static final HeapImpl EMPTY_HEAP = new HeapImpl(Name.of("testHeap"));
 
     private static Map<String, Object> VALID_REG_REQUEST_CLAIMS;
@@ -105,8 +96,6 @@ class FapiAdvancedDCRValidationFilterTest {
 
     @BeforeAll
     public static void beforeAll() throws DCRRegistrationRequestBuilderException {
-        final Map<String, Object> ssaClaims = SoftwareStatementTestFactory.getValidJwksBasedSsaClaims(Map.of());
-        final String ssaJwt = CryptoUtils.createEncodedJwtString(ssaClaims, JWSAlgorithm.PS256);
         VALID_REG_REQUEST_CLAIMS = Map.of("iss", "ACME Fintech",
                                        "token_endpoint_auth_method", "private_key_jwt",
                                        "scope", "openid accounts payments",
@@ -114,25 +103,30 @@ class FapiAdvancedDCRValidationFilterTest {
                                        "response_types", List.of("code id_token"),
                                        "token_endpoint_auth_signing_alg", "PS256",
                                        "id_token_signed_response_alg", "PS256",
-                                       "request_object_signing_alg", "PS256",
-                                       "software_statement", ssaJwt);
+                                       "request_object_signing_alg", "PS256");
 
         VALID_REG_REQUEST = createRegistrationRequest(VALID_REG_REQUEST_CLAIMS);
-    }
-
-    private static RegistrationRequest createRegistrationRequest(Map<String, Object> claims) throws DCRRegistrationRequestBuilderException {
-        final SoftwareStatement.Builder softwareStatementBuilder = new SoftwareStatement.Builder(
-                TrustedDirectoryTestFactory.getTrustedDirectoryService(), JWT_DECODER);
-
-        final Builder registrationRequestBuilder = new Builder(softwareStatementBuilder, JWT_DECODER);
-
-        return registrationRequestBuilder.build(createEncodedJwtString(claims, JWSAlgorithm.PS256));
     }
 
     @BeforeEach
     public void beforeEach() throws HeapException {
         fapiValidationFilter = createDefaultFapiFilter();
         successHandler = new TestSuccessResponseHandler();
+    }
+
+
+    private static RegistrationRequest createRegistrationRequest(Map<String, Object> claims) {
+        try {
+            // FIXME Temporary hack until this filter is moved into openig-fapi module
+            final Constructor<RegistrationRequest> constructor = RegistrationRequest.class.getDeclaredConstructor(
+                    SoftwareStatement.class,
+                    JsonValue.class);
+            constructor.setAccessible(true);
+            return constructor.newInstance(mock(SoftwareStatement.class), json(claims));
+
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to create RegistrationRequest using reflection", e);
+        }
     }
 
     /**
@@ -173,7 +167,7 @@ class FapiAdvancedDCRValidationFilterTest {
 
     private static Context createContext(RegistrationRequest registrationRequest) {
         final AttributesContext attributesContext = new AttributesContext(new RootContext());
-        attributesContext.getAttributes().put(RegistrationRequest.REGISTRATION_REQUEST_KEY, registrationRequest);
+        attributesContext.getAttributes().put(REGISTRATION_REQUEST_KEY, registrationRequest);
         return new TransactionIdContext(attributesContext, new TransactionId("1234"));
     }
 
@@ -186,7 +180,7 @@ class FapiAdvancedDCRValidationFilterTest {
         private <T> void runValidationAndVerifyExceptionThrown(Validator<RegistrationRequest> validator,
                 RegistrationRequest registrationRequest, DCRErrorCode expectedErrorCode, String expectedErrorMessage) {
             final ValidationException validationException = Assertions.assertThrows(ValidationException.class,
-                    () -> validator.validate(registrationRequest));
+                                                                                    () -> validator.validate(registrationRequest));
             assertEquals(expectedErrorCode, validationException.getErrorCode(), "errorCode field");
             assertEquals(expectedErrorMessage, validationException.getErrorDescription(), "errorMessage field");
         }
@@ -228,7 +222,7 @@ class FapiAdvancedDCRValidationFilterTest {
         @Test
         void failsWhenTokenEndpointAuthMethodFieldMissing() {
             final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
-            when(registrationRequest.getClaimsSet()).thenReturn(new ClaimsSetFacade(new JwtClaimsSet(Map.of())));
+            when(registrationRequest.getTokenEndpointAuthMethod()).thenReturn(null);
             runValidationAndVerifyExceptionThrown(fapiValidationFilter::validateTokenEndpointAuthMethods, registrationRequest,
                     DCRErrorCode.INVALID_CLIENT_METADATA, "request object must contain field: token_endpoint_auth_method");
         }
@@ -237,7 +231,7 @@ class FapiAdvancedDCRValidationFilterTest {
         void failsWhenTokenEndpointAuthMethodValueNotSupported() {
             final String[] invalidAuthMethods = new String[]{"none", "client_secret"};
             for (String invalidAuthMethod : invalidAuthMethods) {
-                final RegistrationRequest registrationRequest = mockRegistrationRequest(Map.of("token_endpoint_auth_method", invalidAuthMethod));
+                final RegistrationRequest registrationRequest = createRegistrationRequest(Map.of("token_endpoint_auth_method", invalidAuthMethod));
                 runValidationAndVerifyExceptionThrown(fapiValidationFilter::validateTokenEndpointAuthMethods, registrationRequest,
                         DCRErrorCode.INVALID_CLIENT_METADATA, "token_endpoint_auth_method not supported, must be one of: [private_key_jwt, self_signed_tls_client_auth, tls_client_auth]");
             }
@@ -248,7 +242,7 @@ class FapiAdvancedDCRValidationFilterTest {
             final String[] validMethods = new String[]{"private_key_jwt", "self_signed_tls_client_auth", "tls_client_auth"};
             for (String validAuthMethod : validMethods) {
                 final Map<String, Object> claims = Map.of("token_endpoint_auth_method", validAuthMethod);
-                final RegistrationRequest registrationRequest = mockRegistrationRequest(claims);
+                final RegistrationRequest registrationRequest = createRegistrationRequest(claims);
 
                 fapiValidationFilter.validateTokenEndpointAuthMethods(registrationRequest);
             }
@@ -265,7 +259,7 @@ class FapiAdvancedDCRValidationFilterTest {
                  signingAlgoFields.stream()
                                   .filter(field -> !field.equals(fieldToOmit))
                                   .forEach(field -> signingFields.put(field, "PS256"));
-                final RegistrationRequest registrationRequest = mockRegistrationRequest(signingFields);
+                final RegistrationRequest registrationRequest = createRegistrationRequest(signingFields);
                 fapiValidationFilter.validateSigningAlgorithmUsed(registrationRequest);
             }
         }
@@ -280,7 +274,7 @@ class FapiAdvancedDCRValidationFilterTest {
                 Map<String, Object> signingFields = new HashMap<>();
                 signingAlgoFields.stream().filter(field -> !field.equals(invalidAlgoField)).forEach(field -> signingFields.put(field, "PS256"));
                 signingFields.put(invalidAlgoField, "RS256");
-                runValidationAndVerifyExceptionThrown(fapiValidationFilter::validateSigningAlgorithmUsed, mockRegistrationRequest(signingFields),
+                runValidationAndVerifyExceptionThrown(fapiValidationFilter::validateSigningAlgorithmUsed, createRegistrationRequest(signingFields),
                         DCRErrorCode.INVALID_CLIENT_METADATA, "request object field: " + invalidAlgoField + ", must be one of: [ES256, PS256]");
             }
         }
@@ -291,7 +285,7 @@ class FapiAdvancedDCRValidationFilterTest {
                                                                  "id_token_signed_response_alg",
                                                                  "request_object_signing_alg")
                                                      .collect(toMap(identity(), ignore -> "PS256"));
-            fapiValidationFilter.validateSigningAlgorithmUsed(mockRegistrationRequest(claims));
+            fapiValidationFilter.validateSigningAlgorithmUsed(createRegistrationRequest(claims));
         }
 
         @Test
@@ -310,7 +304,7 @@ class FapiAdvancedDCRValidationFilterTest {
 
             for (List<String> validResponseTypeValue : validResponseTypeValues) {
                 final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
-                when(registrationRequest.getResponseTypes()).thenReturn(Optional.of(validResponseTypeValue));
+                when(registrationRequest.getResponseTypes()).thenReturn(validResponseTypeValue);
 
                 fapiValidationFilter.validateResponseTypes(registrationRequest);
             }
@@ -319,19 +313,11 @@ class FapiAdvancedDCRValidationFilterTest {
         @Test
         void failsWhenResponseTypesInvalid() {
             final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
-            when(registrationRequest.getResponseTypes()).thenReturn(Optional.of(List.of("blah")));
+            when(registrationRequest.getResponseTypes()).thenReturn(List.of("blah"));
 
             runValidationAndVerifyExceptionThrown(fapiValidationFilter::validateResponseTypes, registrationRequest,
                     DCRErrorCode.INVALID_CLIENT_METADATA, "Invalid response_types value: blah, must be one of: \"code\" or \"code id_token\"");
         }
-    }
-
-    private static RegistrationRequest mockRegistrationRequest(Map<String, Object> claims) {
-        final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
-        final ClaimsSetFacade claimsSetFacade = new ClaimsSetFacade(new JwtClaimsSet(claims));
-        when(registrationRequest.getClaimsSet()).thenReturn(claimsSetFacade);
-        when(registrationRequest.getResponseTypes()).thenCallRealMethod();
-        return registrationRequest;
     }
 
     /**
@@ -479,7 +465,7 @@ class FapiAdvancedDCRValidationFilterTest {
         void missingClientTlsCertHeaderMandatoryConfig() {
             final JsonValue filterConfig = json(object());
             final JsonValueException exception = assertThrows(JsonValueException.class,
-                    () -> new Heaplet().create(Name.of("fapiTest"), filterConfig, EMPTY_HEAP));
+                                                              () -> new Heaplet().create(Name.of("fapiTest"), filterConfig, EMPTY_HEAP));
             assertEquals("/clientTlsCertHeader: Expecting a value", exception.getMessage());
         }
 
