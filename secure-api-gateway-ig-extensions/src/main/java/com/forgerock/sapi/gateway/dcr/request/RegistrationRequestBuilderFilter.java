@@ -18,6 +18,7 @@ package com.forgerock.sapi.gateway.dcr.request;
 
 import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
 import static java.util.Objects.requireNonNull;
+import static org.forgerock.json.JsonValueFunctions.setOf;
 import static org.forgerock.openig.heap.Keys.CLOCK_HEAP_KEY;
 import static org.forgerock.openig.util.JsonValues.javaDuration;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
@@ -27,12 +28,14 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Stream;
 
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.json.jose.jws.JwsAlgorithm;
 import org.forgerock.openig.fapi.dcr.RegistrationRequestFactory;
 import org.forgerock.openig.fapi.jwks.JwkSetService;
 import org.forgerock.openig.fapi.trusteddirectory.TrustedDirectoryService;
@@ -159,6 +162,16 @@ public class RegistrationRequestBuilderFilter implements Filter {
             final TrustedDirectoryService trustedDirectoryService = config.get("trustedDirectoryService")
                     .as(requiredHeapObject(heap, TrustedDirectoryService.class));
 
+            // Allow user to configure the algs supported
+            // TODO need to ensure that the configuration contains only algs supported by the FAPI spec
+            // currently this is PS256 and ES256
+            final List<String> defaultFapiSigningAlgs = Stream.of(JwsAlgorithm.PS256, JwsAlgorithm.ES256)
+                                            .map(JwsAlgorithm::getJwaAlgorithmName)
+                                            .toList();
+            final Set<JwsAlgorithm> supportedSigningAlgorithms = config.get("supportedSigningAlgorithms")
+                                                                       .defaultTo(defaultFapiSigningAlgs)
+                                                                       .as(setOf(value -> JwsAlgorithm.parseAlgorithm(value.asString())));
+
             final RegistrationRequestEntitySupplier registrationEntitySupplier
                     = new RegistrationRequestEntitySupplier();
 
@@ -171,7 +184,11 @@ public class RegistrationRequestBuilderFilter implements Filter {
             final ResponseFactory responseFactory = new ResponseFactory(contentTypeNegotiator,
                     contentTypeFormatterFactory);
 
-            return new RegistrationRequestBuilderFilter(new RegistrationRequestFactory(jwkSetService, trustedDirectoryService, clock, skewAllowance),
+            return new RegistrationRequestBuilderFilter(new RegistrationRequestFactory(jwkSetService,
+                                                                                       trustedDirectoryService,
+                                                                                       clock,
+                                                                                       skewAllowance,
+                                                                                       supportedSigningAlgorithms),
                                                         registrationEntitySupplier, jwtDecoder, responseFactory);
         }
     }
