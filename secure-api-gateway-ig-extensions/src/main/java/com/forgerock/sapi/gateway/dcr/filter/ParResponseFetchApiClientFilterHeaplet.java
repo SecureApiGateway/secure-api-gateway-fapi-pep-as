@@ -23,15 +23,14 @@ import java.util.function.Function;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.json.jose.common.JwtReconstruction;
 import org.forgerock.json.jose.jws.SignedJwt;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
 
 /**
  * Heaplet for creating a {@link ResponsePathFetchApiClientFilter} that can be used when protecting an OAuth2.0 PAR

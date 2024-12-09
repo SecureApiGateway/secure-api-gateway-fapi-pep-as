@@ -28,6 +28,7 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;
@@ -41,7 +42,6 @@ import org.slf4j.LoggerFactory;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 
 /**
  * Filter to validate that the client's MTLS transport certificate is valid when making a request to an Authorisation

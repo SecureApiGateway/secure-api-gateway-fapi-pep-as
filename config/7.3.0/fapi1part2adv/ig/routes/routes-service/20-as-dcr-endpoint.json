@@ -42,17 +42,8 @@
           "name": "RegistrationRequestBuilderFilter",
           "type": "RegistrationRequestBuilderFilter",
           "config": {
-            "trustedDirectoryService": "TrustedDirectoryService"
-          }
-        },
-        {
-          "comment": "Validate the signature of the request Jwt and it's embedded SSA",
-          "name": "RegistrationRequestJwtSignatureValidationFilter",
-          "type": "RegistrationRequestJwtSignatureValidationFilter",
-          "config": {
-            "clientHandler": "OBClientHandler",
-            "jwkSetService": "JwkSetService",
-            "jwtSignatureValidator": "RsaJwtSignatureValidator"
+            "trustedDirectoryService": "TrustedDirectoryService",
+            "jwkSetService": "JwkSetService"
           }
         },
         {

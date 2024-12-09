@@ -15,19 +15,20 @@
  */
 package com.forgerock.sapi.gateway.jwks.cache;
 
+import static com.forgerock.sapi.gateway.jwks.RestJwkSetService.findJwkByKeyId;
+
 import java.net.URI;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWK;
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.openig.fapi.jwks.JwkSetService;
 import org.forgerock.util.AsyncFunction;
 import org.forgerock.util.Reject;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.forgerock.sapi.gateway.jwks.JwkSetService;
 
 /**
  * CachingJwkSetService provides an implementation of {@link JwkSetService} which caches JWKSet data.
@@ -86,7 +87,7 @@ public class CachingJwkSetService implements JwkSetService {
                         "invalidating and fetching JWKSet from uri again", keyId, jwksSetUri);
                 // JWKSet exists but key not in set, new key may have been added to set since it was cached, fetch it again
                 jwkSetCache.invalidate(jwksSetUri);
-                return getJwkSet(jwksSetUri).then(JwkSetService.findJwkByKeyId(keyId));
+                return getJwkSet(jwksSetUri).then(findJwkByKeyId(keyId));
             }
         };
     }

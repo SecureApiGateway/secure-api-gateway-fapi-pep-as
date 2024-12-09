@@ -47,6 +47,7 @@ import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
@@ -66,7 +67,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.ParEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
 import com.forgerock.sapi.gateway.util.CryptoUtils;

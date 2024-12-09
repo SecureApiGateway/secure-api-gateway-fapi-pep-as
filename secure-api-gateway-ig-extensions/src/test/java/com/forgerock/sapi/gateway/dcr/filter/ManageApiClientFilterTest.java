@@ -15,6 +15,7 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
+import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
@@ -42,6 +43,14 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientOrganisationService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
+import org.forgerock.openig.fapi.dcr.RegistrationRequest;
+import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.handler.Handlers;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -61,14 +70,6 @@ import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.ClientIdReque
 import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.Heaplet;
 import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.PathParamClientIdRequestParameterLocator;
 import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.QueryParamClientIdRequestParameterLocator;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.models.ApiClientOrganisation;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientOrganisationService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 import com.forgerock.sapi.gateway.util.JsonUtils;
 import com.forgerock.sapi.gateway.util.TestHandlers.FixedResponseHandler;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
@@ -136,7 +137,7 @@ class ManageApiClientFilterTest {
         when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
         context.asContext(AttributesContext.class)
                 .getAttributes()
-                .put(RegistrationRequest.REGISTRATION_REQUEST_KEY, registrationRequest);
+                .put(REGISTRATION_REQUEST_KEY, registrationRequest);
     }
 
     private static void validateInternalServerError(Response response, String expectedErrorMessage) {
@@ -193,7 +194,7 @@ class ManageApiClientFilterTest {
         void getsApiClientWhenRegistrationIsRetrieved() {
             final ApiClient apiClient = mock(ApiClient.class);
             mockClientIdLocatorSuccessResponse();
-            when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(apiClient));
+            when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(apiClient));
 
             final Context context = createContext();
             final FixedResponseHandler responseHandler = successfulUpstreamResponseHandler();
@@ -201,7 +202,7 @@ class ManageApiClientFilterTest {
 
             assertThat(response).isEqualTo(UPSTREAM_REGISTER_RESPONSE);
             verifyContextContainsApiClient(context, apiClient);
-            verify(apiClientService, times(1)).getApiClient(eq(CLIENT_ID));
+            verify(apiClientService, times(1)).get(any(), eq(CLIENT_ID));
             verifyNoInteractions(apiClientOrganisationService);
         }
 
@@ -240,7 +241,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorDueToApiClientServiceError() {
             mockClientIdLocatorSuccessResponse();
-            when(apiClientService.getApiClient(eq(CLIENT_ID)))
+            when(apiClientService.get(any(), eq(CLIENT_ID)))
                     .thenReturn(newExceptionPromise(
                             new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Unable to connect to IDM")));
 
@@ -254,7 +255,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsUnauthorisedWhenApiClientHasBeenDeleted() {
             mockClientIdLocatorSuccessResponse();
-            when(apiClientService.getApiClient(eq(CLIENT_ID)))
+            when(apiClientService.get(any(), eq(CLIENT_ID)))
                     .thenReturn(newExceptionPromise(
                             new ApiClientServiceException(ErrorCode.DELETED, "ApiClient has been deleted")));
 
@@ -280,8 +281,8 @@ class ManageApiClientFilterTest {
         @Test
         void createsApiClientWhenRegistrationIsSuccessful() {
             final ApiClient apiClient = mock(ApiClient.class);
-            when(apiClientService.createApiClient(eq(CLIENT_ID), eq(softwareStatement))).thenReturn(newResultPromise(apiClient));
-            when(apiClientOrganisationService.createApiClientOrganisation(eq(softwareStatement))).thenReturn(newResultPromise(API_CLIENT_ORGANISATION));
+            when(apiClientService.create(any(), eq(CLIENT_ID), eq(softwareStatement))).thenReturn(newResultPromise(apiClient));
+            when(apiClientOrganisationService.create(any(), eq(softwareStatement))).thenReturn(newResultPromise(API_CLIENT_ORGANISATION));
 
             final Context context = createContext();
             addRegistrationRequestToAttributesContext(context);
@@ -291,8 +292,8 @@ class ManageApiClientFilterTest {
 
             assertThat(response).isEqualTo(UPSTREAM_REGISTER_RESPONSE);
             verifyContextContainsApiClient(context, apiClient);
-            verify(apiClientService, times(1)).createApiClient(eq(CLIENT_ID), eq(softwareStatement));
-            verify(apiClientOrganisationService, times(1)).createApiClientOrganisation(eq(softwareStatement));
+            verify(apiClientService, times(1)).create(any(), eq(CLIENT_ID), eq(softwareStatement));
+            verify(apiClientOrganisationService, times(1)).create(any(), eq(softwareStatement));
         }
 
         @Test
@@ -339,7 +340,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorDueToApiClientOrganisationServiceError() {
             // Simulate error creating ApiClientOrganisation
-            when(apiClientOrganisationService.createApiClientOrganisation(eq(softwareStatement)))
+            when(apiClientOrganisationService.create(any(), eq(softwareStatement)))
                     .thenReturn(newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Connection Refused")));
 
             final Context context = createContext();
@@ -355,8 +356,8 @@ class ManageApiClientFilterTest {
 
         @Test
         void returnsErrorDueToApiClientServiceError() {
-            when(apiClientOrganisationService.createApiClientOrganisation(eq(softwareStatement))).thenReturn(newResultPromise(API_CLIENT_ORGANISATION));
-            when(apiClientService.createApiClient(eq(CLIENT_ID), eq(softwareStatement)))
+            when(apiClientOrganisationService.create(any(), eq(softwareStatement))).thenReturn(newResultPromise(API_CLIENT_ORGANISATION));
+            when(apiClientService.create(any(), eq(CLIENT_ID), eq(softwareStatement)))
                     .thenReturn(newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Connection refused")));
 
             final Context context = createContext();
@@ -382,7 +383,7 @@ class ManageApiClientFilterTest {
         @Test
         void updatesApiClientWhenRegistrationUpdateIsSuccessful()  {
             final ApiClient apiClient = mock(ApiClient.class);
-            when(apiClientService.updateApiClient(eq(CLIENT_ID), eq(softwareStatement))).thenReturn(newResultPromise(apiClient));
+            when(apiClientService.update(any(), eq(CLIENT_ID), eq(softwareStatement))).thenReturn(newResultPromise(apiClient));
 
             final Context context = createContext();
             addRegistrationRequestToAttributesContext(context);
@@ -391,7 +392,7 @@ class ManageApiClientFilterTest {
 
             assertThat(response).isEqualTo(UPSTREAM_REGISTER_RESPONSE);
             verifyContextContainsApiClient(context, apiClient);
-            verify(apiClientService, times(1)).updateApiClient(eq(CLIENT_ID), eq(softwareStatement));
+            verify(apiClientService, times(1)).update(any(), eq(CLIENT_ID), eq(softwareStatement));
             verifyNoInteractions(apiClientOrganisationService);
         }
 
@@ -439,7 +440,7 @@ class ManageApiClientFilterTest {
         void deletesApiClientWhenRegistrationIsDeleted() {
             final ApiClient apiClient = mock(ApiClient.class);
             mockClientIdLocatorSuccessResponse();
-            when(apiClientService.deleteApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(apiClient));
+            when(apiClientService.delete(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(apiClient));
 
             final Context context = createContext();
             final Request request = createDeleteRequest();
@@ -450,7 +451,7 @@ class ManageApiClientFilterTest {
             // This is because upstream servers may return 200 (AM does this).
             assertThat(response.getStatus()).isEqualTo(Status.NO_CONTENT);
             verifyContextContainsApiClient(context, apiClient);
-            verify(apiClientService, times(1)).deleteApiClient(eq(CLIENT_ID));
+            verify(apiClientService, times(1)).delete(any(), eq(CLIENT_ID));
             verifyNoInteractions(apiClientOrganisationService);
         }
 
@@ -491,7 +492,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorDueToApiClientServiceError() {
             mockClientIdLocatorSuccessResponse();
-            when(apiClientService.deleteApiClient(eq(CLIENT_ID)))
+            when(apiClientService.delete(any(), eq(CLIENT_ID)))
                     .thenReturn(newExceptionPromise(
                             new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Unable to connect to IDM")));
 

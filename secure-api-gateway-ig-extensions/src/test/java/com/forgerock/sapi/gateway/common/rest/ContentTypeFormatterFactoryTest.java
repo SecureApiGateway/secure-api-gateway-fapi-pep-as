@@ -16,7 +16,6 @@
 package com.forgerock.sapi.gateway.common.rest;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
 
 import java.util.List;
 

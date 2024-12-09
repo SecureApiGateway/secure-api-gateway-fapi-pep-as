@@ -15,8 +15,9 @@
  */
 package com.forgerock.sapi.gateway.dcr.request;
 
-import static com.forgerock.sapi.gateway.util.CryptoUtils.createEncodedJwtString;
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.forgerock.util.promise.Promises.newExceptionPromise;
+import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -25,199 +26,127 @@ import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import java.net.URI;
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
 import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.json.jose.jws.SignedJwt;
+import org.forgerock.openig.fapi.dcr.RegistrationException;
+import org.forgerock.openig.fapi.dcr.RegistrationRequest;
+import org.forgerock.openig.fapi.dcr.RegistrationRequestFactory;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
-import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.params.ParameterizedTest;
-import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 
 import com.forgerock.sapi.gateway.dcr.common.ResponseFactory;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequest;
-import com.forgerock.sapi.gateway.dcr.models.RegistrationRequestFactory;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatement;
-import com.forgerock.sapi.gateway.dcr.models.SoftwareStatementTestFactory;
 import com.forgerock.sapi.gateway.jws.JwtDecoder;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryTestFactory;
-import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.nimbusds.jose.JWSAlgorithm;
 
 class RegistrationRequestBuilderFilterTest {
 
+
+    private final String REGISTRATION_REQUEST_JWT_STRING = CryptoUtils.createEncodedJwtString(Map.of(), JWSAlgorithm.PS256);
+
     private RegistrationRequestBuilderFilter filter;
     private final RegistrationRequestEntitySupplier reqRequestSupplier = new RegistrationRequestEntitySupplier();
     private static final JwtDecoder jwtDecoder = new JwtDecoder();
+    private final RegistrationRequestFactory registrationRequestFactory = mock(RegistrationRequestFactory.class);
+
+    // FIXME - use real responseFactory and assert that the correct error response is returned
     private final ResponseFactory responseFactory = mock(ResponseFactory.class);
     private final Handler handler = mock(Handler.class);
 
     @BeforeEach
     void setUp() {
-        when(handler.handle(any(Context.class), any(Request.class))).thenReturn(Promises.newResultPromise(new Response(Status.OK)));
-        filter = new RegistrationRequestBuilderFilter(reqRequestSupplier, TrustedDirectoryTestFactory.getTrustedDirectoryService(),
+        when(handler.handle(any(Context.class), any(Request.class))).thenReturn(newResultPromise(new Response(Status.OK)));
+        filter = new RegistrationRequestBuilderFilter(registrationRequestFactory, reqRequestSupplier,
                                                       jwtDecoder, responseFactory);
     }
 
     @AfterEach
     void tearDown() {
-        reset(responseFactory, handler);
+        reset(registrationRequestFactory, responseFactory, handler);
     }
 
     @Test
-    void successWithJwskBasedRequest()
-            throws InterruptedException, DCRRegistrationRequestBuilderException {
+    void shouldAddRegistrationRequestToContext() throws InterruptedException {
         // Given
         final AttributesContext context = new AttributesContext(new RootContext());
-        Map<String, Object> ssaClaims = SoftwareStatementTestFactory.getValidJwksBasedSsaClaims(Map.of());
         Request request = new Request();
         request.setMethod("POST");
-        request.setEntity(createRegRequestB64EncodeJwtWithJwksBasedSSA(ssaClaims));
+        request.setEntity(REGISTRATION_REQUEST_JWT_STRING);
+
+        final ArgumentCaptor<SignedJwt> captor = ArgumentCaptor.forClass(SignedJwt.class);
+        final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
+        when(registrationRequestFactory.createRegistrationRequest(captor.capture()))
+                .thenReturn(newResultPromise(registrationRequest));
 
         // When
         Promise<Response, NeverThrowsException> promise = filter.filter(context, request, handler);
 
-        assertThat(promise).isNotNull();
+        // Then
         Response response = promise.getOrThrow();
+        assertThat(captor.getValue().build()).isEqualTo(REGISTRATION_REQUEST_JWT_STRING);
+
         assertThat(response.getStatus()).isEqualTo(Status.OK);
-        RegistrationRequest registrationRequest = (RegistrationRequest) context.getAttributes().get("registrationRequest");
-        assertThat(registrationRequest).isNotNull();
-        SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement();
-        assertThat(softwareStatement).isNotNull();
-        assertThat(softwareStatement.hasJwksUri()).isFalse();
+        RegistrationRequest actualRegistrationRequest = (RegistrationRequest) context.getAttributes().get("registrationRequest");
+        assertThat(actualRegistrationRequest).isSameAs(registrationRequest);
     }
 
     @Test
-    void errorWhenUnrecognisedSSAIssuer_filter() throws InterruptedException, DCRRegistrationRequestBuilderException {
+    void shouldFailIfRegistrationRequestIsNotAJwt() throws Exception {
         // Given
         final AttributesContext context = new AttributesContext(new RootContext());
         Request request = new Request();
         request.setMethod("POST");
-        Map<String, Object> ssaClaimsOverrides = Map.of("iss", "invalid_issuer");
-        request.setEntity(createRegRequestB64EncodedJwtWithJwksUriBasedSSA(ssaClaimsOverrides));
+        request.setEntity("This is not a JWT");
 
         // When
         when(responseFactory.getResponse(any(List.class), eq(Status.BAD_REQUEST), any(Map.class))).thenReturn(new Response(Status.BAD_REQUEST));
         Promise<Response, NeverThrowsException> promise = filter.filter(context, request, handler);
 
-        assertThat(promise).isNotNull();
+        // Then
         Response response = promise.getOrThrow();
         assertThat(response.getStatus()).isEqualTo(Status.BAD_REQUEST);
-        RegistrationRequest registrationRequest = (RegistrationRequest) context.getAttributes().get("registrationRequest");
-        assertThat(registrationRequest).isNull();
+        assertThat(context.getAttributes().get("registrationRequest")).isNull();
         verify(handler, never()).handle(context, request);
     }
 
-    private String createRegRequestB64EncodeJwtWithJwksBasedSSA(Map<String, Object> ssaClaimOverrides)
-            throws DCRRegistrationRequestBuilderException {
-        RegistrationRequest regReq =
-                RegistrationRequestFactory.getRegRequestWithJwksSoftwareStatement(Map.of(), ssaClaimOverrides);
-        return regReq.getB64EncodedJwtString();
-    }
-
     @Test
-    void successWithOBTestDirectoryRequest_filter() throws InterruptedException, DCRRegistrationRequestBuilderException {
+    void shouldReturnAnErrorIfRegistrationRequestFactoryReturnsAnException() throws Exception {
         // Given
         final AttributesContext context = new AttributesContext(new RootContext());
         Request request = new Request();
         request.setMethod("POST");
-        request.setEntity(createRegRequestB64EncodedJwtWithJwksUriBasedSSA(Map.of()));
+        request.setEntity(REGISTRATION_REQUEST_JWT_STRING);
+
+        final ArgumentCaptor<SignedJwt> captor = ArgumentCaptor.forClass(SignedJwt.class);
+        final RegistrationRequest registrationRequest = mock(RegistrationRequest.class);
+        when(registrationRequestFactory.createRegistrationRequest(captor.capture()))
+                .thenReturn(newExceptionPromise(new RegistrationException(RegistrationException.ErrorCode.INVALID_CLIENT_METADATA, "Invalid client metadata")));
+        when(responseFactory.getResponse(any(List.class), eq(Status.BAD_REQUEST), any(Map.class))).thenReturn(new Response(Status.BAD_REQUEST));
 
         // When
         Promise<Response, NeverThrowsException> promise = filter.filter(context, request, handler);
 
-        assertThat(promise).isNotNull();
+        // Then
         Response response = promise.getOrThrow();
-        assertThat(response.getStatus()).isEqualTo(Status.OK);
-        RegistrationRequest registrationRequest = (RegistrationRequest) context.getAttributes().get("registrationRequest");
-        assertThat(registrationRequest).isNotNull();
-        SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement();
-        assertThat(softwareStatement).isNotNull();
-        assertThat(softwareStatement.hasJwksUri()).isTrue();
+        assertThat(captor.getValue().build()).isEqualTo(REGISTRATION_REQUEST_JWT_STRING);
+
+        assertThat(response.getStatus()).isEqualTo(Status.BAD_REQUEST);
+        assertThat(context.getAttributes().get("registrationRequest")).isNull();
+        verify(handler, never()).handle(context, request);
     }
 
-    private String createRegRequestB64EncodedJwtWithJwksUriBasedSSA(Map<String, Object> ssaClaims)
-            throws  DCRRegistrationRequestBuilderException {
-        RegistrationRequest regRequest =
-                RegistrationRequestFactory.getRegRequestWithJwksUriSoftwareStatement(Map.of(), ssaClaims);
-        return  regRequest.getB64EncodedJwtString();
-    }
 
-    /**
-     * Test used to demonstrate that https://github.com/SecureApiGateway/SecureApiGateway/issues/1402 has been fixed.
-     * A race condition was identified in the filter due to a shared builder instance being used.
-     */
-    @ParameterizedTest
-    @ValueSource(ints = {1, 16})
-    void shouldSucceedWhenCalledConcurrently(int numThreads) throws InterruptedException, ExecutionException {
-        final Map<String, Object> ssaClaims = SoftwareStatementTestFactory.getValidJwksBasedSsaClaims(Map.of());
-        final String ssaJwt = CryptoUtils.createEncodedJwtString(ssaClaims, JWSAlgorithm.PS256);
-
-        Map<String, Object> baseClaims = Map.of("token_endpoint_auth_method", "private_key_jwt",
-                                                "scope", "openid accounts payments",
-                                                "response_types", List.of("code id_token"),
-                                                "token_endpoint_auth_signing_alg", "PS256",
-                                                "id_token_signed_response_alg", "PS256",
-                                                "request_object_signing_alg", "PS256",
-                                                "software_statement", ssaJwt);
-
-        final int tasks = 256;
-        final List<Callable<Void>> invokeFilterTasks = new ArrayList<>(tasks);
-        for (int i = 0; i < tasks; i++) {
-            final Map<String, Object> taskClaims = new HashMap<>(baseClaims);
-            // Add some uniqueness to the registration request JWT
-            final List<String> redirectUris = List.of("https://google.co.uk/" + i);
-            taskClaims.put("redirect_uris", redirectUris);
-            final String issuer = "ACME Fintech" + i;
-            taskClaims.put("iss", issuer);
-
-            final String registrationRequestJwt = createEncodedJwtString(taskClaims, JWSAlgorithm.PS256);
-            final AttributesContext context = new AttributesContext(new RootContext());
-            final Request request = new Request();
-            request.setMethod("POST");
-            request.getEntity().setString(registrationRequestJwt);
-
-            // Create a task which invokes the filter and verifies the registrationRequest contains the unique data for the particular task
-            invokeFilterTasks.add(() -> {
-                final Promise<Response, NeverThrowsException> responsePromise = filter.filter(context, request, handler);
-                responsePromise.getOrThrow();
-
-                // Validate the RegistrationRequest created by the filter
-                final RegistrationRequest registrationRequest = ContextUtils.getRequiredAttributeAsType(context,
-                        RegistrationRequest.REGISTRATION_REQUEST_KEY, RegistrationRequest.class);
-
-                assertThat(registrationRequest.getRedirectUris()).isEqualTo(redirectUris.stream().map(URI::create).toList());
-                assertThat(registrationRequest.getIssuer()).isEqualTo(issuer);
-                return null;
-            });
-        }
-        final ExecutorService executorService = Executors.newFixedThreadPool(numThreads);
-        try {
-            final List<Future<Void>> futures = executorService.invokeAll(invokeFilterTasks);
-            for (Future<?> future : futures) {
-                future.get();
-            }
-        } finally {
-            executorService.shutdown();
-        }
-    }
 }

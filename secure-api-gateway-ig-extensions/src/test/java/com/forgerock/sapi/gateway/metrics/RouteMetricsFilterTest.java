@@ -39,6 +39,12 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
+import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.json.jose.jws.JwsHeader;
+import org.forgerock.json.jose.jws.SignedJwt;
+import org.forgerock.json.jose.jwt.JwtClaimsSet;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -60,9 +66,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.metrics.RouteMetricsFilter.Heaplet;
-import com.forgerock.sapi.gateway.trusteddirectories.FetchTrustedDirectoryFilterTest;
 import com.forgerock.sapi.gateway.util.TestHandlers.FixedResponseHandler;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 import com.google.common.base.Ticker;
@@ -71,7 +75,20 @@ import com.google.common.base.Ticker;
 class RouteMetricsFilterTest {
 
     public static final String TRUSTED_DIRECTORY_NAME = "OpenBankingUK";
-    private static final ApiClient TEST_API_CLIENT = FetchTrustedDirectoryFilterTest.createApiClient(TRUSTED_DIRECTORY_NAME);
+    private static final ApiClient TEST_API_CLIENT =
+            ApiClient.builder()
+                     .clientName("Test Client")
+                     .oAuth2ClientId(UUID.randomUUID().toString())
+                     .organisation(new ApiClientOrganisation(UUID.randomUUID().toString(), "Test Company"))
+                     .softwareId(UUID.randomUUID().toString())
+                     .softwareStatementAssertion(new SignedJwt(new JwsHeader(),
+                                                               new JwtClaimsSet(Map.of("iss", "OpenBankingUK")),
+                                                               new byte[0],
+                                                               new byte[0]))
+                     .roles(List.of())
+                     .withEmbeddedJwksSupplier(new JWKSet())
+                     .build();
+
     private static final String TEST_ROUTE_ID = "01-test-route";
     private static final Map<String, Object> EMPTY_METRICS_CONTEXT = Map.of();
     private static final String TEST_FAPI_INTERACTION_ID = UUID.randomUUID().toString();
@@ -326,7 +343,7 @@ class RouteMetricsFilterTest {
                 expectedRequestPath, expectedStatusCode, isSuccessResponse, expectedMetricsContext);
         assertThat(metricsEvent.getApiClientId()).isEqualTo(TEST_API_CLIENT.getOAuth2ClientId());
         assertThat(metricsEvent.getApiClientOrgId()).isEqualTo(TEST_API_CLIENT.getOrganisation().id());
-        assertThat(metricsEvent.getSoftwareId()).isEqualTo(TEST_API_CLIENT.getSoftwareClientId());
+        assertThat(metricsEvent.getSoftwareId()).isEqualTo(TEST_API_CLIENT.getSoftwareId());
         assertThat(metricsEvent.getTrustedDirectory()).isEqualTo(TRUSTED_DIRECTORY_NAME);
         assertThat(metricsEvent.getFapiInteractionId()).isEqualTo(TEST_FAPI_INTERACTION_ID);
     }

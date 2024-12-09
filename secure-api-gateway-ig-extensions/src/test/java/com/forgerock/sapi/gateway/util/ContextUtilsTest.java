@@ -26,12 +26,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 
 class ContextUtilsTest {
 

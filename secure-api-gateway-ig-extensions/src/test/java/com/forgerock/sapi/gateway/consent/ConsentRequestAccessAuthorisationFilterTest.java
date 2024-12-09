@@ -16,9 +16,9 @@
 package com.forgerock.sapi.gateway.consent;
 
 import static org.forgerock.json.JsonValue.field;
-import static org.junit.jupiter.api.Assertions.*;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 

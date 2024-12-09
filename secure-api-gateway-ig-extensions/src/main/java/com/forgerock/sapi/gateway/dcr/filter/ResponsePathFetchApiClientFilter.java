@@ -18,6 +18,8 @@ package com.forgerock.sapi.gateway.dcr.filter;
 import static java.util.Objects.requireNonNull;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
+import static org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode.DELETED;
+import static org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode.NOT_FOUND;
 
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
@@ -27,6 +29,9 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
@@ -38,10 +43,6 @@ import org.slf4j.LoggerFactory;
 import com.forgerock.sapi.gateway.common.error.OAuthErrorResponseFactory;
 import com.forgerock.sapi.gateway.common.rest.ContentTypeFormatterFactory;
 import com.forgerock.sapi.gateway.common.rest.HttpHeaderNames;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 
 /**
  * Implementation of the {@link FetchApiClientFilter} which is specialised for use in an IG route which the {@link ApiClient}
@@ -135,7 +136,7 @@ public class ResponsePathFetchApiClientFilter implements Filter {
                                             "'client_id' is missing in the request."));
                         }
 
-                        return apiClientService.getApiClient(clientId)
+                        return apiClientService.get(context, clientId)
                                                .thenOnResult(FetchApiClientFilter.createAddApiClientToContextResultHandler(context, LOGGER))
                                                .then(apiClient -> response, // return the original response from the upstream
                                                      this::handleApiClientServiceException, this::handleUnexpectedException);
@@ -170,7 +171,7 @@ public class ResponsePathFetchApiClientFilter implements Filter {
 
     private Response handleApiClientServiceException(ApiClientServiceException ex) {
         // Handles the case where the ApiClient has been deleted from the data store
-        if (ex.getErrorCode() == ErrorCode.DELETED || ex.getErrorCode() == ErrorCode.NOT_FOUND) {
+        if (ex.getErrorCode() == DELETED || ex.getErrorCode() == NOT_FOUND) {
             LOGGER.warn("Failed to get ApiClient due to: {}", ex.getErrorCode(), ex);
             return new Response(Status.UNAUTHORIZED).setEntity(json(field("error", "client registration is invalid")));
         } else {

@@ -31,11 +31,11 @@ import java.util.stream.Collectors;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWK;
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.openig.fapi.jwks.JwkSetService;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
 import org.junit.jupiter.api.Test;
 
-import com.forgerock.sapi.gateway.jwks.JwkSetService;
 import com.forgerock.sapi.gateway.jwks.RestJwkSetServiceTest;
 
 /**

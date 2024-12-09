@@ -46,7 +46,7 @@
     </parent>
 
     <properties>
-        <openig.version>2024.9.0</openig.version>
+        <openig.version>2024.11.0</openig.version>
         <nimbus-jose.version>9.40</nimbus-jose.version>
         <bouncy-castle.version>1.78.1</bouncy-castle.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
@@ -61,6 +61,11 @@
                 <version>${openig.version}</version>
                 <scope>import</scope>
                 <type>pom</type>
+            </dependency>
+            <dependency>
+                <groupId>org.forgerock.openig</groupId>
+                <artifactId>openig-fapi</artifactId>
+                <version>${openig.version}</version>
             </dependency>
             <!-- Third party -->
             <dependency>

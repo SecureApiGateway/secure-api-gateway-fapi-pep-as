@@ -21,6 +21,7 @@ import static org.forgerock.util.promise.Promises.newExceptionPromise;
 import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 
@@ -33,6 +34,9 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
+import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
@@ -44,10 +48,6 @@ import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientService;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException;
-import com.forgerock.sapi.gateway.dcr.service.ApiClientServiceException.ErrorCode;
 import com.forgerock.sapi.gateway.util.TestHandlers.FixedResponseHandler;
 
 @ExtendWith(MockitoExtension.class)
@@ -74,7 +74,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     protected void callFilterValidateSuccessBehaviour(Filter filter) throws Exception {
         // Mock the success response for the ApiClientService call
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
 
         final Consumer<AttributesContext> successBehaviourValidator = ctxt -> {
             // Verify that the context was updated with the apiClient data
@@ -135,7 +135,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     @Test
     void returnsErrorResponseWhenApiClientServiceReturnsException() throws Exception {
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(ApiClientServiceException.ErrorCode.SERVER_ERROR, "Unexpected error")));
 
         final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
@@ -153,10 +153,10 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = ErrorCode.class, names = {"NOT_FOUND", "DELETED"})
-    void returnsUnauthorisedResponseWhenApiClientHasBeenDeleted(ErrorCode errorCode) throws Exception {
+    @EnumSource(value = ApiClientServiceException.ErrorCode.class, names = {"NOT_FOUND", "DELETED"})
+    void returnsUnauthorisedResponseWhenApiClientHasBeenDeleted(ApiClientServiceException.ErrorCode errorCode) throws Exception {
         // Mock error response from ApiClientService
-        when(apiClientService.getApiClient(eq(CLIENT_ID))).thenReturn(
+        when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(errorCode,
                                                                   "ApiClient " + CLIENT_ID + " does not exist")));
 

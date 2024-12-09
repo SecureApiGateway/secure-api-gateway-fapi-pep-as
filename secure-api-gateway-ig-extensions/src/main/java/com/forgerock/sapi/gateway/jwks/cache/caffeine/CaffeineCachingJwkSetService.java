@@ -18,8 +18,8 @@ package com.forgerock.sapi.gateway.jwks.cache.caffeine;
 import java.net.URI;
 
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.openig.fapi.jwks.JwkSetService;
 
-import com.forgerock.sapi.gateway.jwks.JwkSetService;
 import com.forgerock.sapi.gateway.jwks.cache.CachingJwkSetService;
 
 /**

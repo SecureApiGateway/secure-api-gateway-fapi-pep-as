@@ -29,6 +29,7 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
+import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
@@ -40,9 +41,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.models.ApiClient;
 import com.forgerock.sapi.gateway.fapi.FapiUtils;
-import com.forgerock.sapi.gateway.trusteddirectories.TrustedDirectoryService;
 import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
@@ -175,11 +174,11 @@ public class RouteMetricsFilter implements Filter {
     }
 
     static String getSoftwareId(ApiClient apiClient ) {
-        return apiClient == null ? null : apiClient.getSoftwareClientId();
+        return apiClient == null ? null : apiClient.getSoftwareId();
     }
 
     static String getTrustedDirectory(ApiClient apiClient) {
-        return apiClient == null ? null : TrustedDirectoryService.getTrustedDirectoryIssuerName(apiClient);
+        return apiClient == null ? null : apiClient.getSoftwareStatementAssertion().getClaimsSet().getIssuer();
     }
 
     private static String getRouteId(Context context) {
