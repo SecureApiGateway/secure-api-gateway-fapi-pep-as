@@ -57,7 +57,6 @@
         <dependency>
             <groupId>org.forgerock.openig</groupId>
             <artifactId>openig-fapi</artifactId>
-            <scope>provided</scope>
             <exclusions>
                 <exclusion>
                     <groupId>org.checkerframework</groupId>
