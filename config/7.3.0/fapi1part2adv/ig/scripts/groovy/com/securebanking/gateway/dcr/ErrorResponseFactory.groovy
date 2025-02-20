@@ -1,8 +1,5 @@
 package com.securebanking.gateway.dcr
 
-import org.forgerock.util.promise.*
-import org.forgerock.http.protocol.*
-
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -50,7 +47,7 @@ class ErrorResponseFactory {
         errorMsgJson["error_description"] = errorMessage
         logger.warn("{}DCR failed, http status: {}, error: {}", logPrefix, httpCode, errorMsgJson)
         def response = new Response(httpCode)
-        response.entity.setJson(errorMsgJson)
+        response.entity.setJson(json(errorMsgJson))
         return response
     }
 }

@@ -188,7 +188,7 @@ public class CryptoUtils {
         return Pair.of(testTransportCert, jwkSet);
     }
 
-    private static RSAKey createJwkForCert(X509Certificate x509Certificate, KeyUse keyUse) throws JOSEException {
+    public static RSAKey createJwkForCert(X509Certificate x509Certificate, KeyUse keyUse) throws JOSEException {
         final Builder jwkBuilder = new Builder(RSAKey.parse(x509Certificate));
         jwkBuilder.keyUse(keyUse);
         final RSAKey jwk = jwkBuilder.build();
