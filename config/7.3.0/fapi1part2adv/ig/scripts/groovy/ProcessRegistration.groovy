@@ -1,6 +1,7 @@
 import static org.forgerock.http.protocol.Response.newResponsePromise
 import static org.forgerock.util.promise.Promises.newExceptionPromise
 import static org.forgerock.util.promise.Promises.newResultPromise
+import static org.forgerock.json.JsonValue.json;
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException
 import org.forgerock.json.jose.jwk.JWK
@@ -303,13 +304,15 @@ private void rewriteUriToAccessExistingAmRegistration() {
 
 private Promise addSoftwareStatementToResponse(response, softwareStatementAssertion) {
     if (response.status.isSuccessful()) {
-        return response.getEntity().getJsonAsync().then(json -> {
-            if (!json.isDefined("software_statement")) {
-                json.put("software_statement", softwareStatementAssertion.build())
-            }
-            response.entity.setJson(json)
-            return response
-        })
+        return response.getEntity().getJsonAsync()
+                .then(jsonAsObj -> json(jsonAsObj))  // transform
+                .then(json -> {
+                    if (!json.isDefined("software_statement")) {
+                        json.put("software_statement", softwareStatementAssertion.build())
+                    }
+                    response.entity.setJson(json)
+                    return response
+                })
     }
     return newResultPromise(response)
 }
