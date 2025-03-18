@@ -16,10 +16,15 @@
 package com.forgerock.sapi.gateway.mtls;
 
 import static java.util.Objects.requireNonNull;
+import static org.forgerock.http.protocol.Response.newResponsePromise;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
+import static org.forgerock.json.JsonValueFunctions.optional;
+import static org.forgerock.openig.util.JsonValues.optionalHeapObject;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
+import static org.forgerock.util.LambdaExceptionUtils.rethrowFunction;
+import static org.forgerock.util.LambdaExceptionUtils.rethrowSupplier;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
@@ -29,17 +34,15 @@ import org.forgerock.http.Handler;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
-import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
-import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
+import org.forgerock.secrets.jwkset.JwkSetSecretStore;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
-import org.forgerock.util.promise.Promises;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,7 +63,7 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
  */
 public class TransportCertValidationFilter implements Filter {
 
-    private final Logger logger = LoggerFactory.getLogger(getClass());
+    private static final Logger logger = LoggerFactory.getLogger(TransportCertValidationFilter.class.getName());
 
     /**
      * Retrieves the client's x509 certificate used for mutual TLS
@@ -80,45 +83,44 @@ public class TransportCertValidationFilter implements Filter {
         this.transportCertValidator = transportCertValidator;
     }
 
-    private Response createErrorResponse(String message) {
+    private static Response errorResponse(String message) {
         return new Response(Status.BAD_REQUEST).setEntity(json(object(field("error_description", message))));
     }
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         logger.debug("Attempting to validate transport cert");
-
         final X509Certificate certificate;
         try {
             certificate = certificateRetriever.retrieveCertificate(context, request);
-        } catch (CertificateException e) {
-            logger.warn("Transport cert not valid", e);
-            return Promises.newResultPromise(createErrorResponse("client tls certificate must be provided as a valid x509 certificate"));
+        } catch (CertificateException certException) {
+            logger.warn("Transport cert not valid", certException);
+            return newResponsePromise(
+                    errorResponse("client tls certificate must be provided as a valid x509 certificate"));
         }
-
-        return getJwkSet(context).thenAsync(jwkSet -> {
-            try {
-                transportCertValidator.validate(certificate, jwkSet);
-                logger.debug("Transport cert validated successfully");
-                return next.handle(context, request);
-            } catch (CertificateException e) {
-                logger.debug("Transport cert failed validation: not present in JWKS or present with wrong \"use\"");
-                return Promises.newResultPromise(createErrorResponse("client tls certificate not found in JWKS for software statement"));
-            }
-        }, ex -> {
-            logger.debug("Failed to load JwkSet", ex);
-            return Promises.newResultPromise(createErrorResponse("Failed to get client JWKSet"));
-        });
-
+        return getJwkSetSecretStore(context)
+                .thenAsync(jwkSetSecretStore ->
+                                   transportCertValidator.validate(certificate, jwkSetSecretStore)
+                                                         .thenAsync(ignored -> next.handle(context, request),
+                                                                    ce -> handleCertException()),
+                loadJwkException -> {
+                    logger.debug("Failed to load JwkSet", loadJwkException);
+                    return newResponsePromise(errorResponse("Failed to get client JWKSet"));
+                });
     }
 
-    private Promise<JWKSet, FailedToLoadJWKException> getJwkSet(Context context) {
+    private Promise<JwkSetSecretStore, FailedToLoadJWKException> getJwkSetSecretStore(Context context) {
         final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
         if (apiClient == null) {
             logger.error("apiClient not found in request context");
             throw new IllegalStateException("apiClient not found in request context");
         }
-        return apiClient.getJwkSet();
+        return apiClient.getJwkSetSecretStore();
+    }
+
+    private static Promise<Response, NeverThrowsException> handleCertException() {
+        logger.debug("Transport cert failed validation: not present in JWKS or present with wrong \"use\"");
+        return newResponsePromise(errorResponse("client tls certificate not found in JWKS for software statement"));
     }
 
     /**
@@ -145,26 +147,43 @@ public class TransportCertValidationFilter implements Filter {
      * }
      */
     public static class Heaplet extends GenericHeaplet {
-
         private final Logger logger = LoggerFactory.getLogger(getClass());
+
+        static final String CONFIG_CERT_RETRIEVER = "certificateRetriever";
+        static final String CONFIG_CERT_VALIDATOR = "transportCertValidator";
+
+        @Deprecated
+        /** @deprecated Use {@link CONFIG_CERT_RETRIEVER} instead. */
+        static final String CONFIG_CERT_HEADER = "clientTlsCertHeader";
 
         @Override
         public Object create() throws HeapException {
-            final CertificateRetriever certificateRetriever;
-            // certificateRetriever configuration is preferred to the deprecated clientTlsCertHeader configuration
-            final JsonValue certificateRetrieverConfig = config.get("certificateRetriever");
-            if (certificateRetrieverConfig.isNotNull()) {
-                certificateRetriever = certificateRetrieverConfig.as(requiredHeapObject(heap, CertificateRetriever.class));
-            } else {
-                // Fallback to the config which only configures the HeaderCertificateRetriever
-                final String clientCertHeaderName = config.get("clientTlsCertHeader").required().asString();
-                logger.warn("{} config option clientTlsCertHeader is deprecated, use certificateRetriever instead. " +
-                                "This option needs to contain a value which is a reference to a {} object on the heap",
-                        TransportCertValidationFilter.class.getSimpleName(), CertificateRetriever.class);
-                certificateRetriever = new HeaderCertificateRetriever(clientCertHeaderName);
-            }
-            final TransportCertValidator transportCertValidator = config.get("transportCertValidator").required()
-                                                                        .as(requiredHeapObject(heap, TransportCertValidator.class));
+            // 'certificateRetriever' configuration is preferred to the deprecated clientTlsCertHeader configuration
+            CertificateRetriever certificateRetriever =
+                    config.get(CONFIG_CERT_RETRIEVER)
+                          .as(optional())
+                          .map(rethrowFunction(node -> node.as(optionalHeapObject(heap,
+                                                                                  CertificateRetriever.class))))
+                          // Fallback to deprecated 'clientTlsCertHeader' config (HeaderCertificateRetriever)
+                          .or(() -> config.get(CONFIG_CERT_HEADER)
+                                          .as(optional())
+                                          .map(node -> {
+                                              logger.warn("{} config option clientTlsCertHeader is deprecated, use "
+                                                                  + "certificateRetriever instead. This option needs "
+                                                                  + "to contain a value which is a reference "
+                                                                  + "to a {} object on the heap",
+                                                          TransportCertValidationFilter.class.getSimpleName(),
+                                                          CertificateRetriever.class);
+                                              return new HeaderCertificateRetriever(node.asString());
+                                          }))
+                          // Or else fail as if the original call to (preferred) 'certificateRetriever' failed
+                          .orElseGet(rethrowSupplier(() -> config.get(CONFIG_CERT_RETRIEVER).required()
+                                                                 .as(requiredHeapObject(heap,
+                                                                                        CertificateRetriever.class))));
+            TransportCertValidator transportCertValidator = config.get(CONFIG_CERT_VALIDATOR)
+                                                                  .required()
+                                                                  .as(requiredHeapObject(heap,
+                                                                                         TransportCertValidator.class));
             return new TransportCertValidationFilter(certificateRetriever, transportCertValidator);
         }
     }

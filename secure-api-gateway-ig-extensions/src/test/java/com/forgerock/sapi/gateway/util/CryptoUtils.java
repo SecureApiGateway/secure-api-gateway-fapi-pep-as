@@ -53,7 +53,6 @@ import org.forgerock.json.jose.jwk.RsaJWK;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.util.Pair;
 
-import com.forgerock.sapi.gateway.jwks.RestJwkSetServiceTest;
 import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -174,11 +173,12 @@ public class CryptoUtils {
         final KeyUse keyUse = new KeyUse(transportCertKeyUse);
         final List<JWK> keys = new ArrayList<>();
         // Add testTransportCert to the JWKS
-        keys.add(createJwkForCert(testTransportCert, keyUse));
+        JWK matchingJwk = createJwkForCert(testTransportCert, keyUse);
+        keys.add(matchingJwk);
 
         // Generate several others certs to add to the JWKS
         for (int i = 0 ; i < 5; i++) {
-            final KeyUse randomKeyUse = i % 2 == 0 ? keyUse : new KeyUse("keyUse" + i);
+            final KeyUse randomKeyUse = i % 2 == 0 ? keyUse : new KeyUse("sig");
             keys.add(createJwkForCert(generateX509Cert(generateRsaKeyPair(), "CN=blah" + i), randomKeyUse));
         }
         // Randomise the key order
@@ -237,8 +237,8 @@ public class CryptoUtils {
     }
 
     public static JWKSet createJwkSet(){
-        return new JWKSet(List.of(RestJwkSetServiceTest.createJWK(UUID.randomUUID().toString()),
-                RestJwkSetServiceTest.createJWK(UUID.randomUUID().toString())));
+        return new JWKSet(List.of(createJWK(UUID.randomUUID().toString()),
+                                  createJWK(UUID.randomUUID().toString())));
     }
 
     public static SignedJwt createSignedJwt(Map<String, Object> claims, JWSAlgorithm signingAlgo) {

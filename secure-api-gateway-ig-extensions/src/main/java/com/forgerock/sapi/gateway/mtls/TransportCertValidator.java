@@ -17,8 +17,12 @@ package com.forgerock.sapi.gateway.mtls;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.stream.Stream;
 
 import org.forgerock.json.jose.jwk.JWKSet;
+import org.forgerock.secrets.jwkset.JwkSetSecretStore;
+import org.forgerock.secrets.keys.CertificateVerificationKey;
+import org.forgerock.util.promise.Promise;
 
 /**
  * Validator which tests if a certificate belongs to a JWKSet and may be used for MTLS purposes.
@@ -26,12 +30,14 @@ import org.forgerock.json.jose.jwk.JWKSet;
 public interface TransportCertValidator {
 
     /**
-     * validate the certificate
+     * Validate the {@code clientCertificate} against the JWKS obtained from the {@code jwkSetSecretStore}. Note that
+     * if not keys are valid then the resulting stream will be empty.
      *
-     * @param certificate X509Certificate MTLS certificate of the client to validate
-     * @param jwkSet JWKSet containing the client's keys
-     * @throws CertificateException if the certificate is not a valid MTLS certificate for this client.
+     * @param clientCertificate {@link X509Certificate} MTLS certificate of the client to validate
+     * @param jwkSetSecretStore {@link JwkSetSecretStore} containing the client's keys
+     * @return a {@link Promise} carrying a {@link CertificateException} if the certificate is not valid (as per the
+     *         original API)
      */
-    void validate(X509Certificate certificate, JWKSet jwkSet) throws CertificateException;
-
+    Promise<Void, CertificateException> validate(X509Certificate clientCertificate,
+                                                 JwkSetSecretStore jwkSetSecretStore);
 }

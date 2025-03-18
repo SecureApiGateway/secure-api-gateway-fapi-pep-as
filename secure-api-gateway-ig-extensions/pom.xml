@@ -53,6 +53,11 @@
     </dependencyManagement>
     <dependencies>
         <dependency>
+            <groupId>org.forgerock.commons</groupId>
+            <artifactId>secrets-api</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.forgerock.openig</groupId>
             <artifactId>openig-core</artifactId>
             <scope>provided</scope>

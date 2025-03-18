@@ -1,12 +1,25 @@
 import static org.forgerock.http.protocol.Response.newResponsePromise
+import static org.forgerock.json.JsonValue.json
+import static org.forgerock.secrets.Purpose.purpose
 import static org.forgerock.util.promise.Promises.newExceptionPromise
 import static org.forgerock.util.promise.Promises.newResultPromise
-import static org.forgerock.json.JsonValue.json;
+
+import java.security.cert.CertificateEncodingException
+import java.security.cert.CertificateExpiredException
+import java.security.cert.CertificateNotYetValidException
+import java.security.cert.X509Certificate
 
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException
 import org.forgerock.json.jose.jwk.JWK
+import org.forgerock.json.jose.jwk.JWKSet
 import org.forgerock.openig.fapi.dcr.RegistrationRequest
 import org.forgerock.openig.fapi.dcr.SoftwareStatement
+import org.forgerock.secrets.NoSuchSecretException
+import org.forgerock.secrets.Purpose
+import org.forgerock.secrets.SecretConstraint
+import org.forgerock.secrets.keys.CertificateVerificationKey
+import org.forgerock.secrets.keys.CryptoKey
+import org.forgerock.util.promise.NeverThrowsException
 
 import com.forgerock.securebanking.uk.gateway.jwks.*
 import com.nimbusds.jose.jwk.RSAKey
@@ -40,10 +53,14 @@ import com.securebanking.gateway.dcr.ErrorResponseFactory
  *   - request object must contain field: token_endpoint_auth_method
  *   - that token_endpoint_auth_method is a valid value, either 'private_key_jwt' or 'tls_client_auth'
  */
+// TODO[wm]: Should the above be s/FapiAdvancedDCRValidationFilter/RegistrationRequestEntityValidatorFilter/ ?
 
-def fapiInteractionId = request.getHeaders().getFirst("x-fapi-interaction-id");
+def fapiInteractionId = request.getHeaders().getFirst("x-fapi-interaction-id")
 if (fapiInteractionId == null) fapiInteractionId = "No x-fapi-interaction-id"
+
 SCRIPT_NAME = "[ProcessRegistration] (" + fapiInteractionId + ") - "
+KEY_USE_TLS = "tls"
+
 logger.debug(SCRIPT_NAME + "Running...")
 
 def errorResponseFactory = new ErrorResponseFactory(SCRIPT_NAME)
@@ -70,9 +87,9 @@ switch (method.toUpperCase()) {
         }
 
         List<String> responseTypes = registrationRequest.getResponseTypes()
-        if(responseTypes == null || responseTypes.isEmpty()){
-            logger.debug(SCRIPT_NAME + "No response_types claim in registration request. Setting default response_types " +
-                    "to " + defaultResponseTypes)
+        if (responseTypes == null || responseTypes.isEmpty()) {
+            logger.debug(SCRIPT_NAME + "No response_types claim in registration request. " +
+                                 "Setting default response_types to " + defaultResponseTypes)
             registrationRequest.setResponseTypes([defaultResponseTypes])
         } else {
             // https://datatracker.ietf.org/doc/html/rfc7591#section-3.2.1 states that:
@@ -94,7 +111,7 @@ switch (method.toUpperCase()) {
         // registration request.
         String tokenEndpointAuthMethod = registrationRequest.getTokenEndpointAuthMethod()
 
-        if (tokenEndpointAuthMethod == null || !tokenEndpointAuthMethodsSupported.contains(tokenEndpointAuthMethod)){
+        if (tokenEndpointAuthMethod == null || !tokenEndpointAuthMethodsSupported.contains(tokenEndpointAuthMethod)) {
             String errorDescription = "token_endpoint_auth_method claim must be one of: " +
                     tokenEndpointAuthMethodsSupported
             logger.info("{}{}", SCRIPT_NAME, errorDescription)
@@ -103,15 +120,18 @@ switch (method.toUpperCase()) {
         logger.debug("{}token_endpoint_auth_method is {}", SCRIPT_NAME, tokenEndpointAuthMethod)
 
         // AM should reject this case?
-        if (tokenEndpointAuthMethod.equals("tls_client_auth") && registrationRequest.getMetadata("tls_client_auth_subject_dn").isNull()) {
-            return errorResponseFactory.invalidClientMetadataErrorResponse("tls_client_auth_subject_dn must be provided to use tls_client_auth")
+        if (tokenEndpointAuthMethod.equals("tls_client_auth")
+            && registrationRequest.getMetadata("tls_client_auth_subject_dn").isNull()) {
+            return errorResponseFactory.invalidClientMetadataErrorResponse("tls_client_auth_subject_dn must be " +
+                                                                                   "provided to use tls_client_auth")
         }
 
         SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement()
         logger.debug(SCRIPT_NAME + "Got ssa [" + softwareStatement.getSoftwareStatementAssertion().build() + "]")
 
         def apiClientOrgId = softwareStatement.getOrganisationId()
-        def apiClientOrgName = softwareStatement.getOrganisationName() !=null ? softwareStatement.getOrganisationName() : apiClientOrgId
+        def apiClientOrgName = softwareStatement.getOrganisationName() != null
+                ? softwareStatement.getOrganisationName() : apiClientOrgId
         logger.debug(SCRIPT_NAME + "Inbound details from SSA: apiClientOrgName: {} apiClientOrgCertId: {}",
                 apiClientOrgName,
                 apiClientOrgId
@@ -121,7 +141,7 @@ switch (method.toUpperCase()) {
         String subjectType = registrationRequest.getMetadata("subject_type").asString()
         if (subjectType == null) {
             logger.debug("subjectType is not set. Setting to 'pairwise'", SCRIPT_NAME)
-            registrationRequest.setMetadata("subject_type", "pairwise");
+            registrationRequest.setMetadata("subject_type", "pairwise")
         }
         logger.debug("{} subject_type is '{}'", SCRIPT_NAME, subjectType)
 
@@ -143,39 +163,46 @@ switch (method.toUpperCase()) {
             rewriteUriToAccessExistingAmRegistration()
         }
 
-        return softwareStatement.getJwkSetLocator().applyAsync(uri -> {
-            registrationRequest.setMetadata("jwks_uri", uri.toString());
-            return jwkSetService.getJwkSet(uri)
+        // Check the transport cert against the software statement
+        X509Certificate tlsClientCert = attributes.clientCertificate
+        return softwareStatement.getJwkSetLocator().applyAsync(jwksUri -> {
+            registrationRequest.setMetadata("jwks_uri", jwksUri.toString())
+            return testTlsClientCertInJwksUri(tlsClientCert, (URI) jwksUri)
         }, apiClientJwkSet -> {
             if (!allowIgIssuedTestCerts) {
-                return newExceptionPromise(new FailedToLoadJWKException("software_statement must contain software_jwks_endpoint"))
+                return newExceptionPromise(new FailedToLoadJWKException(
+                        "software_statement must contain software_jwks_endpoint"))
             }
-
-            // We need to set the jwks claim in the registration request because the software statement might not
-            // have the jwks in the jwks claim in the software statement. If that were the case it would result in
-            // AM being unable to validate client credential jws used in `private_key_jwt` as the
-            // `token_endpoint_auth_method`.
+            // We need to set the jwks claim in the registration request because the software statement might not have
+            // the jwks in the jwks claim in the software statement. If that were the case it would result in AM being
+            // unable to validate client credential jws used in `private_key_jwt` as the `token_endpoint_auth_method`.
             registrationRequest.setMetadata("jwks", apiClientJwkSet.toJsonValue())
-            return newResultPromise(apiClientJwkSet)
-
-        }).thenAsync(apiClientJwkSet -> {
-            logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks: " + apiClientJwkSet)
-            if (!tlsClientCertExistsInJwkSet(apiClientJwkSet)) {
-                String errorDescription = "tls transport cert does not match any certs registered in jwks for software " +
-                        "statement"
-                logger.debug("{}{}", SCRIPT_NAME, errorDescription)
-                return newResultPromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
-            }
-            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it on
-            // However, this might not be the best place to do that?
+            return testClientCertInJwkSet(tlsClientCert, (JWKSet) apiClientJwkSet)
+        })
+        .thenAsync(ignore -> {
+            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it
+            // on. However, this might not be the best place to do that?
             def regJson = registrationRequest.toJsonValue()
             logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
             request.setEntity(regJson)
-
-            return next.handle(context, request)
-                       .thenAsync(response -> addSoftwareStatementToResponse(response, softwareStatement.getSoftwareStatementAssertion()))
-
-        }, e -> newResponsePromise(errorResponseFactory.invalidClientMetadataErrorResponse(e.message)))
+            next.handle(context, request)
+                .thenAsync(response -> addSoftwareStatementToResponse(response,
+                                                                 softwareStatement.getSoftwareStatementAssertion()))
+                .then(response -> {
+                    logger.debug(SCRIPT_NAME + "Returning response" + response)
+                    return response
+                })
+        }, exception -> {
+            if (exception instanceof FailedToLoadJWKException) {
+                return newResponsePromise(
+                        errorResponseFactory.invalidClientMetadataErrorResponse(exception.getMessage()))
+            }
+            // NoSuchSecretException
+            String errorDescription = "tls transport cert does not match any certs " +
+                    "registered in jwks for software statement"
+            logger.debug("{}{}", SCRIPT_NAME, errorDescription)
+            return newResponsePromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
+        })
 
     case "DELETE":
         rewriteUriToAccessExistingAmRegistration()
@@ -196,27 +223,29 @@ switch (method.toUpperCase()) {
 
 }
 
-
 /**
  * Validate the redirect_uris claim in the registration request is valid as per the OB DCR spec:
  * https://openbankinguk.github.io/dcr-docs-pub/v3.2/dynamic-client-registration.html
  */
-private void validateRegistrationRedirectUris(RegistrationRequest registrationRequest) {
+private static void validateRegistrationRedirectUris(RegistrationRequest registrationRequest) {
     List<URI> regRedirectUris = registrationRequest.getRedirectUris()
     SoftwareStatement softwareStatement = registrationRequest.getSoftwareStatement()
     List<URI> ssaRedirectUris = softwareStatement.getRedirectUris()
 
-    for(URI regRequestRedirectUri : regRedirectUris){
-        if(!"https".equals(regRequestRedirectUri.getScheme())){
-            throw new IllegalStateException("invalid registration request redirect_uris value: " + regRequestRedirectUri + " must use https")
+    for (URI regRequestRedirectUri : regRedirectUris){
+        if (!"https".equals(regRequestRedirectUri.getScheme())) {
+            throw new IllegalStateException("invalid registration request redirect_uris value: " +
+                                                    regRequestRedirectUri + " must use https")
         }
 
-        if("localhost".equals(regRequestRedirectUri.getHost())){
-            throw new IllegalStateException("invalid registration request redirect_uris value: " + regRequestRedirectUri + " must not point to localhost")
+        if ("localhost".equals(regRequestRedirectUri.getHost())) {
+            throw new IllegalStateException("invalid registration request redirect_uris value: " +
+                                                    regRequestRedirectUri + " must not point to localhost")
         }
 
-        if(!ssaRedirectUris.contains(regRequestRedirectUri)){
-            throw new IllegalStateException("invalid registration request redirect_uris value, must match or be a subset of the software_redirect_uris")
+        if (!ssaRedirectUris.contains(regRequestRedirectUri)) {
+            throw new IllegalStateException("invalid registration request redirect_uris value, must " +
+                                                    "match or be a subset of the software_redirect_uris")
         }
         return
     }
@@ -226,13 +255,15 @@ private void validateRegistrationRedirectUris(RegistrationRequest registrationRe
  * This method enforces the rule set by OBIE
  * <a href="https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html#data-mapping">here</a>
  * that states:
- * "scope: Specified in the scope claimed. This must be a subset of the scopes in the SSA"
- * also in the
- * <a href="https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html#obclientregistrationrequest1">
+ *   "scope: Specified in the scope claimed. This must be a subset of the scopes in the SSA"
+ *
+ * Also the
+ * <a href=
+ * "https://openbankinguk.github.io/dcr-docs-pub/v3.3/dynamic-client-registration.html#obclientregistrationrequest1">
  * data dictionary for OBClientRegistrationRequest1 </a>
- * it is stated that:
- * "scope     1..1     scope     Scopes the client is asking for (if not specified, default scopes are assigned by the AS).
- * This consists of a list scopes separated by spaces.     String(256)"
+ * states:
+ *   "scope     1..1     scope     Scopes the client is asking for (if not specified, default scopes are assigned by
+ *   the AS). This consists of a list scopes separated by spaces.     String(256)"
  *
  * In the Open Banking issued SSA we can find no scopes defined, however, we do have 'software_roles' which is an array
  * of strings containing AISP, PISP, or a subset thereof, or ASPSP. We must check that the scopes requested are allowed
@@ -284,7 +315,7 @@ private Response performOpenBankingScopeChecks(ErrorResponseFactory errorRespons
     }
 
     logger.debug("{} passed Open Banking scope tests", SCRIPT_NAME)
-    return null;
+    return null
 }
 
 /**
@@ -302,7 +333,8 @@ private void rewriteUriToAccessExistingAmRegistration() {
     request.uri.setRawQuery("client_id=" + apiClientId)
 }
 
-private Promise addSoftwareStatementToResponse(response, softwareStatementAssertion) {
+private static Promise<Response, NeverThrowsException> addSoftwareStatementToResponse(response,
+                                                                                      softwareStatementAssertion) {
     if (response.status.isSuccessful()) {
         return response.getEntity().getJsonAsync()
                 .then(jsonAsObj -> json(jsonAsObj))  // transform
@@ -314,24 +346,64 @@ private Promise addSoftwareStatementToResponse(response, softwareStatementAssert
                     return response
                 })
     }
-    return newResultPromise(response)
+    return response
 }
 
-private boolean tlsClientCertExistsInJwkSet(jwkSet) {
-    def tlsClientCert = attributes.clientCertificate
+private Promise<Void, NoSuchSecretException> testTlsClientCertInJwksUri(X509Certificate tlsClientCert, URI jwksUri) {
+    logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks_endpoint: {}", URI)
+    return jwkSetService.getJwkSetSecretStore(jwksUri)
+                        .thenAsync(jwkSetSecretStore -> {
+                            Purpose<CertificateVerificationKey> tlsPurpose =
+                                    purpose(KEY_USE_TLS, CertificateVerificationKey.class)
+                                            .withConstraints(matchesX509Cert(tlsClientCert))
+                            return jwkSetSecretStore.getValid(tlsPurpose)
+                        })
+                        // We only care that it's present - Void
+                        .thenDiscardResult()
+}
+
+private static SecretConstraint<CryptoKey> matchesX509Cert(final X509Certificate tlsClientCert) {
+    // Note that this emulates the real way in which an X.509 cert will be validated via a JwkSetSecretStore
+    return { secret ->
+        try {
+            tlsClientCert.checkValidity()
+        } catch (CertificateExpiredException | CertificateNotYetValidException ignored) {
+            return false
+        }
+        return secret.getCertificate(X509Certificate.class)
+                     .filter(x509Cert -> {
+                         try {
+                             return Arrays.equals(x509Cert.getEncoded(), tlsClientCert.getEncoded())
+                         } catch (CertificateEncodingException ignored) {
+                             return false
+                         }
+                     })
+                     .isPresent()
+    }
+}
+
+private Promise<Void, NoSuchSecretException> testClientCertInJwkSet(X509Certificate tlsClientCert, JWKSet jwkSet)
+        throws NoSuchSecretException {
+    logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks: {}", jwkSet)
+    if (!tlsClientCertExistsInJwkSet(tlsClientCert, jwkSet)) {
+        return newExceptionPromise(new NoSuchSecretException(tlsClientCert.getSubjectX500Principal().getName()))
+    }
+    // We only care that it's present - Void
+    return newResultPromise(null)
+}
+
+private boolean tlsClientCertExistsInJwkSet(X509Certificate tlsClientCert, JWKSet jwkSet) {
     // RSAKey.parse produces a JWK, we can then extract the cert from the x5c field
     def tlsClientCertX5c = RSAKey.parse(tlsClientCert).getX509CertChain().get(0).toString()
     for (JWK jwk : jwkSet.getJWKsAsList()) {
-        final List<String> x509Chain = jwk.getX509Chain();
-        final String jwkX5c = x509Chain.get(0);
+        final List<String> x509Chain = jwk.getX509Chain()
+        final String jwkX5c = x509Chain.get(0)
         if ("tls".equals(jwk.getUse()) && tlsClientCertX5c.equals(jwkX5c)) {
             logger.debug(SCRIPT_NAME + "Found matching tls cert for provided pem, with kid: " + jwk.getKeyId()
-                    + " x5t#S256: " + jwk.getX509ThumbprintS256())
+                                 + " x5t#S256: " + jwk.getX509ThumbprintS256())
             return true
         }
     }
     logger.debug(SCRIPT_NAME + "tls transport cert does not match any certs registered in jwks for software statement")
     return false
 }
-
-

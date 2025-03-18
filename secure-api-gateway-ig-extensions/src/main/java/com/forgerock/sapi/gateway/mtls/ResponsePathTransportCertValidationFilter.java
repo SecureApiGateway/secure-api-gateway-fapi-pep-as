@@ -15,6 +15,9 @@
  */
 package com.forgerock.sapi.gateway.mtls;
 
+import static java.util.Objects.requireNonNull;
+import static org.forgerock.http.protocol.Response.newResponsePromise;
+import static org.forgerock.http.protocol.Responses.newInternalServerError;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
@@ -31,9 +34,9 @@ import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
+import org.forgerock.secrets.jwkset.JwkSetSecretStore;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
-import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.Promises;
@@ -81,11 +84,11 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      */
     private final TransportCertValidator transportCertValidator;
 
-    public ResponsePathTransportCertValidationFilter(CertificateRetriever certificateRetriever,
-                                                     TransportCertValidator transportCertValidator,
-                                                     boolean certificateIsMandatory) {
-        Reject.ifNull(certificateRetriever, "certificateRetriever must be provided");
-        Reject.ifNull(transportCertValidator, "transportCertValidator must be provided");
+    public ResponsePathTransportCertValidationFilter(final CertificateRetriever certificateRetriever,
+                                                     final TransportCertValidator transportCertValidator,
+                                                     final boolean certificateIsMandatory) {
+        requireNonNull(certificateRetriever, "certificateRetriever must be provided");
+        requireNonNull(transportCertValidator, "transportCertValidator must be provided");
         this.certificateRetriever = certificateRetriever;
         this.transportCertValidator = transportCertValidator;
         this.certificateIsMandatory = certificateIsMandatory;
@@ -103,7 +106,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
              clientCertificate = certificateRetriever.retrieveCertificate(context, request);
         } catch (CertificateException e) {
             logger.error("Failed to resolve client mtls certificate", e);
-            return Promises.newResultPromise(createErrorResponse(e.getMessage()));
+            return Promises.newResultPromise(unauthorizedResponse(e.getMessage()));
         }
 
         // Defer cert validation until the response path, then we know that the client authenticated successfully
@@ -116,45 +119,41 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
                 if (apiClient == null) {
                     logger.warn("Unable to validate transport cert - " +
                             "ApiClient could not be fetched from the attributes context");
-                    return Promises.newResultPromise(createErrorResponse("ApiClient not found"));
+                    return Promises.newResultPromise(unauthorizedResponse("ApiClient not found"));
                 }
-                return validateApiClientTransportCert(apiClient, clientCertificate, response);
+                return apiClient.getJwkSetSecretStore()
+                                .thenAsync(jwkSetSecretStore ->
+                                                   validateCertificate(clientCertificate, jwkSetSecretStore, response),
+                                           loadJwkException ->
+                                                   newResponsePromise(newInternalServerError()));
             }
         });
     }
 
-    private Promise<Response, NeverThrowsException> validateApiClientTransportCert(ApiClient apiClient,
-                                                                                   X509Certificate clientCertificate,
-                                                                                   Response response) {
-        return apiClient.getJwkSet().then(jwkSet -> {
-            try {
-                transportCertValidator.validate(clientCertificate, jwkSet);
-            } catch (CertificateException ce) {
-                logger.error("Failed to validate that the supplied client certificate", ce);
-                return createErrorResponse(ce.getMessage());
-            }
-            // Successfully validated the client's cert, allow the original response to continue along the filter chain.
-            logger.debug("Transport cert validated successfully");
-            return response;
-        }, ex -> {
-            logger.error("Failed to get JWKS for apiClient: {}", apiClient, ex);
-            return new Response(Status.INTERNAL_SERVER_ERROR);
-        });
+    private Promise<Response, NeverThrowsException> validateCertificate(final X509Certificate clientCertificate,
+                                                                        final JwkSetSecretStore jwkSetSecretStore,
+                                                                        final Response response) {
+        return transportCertValidator.validate(clientCertificate, jwkSetSecretStore)
+                                     .then(ignored -> response,
+                                           certException -> {
+                                               logger.error("Failed to validate that the supplied client certificate",
+                                                            certException);
+                                               return unauthorizedResponse(certException.getMessage());
+                                           });
     }
 
-    /**
-     * Creates an error response conforming to spec: <a href="https://www.rfc-editor.org/rfc/rfc6749#section-5.2">rfc6749</a>
-     *
-     * @param message String error message to use in the error_description response field
-     * @return Response object communicating an error as per the spec
+    /*
+     * Creates an UNAUTHORIZED error response conforming to spec:
+     * <a href="https://www.rfc-editor.org/rfc/rfc6749#section-5.2">rfc6749</a>
      */
-    private Response createErrorResponse(String message) {
+    private Response unauthorizedResponse(String message) {
         return new Response(Status.UNAUTHORIZED).setEntity(json(object(field("error", "invalid_client"),
                                                                        field("error_description", message))));
     }
 
     /**
-     * Heaplet used to create TokenEndpointTransportCertValidationFilter or ParEndpointTransportCertValidationFilter objects
+     * Heaplet used to create {@code TokenEndpointTransportCertValidationFilter} or
+     * {@code ParEndpointTransportCertValidationFilter} objects.
      * <p>
      * Mandatory fields:
      * <p>
@@ -184,11 +183,13 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
 
         @Override
         public Object create() throws HeapException {
-            final TransportCertValidator transportCertValidator = config.get("transportCertValidator").required()
-                    .as(requiredHeapObject(heap, TransportCertValidator.class));
+            TransportCertValidator transportCertValidator =
+                    config.get("transportCertValidator")
+                          .required()
+                          .as(requiredHeapObject(heap, TransportCertValidator.class));
 
-            final CertificateRetriever certificateRetriever = config.get("certificateRetriever")
-                    .as(requiredHeapObject(heap, CertificateRetriever.class));
+            CertificateRetriever certificateRetriever = config.get("certificateRetriever")
+                                                              .as(requiredHeapObject(heap, CertificateRetriever.class));
 
             return new ResponsePathTransportCertValidationFilter(certificateRetriever,
                                                                  transportCertValidator,
@@ -197,17 +198,24 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
         }
     }
 
-
-    public static class TokenEndpointTransportCertValidationFilterHeaplet extends ResponsePathTransportCertValidationFilterHeaplet {
+    /**
+     * Heaplet supporting creation of {@code TokenEndpointTransportCertValidationFilter}s. The transport cert must
+     * always be passed to the token endpoint as it is mandatory for sender constrained access tokens.
+     */
+    public static class TokenEndpointTransportCertValidationFilterHeaplet
+            extends ResponsePathTransportCertValidationFilterHeaplet {
         public TokenEndpointTransportCertValidationFilterHeaplet() {
-            // Cert must always be passed to the token endpoint as it is always required for sender constrained access tokens
             super(true);
         }
     }
 
-    public static class ParEndpointTransportCertValidationFilterHeaplet extends ResponsePathTransportCertValidationFilterHeaplet {
+    /**
+     * Heaplet supporting creation of {@code ParEndpointTransportCertValidationFilter}s. The transport cert is optional
+     * for PAR, it is only required when doing {@code tls_client_auth}.
+     */
+    public static class ParEndpointTransportCertValidationFilterHeaplet
+            extends ResponsePathTransportCertValidationFilterHeaplet {
         public ParEndpointTransportCertValidationFilterHeaplet() {
-            // Cert is optional for PAR, it is only required when doing tls_client_auth
             super(false);
         }
     }

@@ -62,8 +62,11 @@ import org.forgerock.openig.filter.ScriptableFilter;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.openig.util.Choice;
+import org.forgerock.secrets.Secret;
+import org.forgerock.secrets.jwkset.JwkSetSecretStore;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
+import org.forgerock.util.Options;
 import org.forgerock.util.Pair;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -111,11 +114,14 @@ class ProcessRegistrationTest extends AbstractScriptTest {
 
     private static JWKSet jwkSet;
     private static X509Certificate testTlsCert;
+    private static JwkSetSecretStore jwkSetSecretStore;    // it's easier to use a real JwkSetSecretStore here
 
     @Mock
     private Handler next;
     @Mock
     private JwkSetService jwkSetService;
+    @Mock
+    private Secret cryptoKey;
     @Mock
     private TrustedDirectoryService trustedDirectoryService;
     @Mock
@@ -132,6 +138,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
         Pair<X509Certificate, JWKSet> pair = generateKeyCertAndJwks();
         testTlsCert = pair.getFirst();
         jwkSet = pair.getSecond();
+        jwkSetSecretStore = new JwkSetSecretStore(jwkSet, Options.defaultOptions());
     }
 
     @BeforeEach
@@ -213,7 +220,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
             when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue1(JWKS_URI));
-            when(jwkSetService.getJwkSet(any())).thenReturn(newResultPromise(jwkSet));
+            //TODO[OPENIG-8576]: replace getJwkSet call...
+            //when(jwkSetService.getJwkSet(any())).thenReturn(newResultPromise(jwkSet));
+            when(jwkSetService.getJwkSetSecretStore(any())).thenReturn(newResultPromise(jwkSetSecretStore));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             doAnswer(invocation -> null)

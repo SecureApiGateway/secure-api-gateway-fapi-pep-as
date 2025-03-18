@@ -1,7 +1,8 @@
 {
   "properties": {
     "security": {
-      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"}
+      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"},
+      "tlsTransportCertSecretId": "tls.cert.secret.id"
     },
     "oauth2": {
       "tokenEndpointAuthMethodsSupported": {
@@ -286,11 +287,12 @@
     },
     {
       "name": "JwkSetService",
-      "type": "CaffeineCachingJwkSetService",
+      "type": "CachingJwkSetService",
       "config": {
-        "handler": "OBClientHandler",
-        "maxCacheEntries": 500,
-        "expireAfterWriteDuration": "24 hours"
+        "endpointHandler": "OBClientHandler",
+        "cacheMaxSize": 500,
+        "cacheTimeout": "24 hours",
+        "tlsTransportCertSecretId": "&{security.tlsTransportCertSecretId}"
       }
     },
     {
@@ -371,7 +373,7 @@
       "name": "TransportCertValidator",
       "type": "DefaultTransportCertValidator",
       "config": {
-        "validKeyUse": "tls"
+        "transportCertSecretId": "&{security.tlsTransportCertSecretId}"
       }
     },
     {
