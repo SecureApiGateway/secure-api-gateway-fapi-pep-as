@@ -17,11 +17,8 @@ package com.forgerock.sapi.gateway.mtls;
 
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.util.stream.Stream;
 
-import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
-import org.forgerock.secrets.keys.CertificateVerificationKey;
 import org.forgerock.util.promise.Promise;
 
 /**

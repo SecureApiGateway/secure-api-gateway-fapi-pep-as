@@ -41,7 +41,7 @@ import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.Purpose;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
-import org.forgerock.secrets.keys.CertificateVerificationKey;
+import org.forgerock.secrets.keys.VerificationKey;
 import org.forgerock.util.Options;
 import org.forgerock.util.Pair;
 import org.junit.jupiter.api.BeforeAll;
@@ -62,8 +62,8 @@ class DefaultTransportCertValidatorTest {
     // The transport cert JWK's keyUse, and related purpose
     private static final String TRANSPORT_CERT_KEY_USE = "tls";
     private static final String TRANSPORT_CERT_LABEL = "tls";
-    private static final Purpose<CertificateVerificationKey> TRANSPORT_CERT_PURPOSE =
-            purpose(TRANSPORT_CERT_LABEL, CertificateVerificationKey.class);
+    private static final Purpose<VerificationKey> TRANSPORT_CERT_PURPOSE =
+            purpose(TRANSPORT_CERT_LABEL, VerificationKey.class);
 
     // It's easier to use a real JwkSetSecretStore
     private static JwkSetSecretStore jwkSetSecretStore;
@@ -94,10 +94,10 @@ class DefaultTransportCertValidatorTest {
                 // Validator configured to use TLS transport purpose as expected transport cert purpose
                 new DefaultTransportCertValidator(TRANSPORT_CERT_PURPOSE),
                 // Specified, but uninteresting, purpose
-                new DefaultTransportCertValidator(purpose("label", CertificateVerificationKey.class)),
+                new DefaultTransportCertValidator(purpose("label", VerificationKey.class)),
                 // Non-specific purpose defaults to "verify"
                 new DefaultTransportCertValidator(purpose(Purpose.VERIFY_CERTIFICATE.getLabel(),
-                                                          CertificateVerificationKey.class))
+                                                          VerificationKey.class))
         );
     }
 

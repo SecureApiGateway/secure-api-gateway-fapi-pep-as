@@ -51,7 +51,7 @@ import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.Purpose;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
-import org.forgerock.secrets.keys.CertificateVerificationKey;
+import org.forgerock.secrets.keys.VerificationKey;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.Options;
@@ -81,8 +81,8 @@ public class ResponsePathTransportCertValidationFilterTest {
     // The transport cert JWK's keyUse, and related purpose
     private static final String TRANSPORT_CERT_KEY_USE = "tls";
     private static final String TRANSPORT_CERT_LABEL = "tls";
-    private static final Purpose<CertificateVerificationKey> TRANSPORT_CERT_PURPOSE =
-            purpose(TRANSPORT_CERT_LABEL, CertificateVerificationKey.class);
+    private static final Purpose<VerificationKey> TRANSPORT_CERT_PURPOSE =
+            purpose(TRANSPORT_CERT_LABEL, VerificationKey.class);
 
     // It's easier to use a real JwkSetSecretStore
     private static JwkSetSecretStore jwkSetSecretStore;
