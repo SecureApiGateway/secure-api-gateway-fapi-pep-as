@@ -18,6 +18,8 @@ package com.forgerock.sapi.gateway.util;
 import java.io.IOException;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.NoSuchAlgorithmException;
@@ -47,6 +49,8 @@ import org.bouncycastle.operator.OperatorCreationException;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
 import org.bouncycastle.util.io.pem.PemObjectGenerator;
 import org.bouncycastle.util.io.pem.PemWriter;
+import org.forgerock.http.header.GenericHeader;
+import org.forgerock.http.protocol.Request;
 import org.forgerock.json.jose.common.JwtReconstruction;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jwk.RsaJWK;
@@ -218,31 +222,28 @@ public class CryptoUtils {
     }
 
     /**
-     * JWT signer which uses generated test RSA private key
+     * Create a {@link Request} with the given certificate
+     *
+     * @param certificate
+     *         the certificate to use for the request
+     * @return the {@link Request}
      */
-    public static RSASSASigner createRSASSASigner() throws NoSuchAlgorithmException {
-        KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
-        generator.initialize(2048);
-        KeyPair pair = generator.generateKeyPair();
-        return new RSASSASigner(pair.getPrivate());
+    public static Request createRequestWithCertHeader(X509Certificate certificate) {
+        return createRequestWithCertHeader(certificate, "clientCertHeader");
     }
 
     /**
-     * Create a JWK that can be used to create a JWKSet
-     * @param keyId the id of the key to create
-     * @return a JWK entry
+     * Create a {@link Request} with the given certificate
+     * @param certificate
+     *      the certificate to use for the request
+     * @param headerName
+     *       the header to put the certificate
+     * @return the {@link Request}
      */
-    public static org.forgerock.json.jose.jwk.JWK createJWK(String keyId) {
-        return RsaJWK.builder("modulusValue", "exponentValue").keyId(keyId).build();
-    }
-
-    public static JWKSet createJwkSet(){
-        return new JWKSet(List.of(createJWK(UUID.randomUUID().toString()),
-                                  createJWK(UUID.randomUUID().toString())));
-    }
-
-    public static SignedJwt createSignedJwt(Map<String, Object> claims, JWSAlgorithm signingAlgo) {
-        String encodedJwsString = createEncodedJwtString(claims, signingAlgo);
-        return new JwtReconstruction().reconstructJwt(encodedJwsString, SignedJwt.class);
+    public static Request createRequestWithCertHeader(X509Certificate certificate, final String headerName) {
+        Request request = new Request();
+        String certUrlEncodedPem = URLEncoder.encode(convertToPem(certificate), StandardCharsets.UTF_8);
+        request.addHeaders(new GenericHeader(headerName, certUrlEncodedPem));
+        return request;
     }
 }

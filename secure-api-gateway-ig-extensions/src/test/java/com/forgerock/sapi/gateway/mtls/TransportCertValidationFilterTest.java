@@ -44,6 +44,7 @@ import org.forgerock.json.JsonValueException;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;

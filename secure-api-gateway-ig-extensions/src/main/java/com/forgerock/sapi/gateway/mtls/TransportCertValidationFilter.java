@@ -36,6 +36,8 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.mtls.CertificateRetriever;
+import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
