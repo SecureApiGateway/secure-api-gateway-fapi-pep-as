@@ -220,8 +220,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
             when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue1(JWKS_URI));
-            //TODO[OPENIG-8576]: replace getJwkSet call...
-            //when(jwkSetService.getJwkSet(any())).thenReturn(newResultPromise(jwkSet));
             when(jwkSetService.getJwkSetSecretStore(any())).thenReturn(newResultPromise(jwkSetSecretStore));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
@@ -505,7 +503,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
         }
 
         @Test
-        void shouldFailIfNoMatchingTlsCert() throws Exception {
+        void shouldFailIfNoMatchingTlsCertInJwkSet() throws Exception {
             // Given
             // ... generate a different cert
             Pair<X509Certificate, JWKSet> pair = generateKeyCertAndJwks();
@@ -523,6 +521,55 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata(eq("jwks"), any());
+            // ... registrationRequest validation
+            when(registrationRequest.getScope()).thenReturn("accounts");
+            when(softwareStatement.getRoles()).thenReturn(List.of("AISP"));
+            when(registrationRequest.getRedirectUris()).thenReturn(List.of(REDIRECT_URI));
+            when(softwareStatement.getRedirectUris()).thenReturn(List.of(REDIRECT_URI));
+            when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
+            when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
+            // ... filter and context (with non-matching cert)
+            Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
+            JsonValue config = validProcessRegistrationConfig();
+            Filter filter = (Filter) new ScriptableFilter.Heaplet()
+                    .create(Name.of("ProcessRegistration"), config, getHeap());
+            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
+            attributesContext.getAttributes().put("clientCertificate", nonMatchingCert);
+            // When
+            final Response response = filter.filter(attributesContext, request, next).get();
+            // Then
+            assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
+            assertThat(response.getEntity().getJson())
+                    .asInstanceOf(type(JsonValue.class))
+                    .satisfies(jsonValue -> {
+                        assertThat(jsonValue.get("error").asString()).isEqualTo(INVALID_SOFTWARE_STATEMENT_ERROR_CODE);
+                        assertThat(jsonValue.get("error_description").asString())
+                                .isEqualTo("tls transport cert does not match any certs "
+                                                   + "registered in jwks for software statement");
+                    });
+            verifyNoInteractions(next);
+        }
+
+        @Test
+        void shouldFailIfNoMatchingTlsCertInJwksUri() throws Exception {
+            // Given
+            // ... generate a different cert
+            Pair<X509Certificate, JWKSet> pair = generateKeyCertAndJwks();
+            X509Certificate nonMatchingCert = pair.getFirst();
+            // ... registrationRequest content
+            when(registrationRequest.getResponseTypes()).thenReturn(List.of(RESPONSE_TYPE));
+            when(registrationRequest.getTokenEndpointAuthMethod()).thenReturn("tls_client_auth");
+            when(registrationRequest.getMetadata(eq("tls_client_auth_subject_dn"))).thenReturn(new JsonValue(DN));
+            when(registrationRequest.getMetadata("subject_type")).thenReturn(new JsonValue("pairwise"));
+            when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
+            when(softwareStatement.getOrganisationId()).thenReturn("someorg");
+            when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
+            when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue1(JWKS_URI));
+            when(jwkSetService.getJwkSetSecretStore(any())).thenReturn(newResultPromise(jwkSetSecretStore));
+            doAnswer(invocation -> null)
+                    .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
+            doAnswer(invocation -> null)
+                    .when(registrationRequest).setMetadata(eq("jwks_uri"), any());
             // ... registrationRequest validation
             when(registrationRequest.getScope()).thenReturn("accounts");
             when(softwareStatement.getRoles()).thenReturn(List.of("AISP"));
@@ -662,6 +709,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                            field("file", "ProcessRegistration.groovy"),
                            field("args",
                                  object(field("jwkSetService", "${heap['JwkSetService']}"),
+                                        field("tlsTransportCertSecretId", "tls.cert.secret.id"),
                                         field("allowIgIssuedTestCerts", true),
                                         field("jwtSignatureValidator", null),
                                         field("tokenEndpointAuthMethodsSupported", array("tls_client_auth")),
