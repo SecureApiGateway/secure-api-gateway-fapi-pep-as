@@ -73,16 +73,16 @@ def method = request.method
 switch (method.toUpperCase()) {
     case "POST":
     case "PUT":
-        if (!attributes.registrationRequest) {
-            logger.error(SCRIPT_NAME + "RegistrationRequestEntityValidatorFilter must be run prior to this script")
+        if (!contexts.fapi.getRegistrationRequest()) {
+            logger.error(SCRIPT_NAME + "FapiInitializerFilter must be run prior to this script")
             return new Response(Status.INTERNAL_SERVER_ERROR)
         }
         logger.debug(SCRIPT_NAME + "required registrationRequest is present")
 
-        RegistrationRequest registrationRequest = attributes.registrationRequest
+        RegistrationRequest registrationRequest = contexts.fapi.getRegistrationRequest()
 
         // Check we have everything we need from the client certificate
-        if (!attributes.clientCertificate) {
+        if (!contexts.fapi.getClientCertificate()) {
             return errorResponseFactory.invalidClientMetadataErrorResponse("No client certificate for registration")
         }
 
@@ -164,7 +164,7 @@ switch (method.toUpperCase()) {
         }
 
         // Check the transport cert against the software statement
-        X509Certificate tlsClientCert = attributes.clientCertificate
+        X509Certificate tlsClientCert = contexts.fapi.getClientCertificate()
         return softwareStatement.getJwkSetLocator().applyAsync(jwksUri -> {
             registrationRequest.setMetadata("jwks_uri", jwksUri.toString())
             return testTlsClientCertInJwksUri(tlsClientCert, (URI) jwksUri)

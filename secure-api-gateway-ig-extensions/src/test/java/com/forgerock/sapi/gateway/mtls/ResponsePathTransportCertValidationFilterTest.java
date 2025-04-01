@@ -47,8 +47,7 @@ import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.mtls.CertificateRetriever;
-import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
@@ -97,8 +96,6 @@ public class ResponsePathTransportCertValidationFilterTest {
     class TransportCertValidationTests {
         private ResponsePathTransportCertValidationFilter certMandatoryTransportFilter;
         @Mock
-        private CertificateRetriever certificateRetriever;
-        @Mock
         private TransportCertValidator transportCertValidator;
 
         @BeforeAll
@@ -109,36 +106,32 @@ public class ResponsePathTransportCertValidationFilterTest {
         @BeforeEach
         public void createValidFilter() {
             // Default resolver behavior is to throw an exception
-            certMandatoryTransportFilter = new ResponsePathTransportCertValidationFilter(certificateRetriever,
-                                                                                         transportCertValidator,
+            certMandatoryTransportFilter = new ResponsePathTransportCertValidationFilter(transportCertValidator,
                                                                                          true);
         }
 
         @Test
-        void shouldFailWhenCertNotFoundAndCertIsMandatory() throws Exception {
+        void shouldFailWhenCertNotFoundAndCertIsMandatory() {
             // Given
-            when(certificateRetriever.retrieveCertificate(any(), any()))
-                    .thenThrow(new CertificateException("invalid cert"));
             TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
             // When
             Response response =
-                    certMandatoryTransportFilter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+                    certMandatoryTransportFilter.filter(fapiContext(null, testApiClient), new Request(), nextHandler)
                                                 .getOrThrowIfInterrupted();
             // Then
-            assertThatResponseIsUnauthorised(response, "invalid cert");
+            assertThatResponseIsUnauthorised(response, "client mtls certificate must be provided");
             // TODO: Fix to use mock handler
             assertFalse(nextHandler.hasBeenInteractedWith(), "next handler must not be reached");
         }
 
         @Test
-        void shouldSkipValidationWhenCertNotFoundAndCertNotMandatory() throws Exception {
+        void shouldSkipValidationWhenCertNotFoundAndCertNotMandatory() {
             // Given
             TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
             ResponsePathTransportCertValidationFilter filter =
-                    new ResponsePathTransportCertValidationFilter(certificateRetriever, transportCertValidator, false);
-            when(certificateRetriever.certificateExists(any(), any())).thenReturn(false);
+                    new ResponsePathTransportCertValidationFilter(transportCertValidator, false);
             // When
-            Response response = filter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+            Response response = filter.filter(fapiContext(null, testApiClient), new Request(), nextHandler)
                                       .getOrThrowIfInterrupted();
             // Then
             assertEquals(Status.OK, response.getStatus());
@@ -147,14 +140,15 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
-        void shouldPassOnErrorResponseFromNextHandler() throws Exception {
+        void shouldPassOnErrorResponseFromNextHandler() {
             //  Given - next handler in chain returns forbidden response
             TestHandler nextHandler = new TestHandler(Handlers.forbiddenHandler());
             X509Certificate mockCert = mock(X509Certificate.class);
-            when(certificateRetriever.retrieveCertificate(any(), any())).thenReturn(mockCert);
+            FapiContext fapiContext = fapiContext(mockCert, testApiClient);
             // When
             Response response =
-                    certMandatoryTransportFilter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+                    certMandatoryTransportFilter.filter(fapiContext, new Request(),
+                                                        nextHandler)
                                                 .getOrThrowIfInterrupted();
             // Then
             assertEquals(Status.FORBIDDEN, response.getStatus());
@@ -162,14 +156,13 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
-        void shouldFailWhenApiClientNotFound() throws Exception {
+        void shouldFailWhenApiClientNotFound() {
             // Given
             TestHandler nextHandler = createHandlerWithValidResponse();
             X509Certificate mockCert = mock(X509Certificate.class);
-            when(certificateRetriever.retrieveCertificate(any(), any())).thenReturn(mockCert);
-            AttributesContext emptyContext = new AttributesContext(new RootContext());
+            FapiContext fapiContext = fapiContext(mockCert, null);
             // When/Then
-            assertThatThrownBy(() -> certMandatoryTransportFilter.filter(emptyContext, new Request(), nextHandler)
+            assertThatThrownBy(() -> certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
                                                                  .getOrThrowIfInterrupted())
                     .isInstanceOf(IllegalStateException.class)
                     .hasMessage("Required attribute: \"apiClient\" not found in context");
@@ -177,15 +170,15 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
-        void shouldFailWhenApiClientJwksCouldNotBeFound() throws Exception {
+        void shouldFailWhenApiClientJwksCouldNotBeFound() {
             // Given
             TestHandler nextHandler = createHandlerWithValidResponse();
             X509Certificate mockCert = mock(X509Certificate.class);
-            when(certificateRetriever.retrieveCertificate(any(), any())).thenReturn(mockCert);
+            FapiContext fapiContext = fapiContext(mockCert, testApiClient);
             when(testApiClient.getJwkSetSecretStore())
                     .thenReturn(newExceptionPromise(new FailedToLoadJWKException("Failed to load JWKS")));
             // When
-            Response response = certMandatoryTransportFilter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+            Response response = certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
                                                             .getOrThrowIfInterrupted();
             // Then
             assertEquals(Status.INTERNAL_SERVER_ERROR, response.getStatus());
@@ -193,34 +186,34 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
-        void shouldFailWhenTransportCertValidationFails() throws Exception {
+        void shouldFailWhenTransportCertValidationFails() {
             // Given
             TestHandler nextHandler = createHandlerWithValidResponse();
             X509Certificate clientCert = mock(X509Certificate.class);
-            when(certificateRetriever.retrieveCertificate(any(), any())).thenReturn(clientCert);
             when(testApiClient.getJwkSetSecretStore()).thenReturn(newResultPromise(jwkSetSecretStore));
             when(transportCertValidator.validate(eq(clientCert), eq(jwkSetSecretStore)))
                     .thenReturn(newExceptionPromise(new CertificateException("Cert has expired")));
+            FapiContext fapiContext = fapiContext(clientCert, testApiClient);
             // When
             Response response =
-                    certMandatoryTransportFilter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+                    certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
                                                 .getOrThrowIfInterrupted();
             // Then
             assertThatResponseIsUnauthorised(response, "Cert has expired");
         }
 
         @Test
-        void shouldSucceedWhenCertIsValid() throws Exception {
+        void shouldSucceedWhenCertIsValid() {
             // Given
             TestHandler nextHandler = createHandlerWithValidResponse();
             X509Certificate clientCert = mock(X509Certificate.class);
-            when(certificateRetriever.retrieveCertificate(any(), any())).thenReturn(clientCert);
             when(testApiClient.getJwkSetSecretStore()).thenReturn(newResultPromise(jwkSetSecretStore));
             when(transportCertValidator.validate(eq(clientCert), eq(jwkSetSecretStore)))
                     .thenReturn(newResultPromise(null));
+            FapiContext fapiContext = fapiContext(clientCert, testApiClient);
             // When
             Response response =
-                    certMandatoryTransportFilter.filter(attrContextWithApiClient(), new Request(), nextHandler)
+                    certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
                                                 .getOrThrowIfInterrupted();
             // Then
             assertEquals(Status.OK, response.getStatus());
@@ -240,10 +233,10 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
     }
 
-    private AttributesContext attrContextWithApiClient() {
+    private FapiContext fapiContext(final X509Certificate certificate, final ApiClient apiClient) {
         AttributesContext attributesContext = new AttributesContext(new RootContext("root"));
-        attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, testApiClient);
-        return attributesContext;
+        attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
+        return new FapiContext(attributesContext).setClientCertificates(certificate);
     }
 
     @Nested
@@ -273,17 +266,15 @@ public class ResponsePathTransportCertValidationFilterTest {
             Heaplet heaplet = heapletClass.getDeclaredConstructor().newInstance();
             HeapImpl heap = new HeapImpl(Name.of("heap"));
             heap.put("transportCertValidator", new DefaultTransportCertValidator(TRANSPORT_CERT_PURPOSE));
-            heap.put("headerCertificateRetriever", new HeaderCertificateRetriever(certHeader));
             // ... and ResponsePathTransportCertValidationFilter config
             JsonValue config = json(object(field("trustedDirectoryService", "trustedDirectoryService"),
                                            field("jwkSetService", "jwkSetService"),
-                                           field("transportCertValidator", "transportCertValidator"),
-                                           field("certificateRetriever", "headerCertificateRetriever")));
+                                           field("transportCertValidator", "transportCertValidator")));
             Filter filter = (Filter) heaplet.create(Name.of("test"), config, heap);
             TestHandler nextHandler = createHandlerWithValidResponse();
             Request request = createRequestWithCertHeader(clientCert, certHeader);
             // When
-            Response response = filter.filter(attrContextWithApiClient(), request, nextHandler)
+            Response response = filter.filter(fapiContext(clientCert, testApiClient), request, nextHandler)
                                       .getOrThrowIfInterrupted();
             // Then
             assertEquals(Status.OK, response.getStatus());

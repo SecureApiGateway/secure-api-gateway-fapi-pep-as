@@ -33,6 +33,7 @@ import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.services.context.AttributesContext;

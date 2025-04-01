@@ -32,6 +32,14 @@
           }
         },
         {
+          "comment": "Initialize FAPI Context",
+          "name": "FapiContextInitializerFilter",
+          "type": "FapiContextInitializerFilter",
+          "config": {
+            "certificateHeaderName": "ssl-client-cert"
+          }
+        },
+        {
           "name": "FapiParRequestValidationFilter",
           "type": "FapiParRequestValidationFilter",
           "comment": "Ensure authorize request object is FAPI compliant"
@@ -52,7 +60,6 @@
           "config": {
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
-            "certificateRetriever": "HeaderCertificateRetriever",
             "transportCertValidator": "TransportCertValidator"
           }
         },

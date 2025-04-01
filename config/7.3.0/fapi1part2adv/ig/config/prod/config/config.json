@@ -296,17 +296,6 @@
       }
     },
     {
-      "name": "HeaderCertificateRetriever",
-      "type": "HeaderCertificateRetriever",
-      "config": {
-        "certificateHeaderName": "ssl-client-cert"
-      }
-    },
-    {
-      "name": "ContextCertificateRetriever",
-      "type": "ContextCertificateRetriever"
-    },
-    {
       "name": "IdmService",
       "type": "IdmService",
       "config": {

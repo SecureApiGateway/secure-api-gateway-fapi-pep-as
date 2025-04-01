@@ -23,7 +23,6 @@ import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 
 import org.forgerock.http.Filter;
@@ -32,7 +31,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.mtls.CertificateRetriever;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -58,8 +57,8 @@ import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
  * This filter depends on the {@link ApiClient} being present in the {@link AttributesContext}.
  * This is typically achieved by installing a {@link ResponsePathFetchApiClientFilter} after this filter in the chain.
  * <p>
- * A configurable {@link CertificateRetriever} is used to retrieve the client's MTLS certificate. This is then validated
- * against the JWKSet for the ApiClient by using a {@link TransportCertValidator}.
+ * The client's MTLS certificate is then validated against the JWKSet for the ApiClient by using a
+ * {@link TransportCertValidator}.
  * <p>
  * If the validation is successful the Authorisation Server Response is passed on along the filter chain. Otherwise,
  * an error response is returned with 400 BAD_REQUEST status.
@@ -67,11 +66,6 @@ import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
 public class ResponsePathTransportCertValidationFilter implements Filter {
 
     private final Logger logger = LoggerFactory.getLogger(getClass());
-
-    /**
-     * Retrieves the client's mTLS certificate
-     */
-    private final CertificateRetriever certificateRetriever;
 
     /**
      * Controls whether the mTLS certificate is required for all requests processed by this filter.
@@ -85,29 +79,23 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      */
     private final TransportCertValidator transportCertValidator;
 
-    public ResponsePathTransportCertValidationFilter(final CertificateRetriever certificateRetriever,
-                                                     final TransportCertValidator transportCertValidator,
+    public ResponsePathTransportCertValidationFilter(final TransportCertValidator transportCertValidator,
                                                      final boolean certificateIsMandatory) {
-        requireNonNull(certificateRetriever, "certificateRetriever must be provided");
         requireNonNull(transportCertValidator, "transportCertValidator must be provided");
-        this.certificateRetriever = certificateRetriever;
         this.transportCertValidator = transportCertValidator;
         this.certificateIsMandatory = certificateIsMandatory;
     }
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
-        if (!certificateIsMandatory && !certificateRetriever.certificateExists(context, request)) {
+        FapiContext fapiContext = context.asContext(FapiContext.class);
+        X509Certificate clientCertificate = fapiContext.getClientCertificate();
+        if (!certificateIsMandatory && clientCertificate == null) {
             // Skip validation for the case where the cert does not exist and it is optional
             logger.debug("Skipping cert validation, cert not found and validation is optional");
             return next.handle(context, request);
-        }
-        final X509Certificate clientCertificate;
-        try {
-             clientCertificate = certificateRetriever.retrieveCertificate(context, request);
-        } catch (CertificateException e) {
-            logger.error("Failed to resolve client mtls certificate", e);
-            return Promises.newResultPromise(unauthorizedResponse(e.getMessage()));
+        } else if (certificateIsMandatory && clientCertificate == null) {
+            return Promises.newResultPromise(unauthorizedResponse("client mtls certificate must be provided"));
         }
 
         // Defer cert validation until the response path, then we know that the client authenticated successfully
@@ -116,7 +104,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
             if (!response.getStatus().isSuccessful()) {
                 return Promises.newResultPromise(response);
             } else {
-                final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
+                final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(fapiContext);
                 if (apiClient == null) {
                     logger.warn("Unable to validate transport cert - " +
                             "ApiClient could not be fetched from the attributes context");
@@ -159,8 +147,6 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      * Mandatory fields:
      * <p>
      *  - transportCertValidator: the name of a {@link TransportCertValidator} object on the heap to use to validate the certs
-     *  - certificateRetriever: a {@link CertificateRetriever} object heap reference used to retrieve the client's
-     *                          certificate to validate.
      * Example config:
      * <pre>{@code
      * {
@@ -168,7 +154,6 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
      *           "type": "TokenEndpointTransportCertValidationFilter or ParEndpointTransportCertValidationFilter",
      *           "comment": "Validate the client's MTLS transport cert",
      *           "config": {
-     *             "certificateRetriever": "HeaderCertificateRetriever",
      *             "transportCertValidator": "TransportCertValidator"
      *           }
      * }
@@ -188,12 +173,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
                     config.get("transportCertValidator")
                           .required()
                           .as(requiredHeapObject(heap, TransportCertValidator.class));
-
-            CertificateRetriever certificateRetriever = config.get("certificateRetriever")
-                                                              .as(requiredHeapObject(heap, CertificateRetriever.class));
-
-            return new ResponsePathTransportCertValidationFilter(certificateRetriever,
-                                                                 transportCertValidator,
+            return new ResponsePathTransportCertValidationFilter(transportCertValidator,
                                                                  certificateIsMandatory);
 
         }

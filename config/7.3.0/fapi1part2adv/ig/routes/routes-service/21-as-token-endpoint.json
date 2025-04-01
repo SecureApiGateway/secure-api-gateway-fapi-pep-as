@@ -36,6 +36,14 @@
           }
         },
         {
+          "comment": "Initialize FAPI Context",
+          "name": "FapiContextInitializerFilter",
+          "type": "FapiContextInitializerFilter",
+          "config": {
+            "certificateHeaderName": "ssl-client-cert"
+          }
+        },
+        {
           "comment": "Add gateway access token to request (custom AT modification script checks access token to enforce route via IG)",
           "type": "ClientCredentialsOAuth2ClientFilter",
           "config": {
@@ -69,7 +77,6 @@
           "config": {
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
-            "certificateRetriever": "HeaderCertificateRetriever",
             "transportCertValidator": "TransportCertValidator"
           }
         },

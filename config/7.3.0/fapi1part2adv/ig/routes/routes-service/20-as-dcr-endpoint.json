@@ -30,11 +30,11 @@
           }
         },
         {
-          "comment": "Add the client's MTLS transport cert to the attributes context",
-          "name": "AddCertificateToAttributesContextFilter",
-          "type": "AddCertificateToAttributesContextFilter",
+          "comment": "Initialize FAPI Context",
+          "name": "FapiContextInitializerFilter",
+          "type": "FapiContextInitializerFilter",
           "config": {
-            "certificateRetriever": "HeaderCertificateRetriever"
+            "certificateHeaderName": "ssl-client-cert"
           }
         },
         {
@@ -52,7 +52,6 @@
           "name": "FapiAdvancedDCRValidationFilter",
           "type": "FapiAdvancedDCRValidationFilter",
           "config": {
-            "certificateRetriever": "ContextCertificateRetriever",
             "supportedSigningAlgorithms": ["PS256"],
             "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}"
           }

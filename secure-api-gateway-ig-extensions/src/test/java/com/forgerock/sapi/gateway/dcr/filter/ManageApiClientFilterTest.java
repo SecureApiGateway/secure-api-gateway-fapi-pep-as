@@ -49,6 +49,7 @@ import org.forgerock.openig.fapi.apiclient.service.ApiClientOrganisationService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.fapi.dcr.RegistrationRequest;
 import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.handler.Handlers;
@@ -110,7 +111,7 @@ class ManageApiClientFilterTest {
     }
 
     static Context createContext() {
-        return new AttributesContext(new RootContext());
+        return new FapiContext(new AttributesContext(new RootContext()));
     }
 
     private static FixedResponseHandler successfulUpstreamResponseHandler() {
@@ -133,11 +134,10 @@ class ManageApiClientFilterTest {
         assertThrows(IllegalStateException.class, () -> FetchApiClientFilter.getApiClientFromContext(context));
     }
 
-    void addRegistrationRequestToAttributesContext(Context context) {
+    void addRegistrationRequestToContext(Context context) {
         when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
-        context.asContext(AttributesContext.class)
-                .getAttributes()
-                .put(REGISTRATION_REQUEST_KEY, registrationRequest);
+        context.asContext(FapiContext.class)
+                .setRegistrationRequest(registrationRequest);
     }
 
     private static void validateInternalServerError(Response response, String expectedErrorMessage) {
@@ -285,7 +285,7 @@ class ManageApiClientFilterTest {
             when(apiClientOrganisationService.create(any(), eq(softwareStatement))).thenReturn(newResultPromise(API_CLIENT_ORGANISATION));
 
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final FixedResponseHandler responseHandler = successfulUpstreamResponseHandler();
             final Response response = invokeFilter(context, createPostRequest(), responseHandler);
@@ -304,7 +304,7 @@ class ManageApiClientFilterTest {
                     () -> invokeFilter(context, createPostRequest(), responseHandler));
 
 
-            assertThat(illegalStateException).hasMessageContaining("Required attribute: \"registrationRequest\" not found in context");
+            assertThat(illegalStateException).hasMessageContaining("registrationRequest not found in context");
 
             verifyNoInteractions(apiClientService, apiClientOrganisationService);
         }
@@ -312,7 +312,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorDueToMalformedRegisterResponse() {
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final Response malformedUpstreamResponse = new Response(Status.OK).setEntity("invalid OAuth2.0 /register response entity");
             final FixedResponseHandler responseHandler = new FixedResponseHandler(malformedUpstreamResponse);
@@ -326,7 +326,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorWhenRegistrationResponseIsMissingClientId() {
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final Response malformedUpstreamResponse = new Response(Status.OK).setEntity(json(object(field("field1", "value1"))));
             final FixedResponseHandler responseHandler = new FixedResponseHandler(malformedUpstreamResponse);
@@ -344,7 +344,7 @@ class ManageApiClientFilterTest {
                     .thenReturn(newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Connection Refused")));
 
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final FixedResponseHandler responseHandler = successfulUpstreamResponseHandler();
             final Response response = invokeFilter(context, createPostRequest(), responseHandler);
@@ -361,7 +361,7 @@ class ManageApiClientFilterTest {
                     .thenReturn(newExceptionPromise(new ApiClientServiceException(ErrorCode.SERVER_ERROR, "Connection refused")));
 
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final FixedResponseHandler responseHandler = successfulUpstreamResponseHandler();
             final Response response = invokeFilter(context, createPostRequest(), responseHandler);
@@ -386,7 +386,7 @@ class ManageApiClientFilterTest {
             when(apiClientService.update(any(), eq(CLIENT_ID), eq(softwareStatement))).thenReturn(newResultPromise(apiClient));
 
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final Response response = invokeFilter(context, createPutRequest(), successfulUpstreamResponseHandler());
 
@@ -405,7 +405,7 @@ class ManageApiClientFilterTest {
 
 
             assertThat(illegalStateException).hasMessageContaining(
-                    "Required attribute: \"registrationRequest\" not found in context");
+                    "registrationRequest not found in context");
 
             verifyNoInteractions(apiClientService, apiClientOrganisationService);
         }
@@ -413,7 +413,7 @@ class ManageApiClientFilterTest {
         @Test
         void returnsErrorDueToMalformedRegisterResponse() {
             final Context context = createContext();
-            addRegistrationRequestToAttributesContext(context);
+            addRegistrationRequestToContext(context);
 
             final Response malformedUpstreamResponse = new Response(Status.OK).setEntity("invalid OAuth2.0 /register response entity");
             final FixedResponseHandler responseHandler = new FixedResponseHandler(malformedUpstreamResponse);

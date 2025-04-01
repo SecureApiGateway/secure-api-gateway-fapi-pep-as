@@ -15,8 +15,6 @@
  */
 package com.forgerock.sapi.gateway.mtls;
 
-import static com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter.Heaplet.CONFIG_CERT_HEADER;
-import static com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter.Heaplet.CONFIG_CERT_RETRIEVER;
 import static com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter.Heaplet.CONFIG_CERT_VALIDATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -44,7 +42,7 @@ import org.forgerock.json.JsonValueException;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -79,8 +77,6 @@ class TransportCertValidationFilterTest {
     @Mock
     private TransportCertValidator transportCertValidator;
     @Mock
-    private HeaderCertificateRetriever certificateResolver;
-    @Mock
     private ApiClient testApiClient;
     @Mock
     private X509Certificate clientCert;
@@ -92,15 +88,14 @@ class TransportCertValidationFilterTest {
     }
 
     @Test
-    public void shouldSucceedWhenCertIsValid() throws CertificateException {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever
+    public void shouldSucceedWhenCertIsValid() {
+        // Given - transportCertValidationFilter configured
         TransportCertValidationFilter transportCertValidationFilter =
-                new TransportCertValidationFilter(certificateResolver, transportCertValidator);
+                new TransportCertValidationFilter(transportCertValidator);
         when(testApiClient.getJwkSetSecretStore()).thenReturn(newResultPromise(jwkSetSecretStore));
         when(transportCertValidator.validate(eq(clientCert), eq(jwkSetSecretStore)))
                 .thenReturn(newResultPromise(null));
-        when(certificateResolver.retrieveCertificate(any(), any())).thenReturn(clientCert);
-        Context context = attrContextWithApiClient(testApiClient);
+        Context context = fapiContext(clientCert, testApiClient);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When
         Response response = transportCertValidationFilter.filter(context, request, nextHandler)
@@ -112,13 +107,11 @@ class TransportCertValidationFilterTest {
 
     @Test
     public void shouldFailureIfCertHeaderNotProvided() throws Exception {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever
+        // Given - transportCertValidationFilter configured
         TransportCertValidationFilter transportCertValidationFilter =
-                new TransportCertValidationFilter(certificateResolver, transportCertValidator);
+                new TransportCertValidationFilter(transportCertValidator);
         // ... and request cert resolves to no cert header
-        when(certificateResolver.retrieveCertificate(any(), any()))
-                .thenThrow(new CertificateException("Client mTLS certificate not provided"));
-        Context context = attrContextWithApiClient(testApiClient);
+        Context context = fapiContext(null, testApiClient);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When
         Response response = transportCertValidationFilter.filter(context, request, nextHandler)
@@ -129,33 +122,12 @@ class TransportCertValidationFilterTest {
     }
 
     @Test
-    public void shouldFailureIfCertHeaderValueCorrupt() throws Exception {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever
-        final TransportCertValidationFilter transportCertValidationFilter
-                = new TransportCertValidationFilter(certificateResolver, transportCertValidator);
-        // ... and request cert fails with decoding error
-        when(certificateResolver.retrieveCertificate(any(), any()))
-                .thenThrow(new CertificateException("Failed to URL decode certificate header"
-                                                            + " value. Expect certificate in PEM"
-                                                            + " encoded then URL encoded format"));
-        Context context = attrContextWithApiClient(testApiClient);
-        TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
-        // When
-        Response response = transportCertValidationFilter.filter(context, request, nextHandler)
-                                                         .getOrThrowIfInterrupted();
-        // Then
-        assertErrorResponse(response, "client tls certificate must be provided as a valid x509 certificate",
-                            nextHandler);
-    }
-
-    @Test
-    public void shouldFailIfApiClientNotPresentInContext() throws CertificateException {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever, but no API client
+    public void shouldFailIfApiClientNotPresentInContext() {
+        // Given - transportCertValidationFilter configured
         TransportCertValidationFilter transportCertValidationFilter =
-                new TransportCertValidationFilter(certificateResolver, transportCertValidator);
-        when(certificateResolver.retrieveCertificate(any(), any())).thenReturn(clientCert);
+                new TransportCertValidationFilter(transportCertValidator);
         // ... and no ApiClient on the context
-        Context context = new AttributesContext(new RootContext());
+        Context context = new FapiContext(new AttributesContext(new RootContext())).setClientCertificates(clientCert);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When/ Then
         assertThatThrownBy(() -> transportCertValidationFilter.filter(context, request, nextHandler)
@@ -166,14 +138,13 @@ class TransportCertValidationFilterTest {
 
     @Test
     public void shouldFailIfApiClientJwkSetCannotBeRetrieved() throws Exception {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever
+        // Given - transportCertValidationFilter configured
         TransportCertValidationFilter transportCertValidationFilter =
-                new TransportCertValidationFilter(certificateResolver, transportCertValidator);
-        when(certificateResolver.retrieveCertificate(any(), any())).thenReturn(clientCert);
+                new TransportCertValidationFilter(transportCertValidator);
         // ... and JWKS loading fails
         when(testApiClient.getJwkSetSecretStore())
                 .thenReturn(newExceptionPromise(new FailedToLoadJWKException("Failed to load JWKS")));
-        Context context = attrContextWithApiClient(testApiClient);
+        Context context = fapiContext(clientCert, testApiClient);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When
         Response response = transportCertValidationFilter.filter(context, request, nextHandler)
@@ -184,16 +155,15 @@ class TransportCertValidationFilterTest {
 
     @Test
     public void shouldFailWhenCertNotInJwks() throws Exception {
-        // Given - transportCertValidationFilter configured with a HeaderCertificateRetriever
+        // Given - transportCertValidationFilter configured
         TransportCertValidationFilter transportCertValidationFilter =
-                new TransportCertValidationFilter(certificateResolver, transportCertValidator);
+                new TransportCertValidationFilter(transportCertValidator);
         when(testApiClient.getJwkSetSecretStore()).thenReturn(newResultPromise(jwkSetSecretStore));
-        when(certificateResolver.retrieveCertificate(any(), any())).thenReturn(clientCert);
         // ... and transportCertValidator validation fails to find JWK
         when(transportCertValidator.validate(any(), eq(jwkSetSecretStore)))
                 .thenReturn(newExceptionPromise(new CertificateException(
                         "Failed to find JWK entry in provided JWKSet which matches the X509 cert")));
-        Context context = attrContextWithApiClient(testApiClient);
+        Context context = fapiContext(clientCert, testApiClient);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When
         Response response = transportCertValidationFilter.filter(context, request, nextHandler)
@@ -208,11 +178,8 @@ class TransportCertValidationFilterTest {
         private static Stream<Arguments> invalidConfigurations() {
             return Stream.of(
                     // Missing required CONFIG_CERT_VALIDATOR field
-                    arguments(json(object(field(CONFIG_CERT_RETRIEVER, "HeaderCertificateRetriever"))),
-                              "/%s: Expecting a value".formatted(CONFIG_CERT_VALIDATOR)),
-                    // Missing required CONFIG_CERT_RETRIEVER or CONFIG_CERT_HEADER field
-                    arguments(json(object(field(CONFIG_CERT_VALIDATOR, "TransportCertValidator"))),
-                              "/%s: Expecting a value".formatted(CONFIG_CERT_RETRIEVER)));
+                    arguments(json(object()),
+                              "/%s: Expecting a value".formatted(CONFIG_CERT_VALIDATOR)));
         }
 
         @ParameterizedTest
@@ -220,7 +187,6 @@ class TransportCertValidationFilterTest {
         void shouldFailToConstructFilterWithInvalidConfig(final JsonValue config, final String expectedExceptionMessage) {
             final Name test = Name.of("test");
             HeapImpl heap = new HeapImpl(test);
-            heap.put("HeaderCertificateRetriever", certificateResolver);
             heap.put("TransportCertValidator", transportCertValidator);
             Heaplet heaplet = new Heaplet();
             assertThatThrownBy(() -> heaplet.create(test, config, heap))
@@ -232,11 +198,7 @@ class TransportCertValidationFilterTest {
         private static Stream<JsonValue> validConfigurations() {
             return Stream.of(
                     // Full config
-                    json(object(field(CONFIG_CERT_RETRIEVER, "HeaderCertificateRetriever"),
-                                field(CONFIG_CERT_VALIDATOR, "TransportCertValidator"))),
-                    // Deprecated config
-                    json(object(field(CONFIG_CERT_HEADER, CERTIFICATE_HEADER_NAME),
-                                field(CONFIG_CERT_VALIDATOR, "TransportCertValidator"))));
+                    json(object(field(CONFIG_CERT_VALIDATOR, "TransportCertValidator"))));
         }
 
         @ParameterizedTest
@@ -244,18 +206,18 @@ class TransportCertValidationFilterTest {
         void shouldCreateFilterWithValidAndDeprecatedConfig(final JsonValue config) throws Exception {
             Name test = Name.of("test");
             HeapImpl heap = new HeapImpl(test);
-            heap.put("HeaderCertificateRetriever", certificateResolver);
             heap.put("TransportCertValidator", transportCertValidator);
             Heaplet heaplet = new Heaplet();
             assertThat(heaplet.create(test, config, heap)).isNotNull();
         }
     }
 
-    private static Context attrContextWithApiClient(ApiClient apiClient) {
+    private static Context fapiContext(X509Certificate certificate, ApiClient apiClient) {
         Context transactionIdContext = new TransactionIdContext(new RootContext(), new TransactionId("1234"));
         AttributesContext attributesContext = new AttributesContext(transactionIdContext);
         attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
-        return attributesContext;
+        return new FapiContext(attributesContext)
+                .setClientCertificates(certificate);
     }
 
     private static void assertErrorResponse(Response response,

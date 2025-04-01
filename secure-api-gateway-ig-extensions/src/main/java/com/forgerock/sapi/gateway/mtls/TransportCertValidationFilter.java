@@ -36,8 +36,7 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.mtls.CertificateRetriever;
-import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -54,10 +53,6 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
  * Filter to validate that the client's MTLS transport certificate is valid.
  * <p>
  * This filter depends on the {@link ApiClient} being present in the {@link AttributesContext}.
- * <p>
- * The certificate for the request is supplied by the pluggable certificateRetriever, see {@link HeaderCertificateRetriever}
- * for an example implementation (this is the default configured by the {@link Heaplet})
- * <p>
  * Once the {@link X509Certificate} and JWKSet have been obtained, then the filter delegates to a {@link TransportCertValidator}
  * to do the validation.
  * If the validator successfully validates the certificate, then the request is passed to the next filter in the chain,
@@ -68,20 +63,12 @@ public class TransportCertValidationFilter implements Filter {
     private static final Logger logger = LoggerFactory.getLogger(TransportCertValidationFilter.class.getName());
 
     /**
-     * Retrieves the client's x509 certificate used for mutual TLS
-     */
-    private final CertificateRetriever certificateRetriever;
-
-    /**
      * Validator which checks if the client's MTLS certificate is valid.
      */
     private final TransportCertValidator transportCertValidator;
 
-    public TransportCertValidationFilter(CertificateRetriever certificateRetriever,
-                                        TransportCertValidator transportCertValidator) {
-        requireNonNull(certificateRetriever, "certificateRetriever must be provided");
+    public TransportCertValidationFilter(TransportCertValidator transportCertValidator) {
         requireNonNull(transportCertValidator, "transportCertValidator must be provided");
-        this.certificateRetriever = certificateRetriever;
         this.transportCertValidator = transportCertValidator;
     }
 
@@ -92,15 +79,13 @@ public class TransportCertValidationFilter implements Filter {
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         logger.debug("Attempting to validate transport cert");
-        final X509Certificate certificate;
-        try {
-            certificate = certificateRetriever.retrieveCertificate(context, request);
-        } catch (CertificateException certException) {
-            logger.warn("Transport cert not valid", certException);
+        FapiContext fapiContext = context.asContext(FapiContext.class);
+        final X509Certificate certificate = fapiContext.getClientCertificate();
+        if (certificate == null) {
             return newResponsePromise(
                     errorResponse("client tls certificate must be provided as a valid x509 certificate"));
         }
-        return getJwkSetSecretStore(context)
+        return getJwkSetSecretStore(fapiContext)
                 .thenAsync(jwkSetSecretStore ->
                                    transportCertValidator.validate(certificate, jwkSetSecretStore)
                                                          .thenAsync(ignored -> next.handle(context, request),
@@ -111,7 +96,7 @@ public class TransportCertValidationFilter implements Filter {
                 });
     }
 
-    private Promise<JwkSetSecretStore, FailedToLoadJWKException> getJwkSetSecretStore(Context context) {
+    private Promise<JwkSetSecretStore, FailedToLoadJWKException> getJwkSetSecretStore(FapiContext context) {
         final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
         if (apiClient == null) {
             logger.error("apiClient not found in request context");
@@ -131,62 +116,26 @@ public class TransportCertValidationFilter implements Filter {
      * Mandatory fields:
      *  - transportCertValidator: the name of a {@link TransportCertValidator} object on the heap to use to validate the certs
      * <p>
-     * Optional fields:
-     * - certificateRetriever: a {@link CertificateRetriever} object heap reference used to retrieve the client's
-     *                         certificate to validate.
-     * - clientTlsCertHeader: (Deprecated - Use certificateRetriever config instead)
-     *                        the name of the Request Header which contains the client's TLS cert
-     * <p>
      * Example config:
      * {
      *           "comment": "Validate the MTLS transport cert",
      *           "name": "TransportCertValidationFilter",
      *           "type": "TransportCertValidationFilter",
      *           "config": {
-     *             "certificateRetriever": "HeaderCertificateRetriever",
      *             "transportCertValidator": "TransportCertValidator"
      *           }
      * }
      */
     public static class Heaplet extends GenericHeaplet {
-        private final Logger logger = LoggerFactory.getLogger(getClass());
-
-        static final String CONFIG_CERT_RETRIEVER = "certificateRetriever";
         static final String CONFIG_CERT_VALIDATOR = "transportCertValidator";
-
-        @Deprecated
-        /** @deprecated Use {@link CONFIG_CERT_RETRIEVER} instead. */
-        static final String CONFIG_CERT_HEADER = "clientTlsCertHeader";
 
         @Override
         public Object create() throws HeapException {
-            // 'certificateRetriever' configuration is preferred to the deprecated clientTlsCertHeader configuration
-            CertificateRetriever certificateRetriever =
-                    config.get(CONFIG_CERT_RETRIEVER)
-                          .as(optional())
-                          .map(rethrowFunction(node -> node.as(optionalHeapObject(heap,
-                                                                                  CertificateRetriever.class))))
-                          // Fallback to deprecated 'clientTlsCertHeader' config (HeaderCertificateRetriever)
-                          .or(() -> config.get(CONFIG_CERT_HEADER)
-                                          .as(optional())
-                                          .map(node -> {
-                                              logger.warn("{} config option clientTlsCertHeader is deprecated, use "
-                                                                  + "certificateRetriever instead. This option needs "
-                                                                  + "to contain a value which is a reference "
-                                                                  + "to a {} object on the heap",
-                                                          TransportCertValidationFilter.class.getSimpleName(),
-                                                          CertificateRetriever.class);
-                                              return new HeaderCertificateRetriever(node.asString());
-                                          }))
-                          // Or else fail as if the original call to (preferred) 'certificateRetriever' failed
-                          .orElseGet(rethrowSupplier(() -> config.get(CONFIG_CERT_RETRIEVER).required()
-                                                                 .as(requiredHeapObject(heap,
-                                                                                        CertificateRetriever.class))));
             TransportCertValidator transportCertValidator = config.get(CONFIG_CERT_VALIDATOR)
                                                                   .required()
                                                                   .as(requiredHeapObject(heap,
                                                                                          TransportCertValidator.class));
-            return new TransportCertValidationFilter(certificateRetriever, transportCertValidator);
+            return new TransportCertValidationFilter(transportCertValidator);
         }
     }
 }

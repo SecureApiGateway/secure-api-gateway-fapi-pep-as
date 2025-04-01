@@ -54,6 +54,7 @@ import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.fapi.dcr.RegistrationRequest;
 import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.fapi.jwks.JwkSetService;
@@ -131,7 +132,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
     @Mock
     private SignedJwt ssa;
 
-    private AttributesContext attributesContext;
+    private FapiContext fapiContext;
 
     @BeforeAll
     public static void setUpSecrets() throws JOSEException {
@@ -143,7 +144,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
 
     @BeforeEach
     public void setUpContext() {
-        attributesContext = new AttributesContext(new RootContext());
+        fapiContext = new FapiContext(new AttributesContext(new RootContext()));
+        fapiContext.setRegistrationRequest(registrationRequest);
+        fapiContext.setClientCertificates(testTlsCert);
     }
 
     protected HeapImpl getHeap() throws Exception {
@@ -185,16 +188,14 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                             field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
                                             field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            when(next.handle(attributesContext, request))
+            when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(OK);
             assertThat(response.getEntity().getJson())
@@ -203,7 +204,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                         assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString())
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
-            verify(next).handle(attributesContext, request);
+            verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             verify(registrationRequest).setMetadata(eq("jwks"), any());  // can't verify eq(jwkSet)
         }
@@ -239,16 +240,14 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                             field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
                                             field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            when(next.handle(attributesContext, request))
+            when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(OK);
             assertThat(response.getEntity().getJson())
@@ -257,7 +256,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                         assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString())
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
-            verify(next).handle(attributesContext, request);
+            verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             verify(registrationRequest).setMetadata("jwks_uri", JWKS_URI.toASCIIString());
         }
@@ -269,8 +268,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
+            fapiContext.setRegistrationRequest(null);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(INTERNAL_SERVER_ERROR);
             assertThat(response.getEntity().getBytes()).isEmpty();
@@ -284,9 +284,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
+            fapiContext.setClientCertificates(null);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -310,10 +310,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -338,10 +336,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -393,10 +389,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -433,10 +427,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -479,16 +471,14 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                             field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
                                             field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            when(next.handle(attributesContext, request))
+            when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(OK);
             assertThat(response.getEntity().getJson())
@@ -497,7 +487,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                         assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString())
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
-            verify(next).handle(attributesContext, request);
+            verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             verify(registrationRequest).setResponseTypes(List.of(RESPONSE_TYPE));
         }
@@ -508,6 +498,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             // ... generate a different cert
             Pair<X509Certificate, JWKSet> pair = generateKeyCertAndJwks();
             X509Certificate nonMatchingCert = pair.getFirst();
+            fapiContext.setClientCertificates(nonMatchingCert);
             // ... registrationRequest content
             when(registrationRequest.getResponseTypes()).thenReturn(List.of(RESPONSE_TYPE));
             when(registrationRequest.getTokenEndpointAuthMethod()).thenReturn("tls_client_auth");
@@ -533,10 +524,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", nonMatchingCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -582,10 +571,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", nonMatchingCert);
+            fapiContext.setClientCertificates(nonMatchingCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
             assertThat(response.getEntity().getJson())
@@ -632,16 +620,14 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                             field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
                                             field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("PUT").setUri(REQUEST_URI);
-            when(next.handle(attributesContext, request))
+            when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("registrationRequest", registrationRequest);
-            attributesContext.getAttributes().put("clientCertificate", testTlsCert);
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then - request apiClientId manipulated
             assertThat(request.getUri().toString()).isEqualTo("https://www.bank.com?client_id=" + API_CLIENT_ID);
             assertThat(response.getEntity().getJson())
@@ -650,7 +636,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                         assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString())
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
-            verify(next).handle(attributesContext, request);
+            verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             verify(registrationRequest).setMetadata(eq("jwks"), any());  // can't verify eq(jwkSet)
         }
@@ -663,15 +649,15 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             // Given
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             Request request = new Request().setMethod("GET").setUri(REQUEST_URI);
-            when(next.handle(attributesContext, request))
+            when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            attributesContext.getAttributes().put("apiClient", apiClient(ssa));
+            fapiContext.asContext(AttributesContext.class).getAttributes().put("apiClient", apiClient(ssa));
             // When
-            final Response response = filter.filter(attributesContext, request, next).get();
+            final Response response = filter.filter(fapiContext, request, next).get();
             // Then - request apiClientId manipulated
             assertThat(request.getUri().toString()).isEqualTo("https://www.bank.com?client_id=" + API_CLIENT_ID);
             assertThat(response.getEntity().getJson())
@@ -680,7 +666,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                         assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString())
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
-            verify(next).handle(attributesContext, request);
+            verify(next).handle(fapiContext, request);
         }
 
         private static ApiClient apiClient(final SignedJwt ssa) {

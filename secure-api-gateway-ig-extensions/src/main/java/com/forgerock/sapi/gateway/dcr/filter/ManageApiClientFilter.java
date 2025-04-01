@@ -15,8 +15,6 @@
  */
 package com.forgerock.sapi.gateway.dcr.filter;
 
-import static com.forgerock.sapi.gateway.util.ContextUtils.REGISTRATION_REQUEST_KEY;
-import static com.forgerock.sapi.gateway.util.ContextUtils.getRequiredAttributeAsType;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
@@ -39,6 +37,7 @@ import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientOrganisationService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.fapi.dcr.RegistrationRequest;
 import org.forgerock.openig.fapi.dcr.SoftwareStatement;
 import org.forgerock.openig.heap.GenericHeaplet;
@@ -227,9 +226,10 @@ public class ManageApiClientFilter implements Filter {
     }
 
     private static SoftwareStatement extractSoftwareStatement(Context context) {
-        final RegistrationRequest registrationRequest = getRequiredAttributeAsType(context,
-                                                                                   REGISTRATION_REQUEST_KEY,
-                                                                                   RegistrationRequest.class);
+        final RegistrationRequest registrationRequest = context.asContext(FapiContext.class).getRegistrationRequest();
+        if (registrationRequest == null){
+            throw new IllegalStateException("registrationRequest not found in context");
+        }
         return registrationRequest.getSoftwareStatement();
     }
 
