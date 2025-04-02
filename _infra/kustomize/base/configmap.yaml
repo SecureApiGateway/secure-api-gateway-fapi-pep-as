@@ -1,0 +1,32 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: core-deployment-config
+data:
+  #--Fully Qualified Domain Names--
+  BASE_FQDN: "dev.forgerock.financial"
+  IDENTITY_PLATFORM_FQDN: "iam.dev.forgerock.financial"
+  IG_FQDN: "sapig.dev.forgerock.financial"
+  MTLS_FQDN: "mtls.sapig.dev.forgerock.financial"
+  TRUSTEDDIR_FQDN: "test-trusted-directory.dev.forgerock.financial"
+  # --Environment Settings for SAPIG & Cloud Platform--
+  # ---SAPIG---
+  # core: base sapig
+  # ob: Open Banking specification of sapig
+  SAPIG_TYPE: "core"
+  # ---Cloud---
+  # CDK value: (Cloud Developer's Kit) development identity platform
+  # CDM value: CDM (Cloud Deployment Model)
+  # FIDC value: FIDC (Forgerock Identity Cloud) identity cloud platform
+  CLOUD_TYPE: "CDK"
+  #--Additional Config--
+  AM_REALM: "alpha"
+  CERT_ISSUER: "null-issuer" #Needed?
+  # Connection settings for the IG hosted data repo
+  GATEWAY_DATA_REPO_URI: "http://ig:80" # Needed for RCS and RS
+  # Wherever to use additional TTD other than OB
+  IG_TEST_DIRECTORY_ENABLED: "true"
+  # Where to store the IG Truststore
+  IG_TRUSTSTORE_PATH: "/secrets/truststore/igtruststore"
+  USER_OBJECT: "user"
