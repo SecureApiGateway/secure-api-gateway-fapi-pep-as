@@ -1,0 +1,106 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: ig
+    app.kubernetes.io/component: ig
+    app.kubernetes.io/instance: ig
+    app.kubernetes.io/part-of: pingid
+    tier: middle
+  name: ig
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ig
+      app.kubernetes.io/component: ig
+      app.kubernetes.io/instance: ig
+      app.kubernetes.io/part-of: pingid
+      tier: middle
+  template:
+    metadata:
+      labels:
+        app: ig
+        app.kubernetes.io/component: ig
+        app.kubernetes.io/instance: ig
+        app.kubernetes.io/part-of: pingid
+        tier: middle
+    spec:
+      containers:
+        - env:
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: MY_POD_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP
+          envFrom:
+            - secretRef:
+                name: core-secrets
+            - configMapRef:
+                name: core-deployment-config
+          image: ig
+          imagePullPolicy: Always
+          livenessProbe:
+            httpGet:
+              path: /kube/liveness
+              port: 8080
+            periodSeconds: 30
+            timeoutSeconds: 5
+          name: ig
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /kube/readiness
+              port: 8080
+            initialDelaySeconds: 5
+          resources:
+            limits:
+              memory: 512Mi
+            requests:
+              cpu: 200m
+              memory: 512Mi
+          volumeMounts:
+            - mountPath: /var/ig/secrets/truststore
+              name: new-truststore
+              readOnly: true
+      initContainers:
+        - command:
+            - /home/forgerock/import-pem-certs.sh
+          env:
+            - name: TRUSTSTORE_PATH
+              value: /truststore/igtruststore
+            - name: TRUSTSTORE_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: IG_TRUSTSTORE_PASSWORD
+                  name: core-secrets
+            - name: IG_PEM_TRUSTSTORE
+              value: /var/run/secrets/truststore/ig-truststore.pem
+          image: ig
+          imagePullPolicy: Always
+          name: truststore-init
+          volumeMounts:
+            - mountPath: /truststore
+              name: new-truststore
+            - mountPath: /var/run/secrets/truststore
+              name: ig-truststore-pem
+      securityContext:
+        runAsGroup: 0
+        runAsUser: 11111
+      tolerations:
+        - effect: NoSchedule
+          key: kubernetes.io/arch
+          operator: Exists
+      volumes:
+        - emptyDir: {}
+          name: new-truststore
+        - name: ig-truststore-pem
+          secret:
+            optional: false
+            secretName: ig-truststore-pem
