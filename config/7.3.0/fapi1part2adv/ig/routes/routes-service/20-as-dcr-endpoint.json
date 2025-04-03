@@ -68,7 +68,6 @@
               "jwkSetService": "${heap['JwkSetService']}",
               "tlsTransportCertSecretId": "&{security.tlsTransportCertSecretId}",
               "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
-              "jwtSignatureValidator": "${heap['RsaJwtSignatureValidator']}",
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
               "trustedDirectoryService": "${heap['TrustedDirectoryService']}"
             }

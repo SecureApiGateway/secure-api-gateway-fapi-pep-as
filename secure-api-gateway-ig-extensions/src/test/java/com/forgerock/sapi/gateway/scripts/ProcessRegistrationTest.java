@@ -711,7 +711,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                  object(field("jwkSetService", "${heap['JwkSetService']}"),
                                         field("tlsTransportCertSecretId", "tls.cert.secret.id"),
                                         field("allowIgIssuedTestCerts", true),
-                                        field("jwtSignatureValidator", null),
                                         field("tokenEndpointAuthMethodsSupported", array("tls_client_auth")),
                                         field("trustedDirectoryService", "${heap['TrustedDirectoryService']}")))));
     }
@@ -722,7 +721,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                            field("args",
                                  object(field("jwkSetService", "${heap['JwkSetService']}"),
                                         field("allowIgIssuedTestCerts", false),
-                                        field("jwtSignatureValidator", null),
                                         field("tokenEndpointAuthMethodsSupported", array("tls_client_auth")),
                                         field("trustedDirectoryService", "${heap['TrustedDirectoryService']}")))));
     }
