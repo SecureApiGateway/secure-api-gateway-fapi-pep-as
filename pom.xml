@@ -20,13 +20,13 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.forgerock.sapi.gateway</groupId>
-    <artifactId>secure-api-gateway-core</artifactId>
+    <artifactId>secure-api-gateway-fapi-pep-as</artifactId>
     <version>4.0.5-SNAPSHOT</version>
 
     <packaging>pom</packaging>
-    <name>secure-api-gateway-core</name>
-    <description>Secure API Gateway Core components and plain_fapi deployment configuration</description>
-    <url>https://github.com/SecureApiGateway/secure-api-gateway-core.git</url>
+    <name>secure-api-gateway-fapi-pep-as</name>
+    <description>Secure API Gateway FAPI PEP AS components and plain_fapi deployment configuration</description>
+    <url>https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-as.git</url>
     <licenses>
         <license>
             <name>Apache License, Version 2.0</name>
@@ -36,7 +36,7 @@
 
     <modules>
         <module>secure-api-gateway-ig-extensions</module>
-        <module>secure-api-gateway-core-docker</module>
+        <module>secure-api-gateway-fapi-pep-as-docker</module>
     </modules>
 
     <parent>
@@ -74,7 +74,7 @@
     <scm>
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
-        <url>https://github.com/SecureApiGateway/secure-api-gateway-core.git</url>
+        <url>https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-as.git</url>
         <tag>HEAD</tag>
     </scm>
 

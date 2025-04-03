@@ -3,28 +3,28 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: ig
-    app.kubernetes.io/component: ig
-    app.kubernetes.io/instance: ig
+    app: fapi-pep-as
+    app.kubernetes.io/component: fapi-pep-as
+    app.kubernetes.io/instance: fapi-pep-as
     app.kubernetes.io/part-of: pingid
     tier: middle
-  name: ig
+  name: fapi-pep-as
   namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ig
-      app.kubernetes.io/component: ig
-      app.kubernetes.io/instance: ig
+      app: fapi-pep-as
+      app.kubernetes.io/component: fapi-pep-as
+      app.kubernetes.io/instance: fapi-pep-as
       app.kubernetes.io/part-of: pingid
       tier: middle
   template:
     metadata:
       labels:
-        app: ig
-        app.kubernetes.io/component: ig
-        app.kubernetes.io/instance: ig
+        app: fapi-pep-as
+        app.kubernetes.io/component: fapi-pep-as
+        app.kubernetes.io/instance: fapi-pep-as
         app.kubernetes.io/part-of: pingid
         tier: middle
     spec:
@@ -40,10 +40,10 @@ spec:
                   fieldPath: status.podIP
           envFrom:
             - secretRef:
-                name: core-secrets
+                name: as-sapig-secrets
             - configMapRef:
-                name: core-deployment-config
-          image: ig
+                name: as-sapig-deployment-config
+          image: fapi-pep-as
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
@@ -51,7 +51,7 @@ spec:
               port: 8080
             periodSeconds: 30
             timeoutSeconds: 5
-          name: ig
+          name: fapi-pep-as
           ports:
             - containerPort: 8080
           readinessProbe:
@@ -79,7 +79,7 @@ spec:
               valueFrom:
                 secretKeyRef:
                   key: IG_TRUSTSTORE_PASSWORD
-                  name: core-secrets
+                  name: as-sapig-secrets
             - name: IG_PEM_TRUSTSTORE
               value: /var/run/secrets/truststore/ig-truststore.pem
           image: ig

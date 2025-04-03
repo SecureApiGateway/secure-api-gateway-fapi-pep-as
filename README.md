@@ -1,5 +1,5 @@
-# Secure API Gateway Core
-This repo contains the core Secure API Gateway component, this component builds on top of ForgeRock Identity Gateway
+# Secure API Gateway FAPI PEP AS
+This repo contains the fapi-pep-as Secure API Gateway component, this component builds on top of ForgeRock Identity Gateway
 (IG) product to protect APIs to the [FAPI](https://fapi.openid.net/) standard.
 
 ## Gateway builds
@@ -20,10 +20,10 @@ Support for [FAPI 2.0](https://openid.bitbucket.io/fapi/fapi-2_0-security-profil
 ### Open Banking UK
 A SAPI-G build exists for Open Banking UK, see repo: https://github.com/SecureApiGateway/secure-api-gateway-ob-uk
 
-This build takes the core and adds support for Open Banking UK API endpoints, protected with FAPI 1.0 Part 2 Advanced.
+This build takes the fapi-pep-as and adds support for Open Banking UK API endpoints, protected with FAPI 1.0 Part 2 Advanced.
 
 ### Sub-modules
-## secure-api-gateway-core-docker
+## secure-api-gateway-fapi-pep-as-docker
 This module manages creating docker images for the gateway builds supported.
 
 See [README.md](secure-api-gateway-core-docker/README.md) for more details.

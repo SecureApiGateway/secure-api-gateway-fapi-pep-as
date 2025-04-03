@@ -5,7 +5,7 @@ metadata:
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream: "true"
-    nginx.ingress.kubernetes.io/auth-tls-secret: NAMESPACE_PLACEHOLDER/mtls-ca-certs
+    nginx.ingress.kubernetes.io/auth-tls-secret: NAMESPACE_PLACEHOLDER/fapi-pep-as-mtls-ca-certs
     nginx.ingress.kubernetes.io/auth-tls-verify-client: optional_no_ca
     nginx.ingress.kubernetes.io/large-client-header-buffers: "4 128k"
     nginx.ingress.kubernetes.io/proxy-body-size: 64m
@@ -14,7 +14,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffers: 4 256k
     nginx.ingress.kubernetes.io/proxy-busy-buffers_size: 256k
     nginx.ingress.kubernetes.io/error-log-level: "debug"
-  name: mtls
+  name: as-mtls
 spec:
   ingressClassName: nginx
   rules:
@@ -23,28 +23,28 @@ spec:
         paths:
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /am/oauth2/realms/root/realms/alpha/access_token
             pathType: Exact
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /am/oauth2/realms/root/realms/alpha/register
             pathType: Prefix
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /am/oauth2/realms/root/realms/alpha/par
             pathType: Prefix
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /rs/
@@ -52,7 +52,7 @@ spec:
   tls:
     - hosts:
         - MTLS_FQDN_PLACEHOLDER
-      secretName: mtls-tls-cert
+      secretName: fapi-pep-as-mtls-tls-cert
 ---
 # Ingress for access to routes protected with TLS by a ForgeRock cert
 apiVersion: networking.k8s.io/v1
@@ -67,7 +67,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffers: 4 256k
     nginx.ingress.kubernetes.io/proxy-busy-buffers_size: 256k
     nginx.ingress.kubernetes.io/error-log-level: "debug"
-  name: sapig
+  name: as-sapig
 spec:
   ingressClassName: nginx
   rules:
@@ -76,7 +76,7 @@ spec:
         paths:
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /
@@ -84,13 +84,13 @@ spec:
   tls:
     - hosts:
         - FQDN_PLACEHOLDER
-      secretName: sapig-tls-cert
+      secretName: fapi-pep-as-tls-cert
 ---
 # Ingress for dev only, provides access to the IG Studio UI
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: ig-web
+  name: as-ig-studio
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
     nginx.ingress.kubernetes.io/rewrite-target: "/$2"
@@ -99,14 +99,14 @@ spec:
   tls:
     - hosts:
         - FQDN_PLACEHOLDER
-      secretName: sapig-tls-cert
+      secretName: fapi-pep-as-tls-cert
   rules:
     - host: FQDN_PLACEHOLDER
       http:
         paths:
           - backend:
               service:
-                name: ig
+                name: fapi-pep-as
                 port:
                   number: 80
             path: /ig(/|$)(.*)

@@ -17,10 +17,10 @@ ifndef dockerArgs
 	$(eval dockerArgs=)
 endif
 	@if [ "${setlatest}" = "true" ]; then \
-		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
+		docker build secure-api-gateway-fapi-pep-as-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG} -t ${repo}/securebanking/${service}:latest; \
 		docker push ${repo}/securebanking/${service} --all-tags; \
     else \
-   		docker build secure-api-gateway-core-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG}; \
+   		docker build secure-api-gateway-fapi-pep-as-docker ${dockerArgs} -t ${repo}/securebanking/${service}:${TAG}; \
    		docker push ${repo}/securebanking/${service}:${TAG}; \
    	fi;
 conf:
@@ -45,9 +45,9 @@ endif
 	mvn -U install ${mavenArgs};
 
 copy-java-dependencies:
-	mvn -U dependency:copy-dependencies --projects secure-api-gateway-core-docker -DoutputDirectory=./7.3.0/ig/lib
+	mvn -U dependency:copy-dependencies --projects secure-api-gateway-fapi-pep-as-docker -DoutputDirectory=./7.3.0/ig/lib
 
 clean:
 	mvn clean
 	./bin/config.sh clean
-	rm -rf secure-api-gateway-core-docker/7.3.0/ig/lib
+	rm -rf secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/lib
