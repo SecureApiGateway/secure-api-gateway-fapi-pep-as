@@ -19,10 +19,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import java.util.LinkedHashMap;
 
+import org.forgerock.openig.fapi.dcr.common.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
 
 class ContentTypeFormatterHtmlTest {
 
@@ -36,7 +35,7 @@ class ContentTypeFormatterHtmlTest {
     void success_getFormattedResponse() {
         // Given
         LinkedHashMap<String, String> errorMap = new LinkedHashMap<>();
-        errorMap.put("error_code", DCRErrorCode.INVALID_CLIENT_METADATA.getCode());
+        errorMap.put("error_code", ErrorCode.INVALID_CLIENT_METADATA.getCode());
         errorMap.put("error_description", "registration request must hold software_statement assert");
         // When
         String entity = formatter.getFormattedResponse(errorMap);

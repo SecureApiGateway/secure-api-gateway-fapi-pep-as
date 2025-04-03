@@ -19,10 +19,9 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 
 import java.util.Map;
 
+import org.forgerock.openig.fapi.dcr.common.ErrorCode;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-
-import com.forgerock.sapi.gateway.dcr.common.DCRErrorCode;
 
 class ContentTypeFormatterJsonTest {
 
@@ -36,7 +35,7 @@ class ContentTypeFormatterJsonTest {
     @Test
     public void success_getFormattedResponse(){
         // Given
-        Map<String, String> errorFields = Map.of("error_code", DCRErrorCode.INVALID_CLIENT_METADATA.getCode());
+        Map<String, String> errorFields = Map.of("error_code", ErrorCode.INVALID_CLIENT_METADATA.getCode());
         // When
         String json = formatter.getFormattedResponse(errorFields);
         // Then

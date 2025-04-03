@@ -15,6 +15,7 @@
  */
 package com.forgerock.sapi.gateway.mtls;
 
+import static com.forgerock.sapi.gateway.util.CryptoUtils.createRequestWithCertHeader;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
@@ -46,6 +47,8 @@ import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.mtls.CertificateRetriever;
+import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
@@ -278,7 +281,7 @@ public class ResponsePathTransportCertValidationFilterTest {
                                            field("certificateRetriever", "headerCertificateRetriever")));
             Filter filter = (Filter) heaplet.create(Name.of("test"), config, heap);
             TestHandler nextHandler = createHandlerWithValidResponse();
-            Request request = HeaderCertificateRetrieverTest.createRequestWithCertHeader(clientCert, certHeader);
+            Request request = createRequestWithCertHeader(clientCert, certHeader);
             // When
             Response response = filter.filter(attrContextWithApiClient(), request, nextHandler)
                                       .getOrThrowIfInterrupted();

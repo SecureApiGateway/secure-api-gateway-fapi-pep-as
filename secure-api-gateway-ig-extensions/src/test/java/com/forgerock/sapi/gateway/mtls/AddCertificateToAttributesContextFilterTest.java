@@ -16,7 +16,7 @@
 package com.forgerock.sapi.gateway.mtls;
 
 import static com.forgerock.sapi.gateway.mtls.AddCertificateToAttributesContextFilter.DEFAULT_CERTIFICATE_ATTRIBUTE;
-import static com.forgerock.sapi.gateway.mtls.HeaderCertificateRetrieverTest.createRequestWithCertHeader;
+import static com.forgerock.sapi.gateway.util.CryptoUtils.createRequestWithCertHeader;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.generateRsaKeyPair;
 import static com.forgerock.sapi.gateway.util.CryptoUtils.generateX509Cert;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -25,15 +25,20 @@ import static org.forgerock.json.JsonValue.object;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.concurrent.ExecutionException;
 
+import org.forgerock.http.header.GenericHeader;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.json.JsonValueException;
+import org.forgerock.openig.fapi.mtls.CertificateRetriever;
+import org.forgerock.openig.fapi.mtls.HeaderCertificateRetriever;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -49,10 +54,10 @@ import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.forgerock.sapi.gateway.mtls.AddCertificateToAttributesContextFilter.Heaplet;
+import com.forgerock.sapi.gateway.util.CryptoUtils;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
 class AddCertificateToAttributesContextFilterTest {
-
     private final X509Certificate testCertificate = generateX509Cert(generateRsaKeyPair(), "CN=test");
 
     private static class SingletonCertificateRetriever implements CertificateRetriever {
@@ -179,6 +184,7 @@ class AddCertificateToAttributesContextFilterTest {
             final AddCertificateToAttributesContextFilter filter = (AddCertificateToAttributesContextFilter) new Heaplet().create(Name.of("test"), filterConfig, heap);
             testCertificateIsAddedToAttributesContext(testCertificate, customCertAttributeName, filter, createRequestWithCertHeader(testCertificate));
         }
+
     }
 
 }
