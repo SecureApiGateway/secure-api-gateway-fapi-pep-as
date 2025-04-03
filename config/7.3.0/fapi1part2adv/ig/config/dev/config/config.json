@@ -103,32 +103,6 @@
       "capture" : [ "response", "request" ]
     },
     {
-      "name": "ValidateApiClientMtlsCertChain",
-      "type": "ChainOfFilters",
-      "comment": "This filter chain validates the ApiClient's MTLS cert using the Trusted Directory, it first fetches all of the resources it needs to perform the validation",
-      "config" : {
-        "filters": [
-          {
-            "comment": "Add ApiClient data to the context attributes.apiClient",
-            "name": "FetchApiClientFilter",
-            "type": "FetchApiClientFilter",
-            "config": {
-              "apiClientService": "IdmApiClientService"
-            }
-          },
-          {
-            "comment": "Validate the MTLS transport cert",
-            "name": "TransportCertValidationFilter",
-            "type": "TransportCertValidationFilter",
-            "config": {
-              "certificateRetriever": "HeaderCertificateRetriever",
-              "transportCertValidator": "TransportCertValidator"
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "SBATFapiInteractionFilterChain",
       "type": "ChainOfFilters",
       "comment": "This filter chain will set the x-fapi-interaction-id (if not provided in the request), and also set the transaction context to the x-fapi-interaction-id value. This means that if the 'TransactionIdOutboundFilter' is specified on any handlers used by the chain the x-fapi-interaction-id value will be passed onward in the X-ForgeRock-TransactionId header",
@@ -175,43 +149,10 @@
       }
     },
     {
-      "name" : "AmService",
-      "type" : "AmService",
-      "config" : {
-        "url" : "https://&{identity.platform.fqdn}/am",
-        "realm" : "/&{am.realm}",
-        "agent" : {
-          "username" : "ig-agent",
-          "passwordSecretId" : "ig.agent.password"
-        },
-        "secretsProvider": "SystemAndEnvSecretStore-IAM",
-        "sessionCache" : {
-          "enabled" : false
-        },
-        "notifications" : {
-          "enabled" : false
-        }
-      }
-    },
-    {
       "name": "SystemAndEnvSecretStore-IAM",
       "type": "SystemAndEnvSecretStore",
       "config": {
         "format": "PLAIN"
-      }
-    },
-    {
-      "name": "SecretsProvider-AmJWK",
-      "type": "SecretsProvider",
-      "config": {
-        "stores": [
-          {
-            "type": "JwkSetSecretStore",
-            "config": {
-              "jwkUrl": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/connect/jwk_uri"
-            }
-          }
-        ]
       }
     },
     {
@@ -249,24 +190,6 @@
           }
         ],
         "handler": "ForgeRockClientHandler"
-      }
-    },
-    {
-      "name": "SecretKeyPropertyFormat-Gateway",
-      "type": "SecretKeyPropertyFormat",
-      "config": {
-        "format": "PLAIN",
-        "algorithm": "AES"
-      }
-    },
-    {
-      "name": "SystemAndEnvSecretStore-Gateway",
-      "type": "SystemAndEnvSecretStore",
-      "config": {
-        "mappings": [{
-          "secretId": "ig.gw.secret",
-          "format": "SecretKeyPropertyFormat-Gateway"
-        }]
       }
     },
     {

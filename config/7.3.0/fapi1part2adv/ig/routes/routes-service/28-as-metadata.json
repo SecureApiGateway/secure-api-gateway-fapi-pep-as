@@ -18,8 +18,8 @@
             "args": {
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
               "mtlsEndpoints": ["registration_endpoint", "token_endpoint", "pushed_authorization_request_endpoint"],
-              "igHost": "&{ig.fqdn}",
-              "mtlsHost": "&{mtls.fqdn}"
+              "igHost": "&{as.fqdn}",
+              "mtlsHost": "&{as.mtls.fqdn}"
             }
           }
         },
@@ -31,7 +31,7 @@
             "messageType" : "REQUEST",
             "remove" : [ "host", "X-Forwarded-Host" ],
             "add" : {
-              "X-Forwarded-Host" : [ "&{ig.fqdn}" ]
+              "X-Forwarded-Host" : [ "&{as.fqdn}" ]
             }
           }
         }

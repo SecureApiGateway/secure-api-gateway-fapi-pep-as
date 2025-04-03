@@ -12,5 +12,5 @@ jobs:
     uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-code-scanning.yml@main
     secrets: inherit
     with:
-      componentName: secure-api-gateway-core
+      componentName: secure-api-gateway-fapi-pep-as
       language: java-kotlin

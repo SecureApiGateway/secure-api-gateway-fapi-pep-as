@@ -2,13 +2,13 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: core-deployment-config
+  name: as-sapig-deployment-config
 data:
   #--Fully Qualified Domain Names--
   BASE_FQDN: "dev.forgerock.financial"
   IDENTITY_PLATFORM_FQDN: "iam.dev.forgerock.financial"
-  IG_FQDN: "sapig.dev.forgerock.financial"
-  MTLS_FQDN: "mtls.sapig.dev.forgerock.financial"
+  AS_FQDN: "as.sapig.dev.forgerock.financial"
+  AS_MTLS_FQDN: "mtls.sapig.dev.forgerock.financial"
   TRUSTEDDIR_FQDN: "test-trusted-directory.dev.forgerock.financial"
   # --Environment Settings for SAPIG & Cloud Platform--
   # ---SAPIG---

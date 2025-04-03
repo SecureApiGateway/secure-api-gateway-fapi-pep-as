@@ -20,12 +20,12 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.forgerock.sapi.gateway</groupId>
-        <artifactId>secure-api-gateway-core</artifactId>
+        <artifactId>secure-api-gateway-fapi-pep-as</artifactId>
         <version>4.0.5-SNAPSHOT</version>
         <relativePath>../pom.xml</relativePath>
     </parent>
 
-    <artifactId>secure-api-gateway-core-docker</artifactId>
+    <artifactId>secure-api-gateway-fapi-pep-as-docker</artifactId>
     <packaging>pom</packaging>
 
     <properties>

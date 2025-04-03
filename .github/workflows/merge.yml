@@ -13,5 +13,5 @@ jobs:
     secrets: inherit
     with:
       componentBranch: ${{ github.head_ref || github.ref_name }}
-      componentName: secure-api-gateway-core
+      componentName: secure-api-gateway-fapi-pep-as
       dockerTag: $(echo ${{ github.sha }} | cut -c1-7)

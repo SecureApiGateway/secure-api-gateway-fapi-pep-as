@@ -17,7 +17,7 @@ jobs:
     uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-release.yml@main
     secrets: inherit
     with:
-      componentName: secure-api-gateway-core
+      componentName: secure-api-gateway-fapi-pep-as
       dockerTag: $(echo ${{ github.sha }} | cut -c1-7)
       releaseNotes: ${{ inputs.releaseNotes }}
       releaseVersion: ${{ inputs.releaseVersion }}
