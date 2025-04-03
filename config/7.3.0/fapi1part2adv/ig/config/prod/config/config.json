@@ -366,10 +366,6 @@
       }
     },
     {
-      "name": "RsaJwtSignatureValidator",
-      "type": "RsaJwtSignatureValidator"
-    },
-    {
       "name": "TransportCertValidator",
       "type": "DefaultTransportCertValidator",
       "config": {

@@ -43,7 +43,8 @@
           "type": "RegistrationRequestBuilderFilter",
           "config": {
             "trustedDirectoryService": "TrustedDirectoryService",
-            "jwkSetService": "JwkSetService"
+            "jwkSetService": "JwkSetService",
+            "supportedSigningAlgorithms": ["PS256"]
           }
         },
         {
@@ -65,8 +66,8 @@
             "file": "ProcessRegistration.groovy",
             "args": {
               "jwkSetService": "${heap['JwkSetService']}",
+              "tlsTransportCertSecretId": "&{security.tlsTransportCertSecretId}",
               "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
-              "jwtSignatureValidator": "${heap['RsaJwtSignatureValidator']}",
               "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
               "trustedDirectoryService": "${heap['TrustedDirectoryService']}"
             }
