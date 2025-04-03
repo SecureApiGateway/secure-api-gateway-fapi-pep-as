@@ -17,8 +17,8 @@ import org.forgerock.openig.fapi.dcr.SoftwareStatement
 import org.forgerock.secrets.NoSuchSecretException
 import org.forgerock.secrets.Purpose
 import org.forgerock.secrets.SecretConstraint
+import org.forgerock.secrets.keys.CertificateVerificationKey
 import org.forgerock.secrets.keys.CryptoKey
-import org.forgerock.secrets.keys.VerificationKey
 import org.forgerock.util.promise.NeverThrowsException
 
 import com.forgerock.securebanking.uk.gateway.jwks.*
@@ -346,27 +346,20 @@ private static Promise<Response, NeverThrowsException> addSoftwareStatementToRes
                     return response
                 })
     }
-    return newResponsePromise(response)
+    return response
 }
 
 private Promise<Void, NoSuchSecretException> testTlsClientCertInJwksUri(X509Certificate tlsClientCert, URI jwksUri) {
-    logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks_endpoint: {}", jwksUri)
-    // TODO: This should be refactored to use the DefaultTransportCertValidator
+    logger.debug(SCRIPT_NAME + "Checking cert against ssa software_jwks_endpoint: {}", URI)
     return jwkSetService.getJwkSetSecretStore(jwksUri)
                         .thenAsync(jwkSetSecretStore -> {
-                            Purpose<VerificationKey> tlsPurpose =
-                                    purpose(tlsTransportCertSecretId, VerificationKey.class)
+                            Purpose<CertificateVerificationKey> tlsPurpose =
+                                    purpose(KEY_USE_TLS, CertificateVerificationKey.class)
                                             .withConstraints(matchesX509Cert(tlsClientCert))
                             return jwkSetSecretStore.getValid(tlsPurpose)
-                                    .then(secrets -> {
-                                        if (!secrets.findAny()) {
-                                            throw new NoSuchSecretException(tlsPurpose)
-                                        }
-                                        return secrets;
-                                    })
-                                    // We only care that it's present - Void
-                                    .thenDiscardResult()
                         })
+                        // We only care that it's present - Void
+                        .thenDiscardResult()
 }
 
 private static SecretConstraint<CryptoKey> matchesX509Cert(final X509Certificate tlsClientCert) {
