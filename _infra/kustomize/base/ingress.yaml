@@ -42,13 +42,6 @@ spec:
                   number: 80
             path: /am/oauth2/realms/root/realms/alpha/par
             pathType: Prefix
-          - backend:
-              service:
-                name: fapi-pep-as
-                port:
-                  number: 80
-            path: /rs/
-            pathType: Prefix
   tls:
     - hosts:
         - MTLS_FQDN_PLACEHOLDER
