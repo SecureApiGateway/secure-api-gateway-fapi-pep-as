@@ -1,5 +1,5 @@
 repo := europe-west4-docker.pkg.dev/sbat-gcr-develop/sapig-docker-artifact
-service := sapig-core
+service := fapi-pep-as
 
 docker: build-java copy-java-dependencies conf
 ifndef tag
