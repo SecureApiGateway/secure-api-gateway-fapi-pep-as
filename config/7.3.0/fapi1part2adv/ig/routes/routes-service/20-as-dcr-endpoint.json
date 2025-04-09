@@ -34,7 +34,7 @@
           "name": "FapiContextInitializerFilter",
           "type": "FapiContextInitializerFilter",
           "config": {
-            "certificateHeaderName": "ssl-client-cert"
+            "tlsCertificateHeaderName": "ssl-client-cert"
           }
         },
         {
