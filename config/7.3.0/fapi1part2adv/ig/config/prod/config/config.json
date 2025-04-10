@@ -279,7 +279,7 @@
               {
                 "type": "JwkSetSecretStore",
                 "config": {
-                  "jwkUrl": "https://&{trusteddir.fqdn}/jwkms/testdirectory/jwks",
+                  "jwkUrl": "https://&{ig.test.directory.fqdn}/jwkms/testdirectory/jwks",
                   "handler": "OBClientHandler"
                 }
               }
