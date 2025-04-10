@@ -1,0 +1,41 @@
+---
+apiVersion: {{ .Values.configmap.apiVersion }}
+kind: ConfigMap
+metadata:
+  name: as-sapig-deployment-config
+data:
+  BASE_FQDN: {{ .Values.configmap.baseFQDN }}
+  IDENTITY_PLATFORM_FQDN: {{ .Values.configmap.identityPlatformFQDN }}
+  AS_FQDN: {{ .Values.configmap.asFQDN }}
+  AS_MTLS_FQDN: {{ .Values.configmap.asMtlsFQDN }}
+  # --Environment Settings for SAPIG & Cloud Platform--
+  # ---SAPIG---
+  # core: base sapig
+  # ob: Open Banking specification of sapig
+  SAPIG_TYPE: {{ .Values.configmap.sapigType }}
+  # ---Cloud---
+  # CDK value: (Cloud Developer's Kit) development identity platform
+  # CDM value: CDM (Cloud Deployment Model)
+  # FIDC value: FIDC (Forgerock Identity Cloud) identity cloud platform
+  CLOUD_TYPE: {{ .Values.configmap.cloudType }}
+  #--Additional Config--
+  AM_REALM: {{ .Values.configmap.amRealm }}
+  CERT_ISSUER: {{ .Values.configmap.certIssuer }}
+  # Connection settings for the IG hosted data repo
+  GATEWAY_DATA_REPO_URI: {{ .Values.configmap.gatewayDataRepoURI }}
+  # Wherever to use additional TTD other than OB
+  IG_TEST_DIRECTORY_ENABLED: {{ .Values.configmap.igTestDirectoryEnabled | quote }}
+  # Where to store the IG Truststore
+  IG_TRUSTSTORE_PATH: {{ .Values.configmap.igTruststorePath }}
+  TEST_DIRECTORY_FQDN: {{ .Values.configmap.testDirectoryFQDN }}
+  USER_OBJECT: {{ .Values.configmap.userObject }}
+---
+apiVersion: {{ .Values.configmap.apiVersion }}
+kind: ConfigMap
+metadata:
+  name: as-sapig-aic-deployment-config
+data:
+  #--AIC Specific--
+  IDENTITY_DEFAULT_USER_AUTHENTICATION_SERVICE: {{ .Values.configmap.AIC.identityDefaultUserAuthenticationService }}
+  IDENTITY_GOOGLE_SECRET_STORE_NAME: {{ .Values.configmap.AIC.identityGoogleSecretStoreName }}
+  IDENTITY_GOOGLE_SECRET_STORE_OAUTH2_CA_CERTS_SECRET_NAME: {{ .Values.configmap.AIC.identityGoogleSecretStoreOAuth2CACertsSecretName }}

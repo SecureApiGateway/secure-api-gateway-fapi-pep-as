@@ -1,0 +1,106 @@
+# Ingress for routes requiring MTLS with Open Banking Directory issued certs
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/auth-tls-pass-certificate-to-upstream: "true"
+    nginx.ingress.kubernetes.io/auth-tls-secret: {{ .Release.Namespace }}/{{ .Values.ingress.asMtls.annotations.authTlsSecret }}
+    nginx.ingress.kubernetes.io/auth-tls-verify-client: "optional_no_ca"
+    nginx.ingress.kubernetes.io/large-client-header-buffers: "4 128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffers: "4 256k"
+    nginx.ingress.kubernetes.io/proxy-busy-buffers_size: "256k"
+    nginx.ingress.kubernetes.io/error-log-level: "debug"
+  name: as-mtls
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.ingress.asMtls.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/access_token
+            pathType: Exact
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/register
+            pathType: Prefix
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/par
+            pathType: Prefix
+  tls:
+    - hosts:
+        - {{ .Values.ingress.asMtls.tls.host }}
+      secretName: {{ .Values.ingress.asMtls.tls.secretName }}
+---
+# Ingress for access to routes protected with TLS by a ForgeRock cert
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/large-client-header-buffers: "4 128k"
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/proxy-buffer-size: "128k"
+    nginx.ingress.kubernetes.io/proxy-buffering: "on"
+    nginx.ingress.kubernetes.io/proxy-buffers: "4 256k"
+    nginx.ingress.kubernetes.io/proxy-busy-buffers_size: "256k"
+    nginx.ingress.kubernetes.io/error-log-level: "debug"
+  name: as-sapig
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.ingress.asSapig.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - {{ .Values.ingress.asSapig.tls.host }}
+      secretName: {{ .Values.ingress.asSapig.tls.secretName}}
+---
+# Ingress for dev only, provides access to the IG Studio UI
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
+  name: as-ig-studio
+spec:
+  ingressClassName: nginx
+  rules:
+    - host: {{ .Values.ingress.asIGSstudio.host }}
+      http:
+        paths:
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /ig(/|$)(.*)
+            pathType: ImplementationSpecific
+  tls:
+    - hosts:
+        - {{ .Values.ingress.asIGSstudio.tls.host }}
+      secretName: {{ .Values.ingress.asIGSstudio.tls.secretName }}
