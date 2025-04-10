@@ -1,0 +1,118 @@
+---
+configmap:
+  # Version of the Kubernetes API to use
+  apiVersion: "v1"
+  amRealm: "alpha"
+  asFQDN: "as-sapig.dev-cdk-core.forgerock.financial"
+  asMtlsFQDN: "as-mtls.sapig.dev-cdk-core.forgerock.financial"
+  baseFQDN: "dev-cdk-core.forgerock.financial"
+  certIssuer: "null-issuer"
+  cloudType: "CDK"
+  gatewayDataRepoURI: "http://ig:80"
+  identityPlatformFQDN: "iam.dev-cdk-core.forgerock.financial"
+  igTestDirectoryEnabled: "true"
+  igTruststorePath: "/secrets/truststore/igtruststore"
+  sapigType: "core"
+  testDirectoryFQDN: "test-trusted-directory.dev-cdk-core.forgerock.financial"
+  userObject: "user"
+  AIC:
+    identityDefaultUserAuthenticationService: "PasswordGrant"
+    identityGoogleSecretStoreName: "ESV"
+    identityGoogleSecretStoreOAuth2CACertsSecretName: "esv-sapig-core-am-oauth2-ca-certs"
+
+deployment:
+  # Affinity Configuration
+  affinity: {}
+  # Version of the Kubernetes API to use
+  apiVersion: "apps/v1"
+  # Container port exposed by a pod or deployment
+  containerPort: 8080
+  image:
+    # Repo And Tag are not provided here as the value for the repo will be unique for each user/customer as they will be building their own docker images and push to their own Container Registries 
+    # The tag will use the .AppVersion as the default, meaning that customers who want to install V1 will get V1.0.0 of the software - you may supply a hard coded version if required  
+    # The values for each of these should be supplied in the .Values folder of an individual deployment within the specification repository - See https://github.com/SecureApiGateway/SecureApiGateway/wiki/Deployment#repositories
+    # repo:
+    # tag:
+    # We want to pull the image down each time we do a deployment, required if using 'latest' tag
+    imagePullPolicy: Always
+  # Additonal Java config - Needs further explanation
+  # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ for further info on Liveness and Readiness Probes
+  # Config for the liveness probe
+  livenessProbe:
+    initialDelaySeconds: 160
+    failureThreshold: 5
+    path: "/kube/liveness"
+    periodSeconds: 5
+    successThreshold: 1
+    timeoutSeconds: 5
+  # RS Connects to the mongodb instance
+  mongodb:
+    # Full name of the mongodb deployment
+    host: "mongodb"
+  # Config for the readiness probe
+  readinessProbe:
+    failureThreshold: 3
+    periodSeconds: 5
+    path: "/kube/readiness"
+    successThreshold: 1
+    timeoutSeconds: 5
+  # How many pods are to run in the deployment
+  replicas: 1
+  # See https://kubernetes.io/docs/concepts/configuration/manage-resources-containers/ 
+  # Resource Requests and Limits
+  resources:
+    limits:
+      memory: "512Mi"
+    requests:
+      cpu: "200m"
+      memory: "512Mi"
+  # See https://kubernetes.io/docs/tasks/manage-daemon/update-daemon-set/
+  # Allows you to have multiple versions of the deployment in the same cluster, kubernetes will create new pods and scale down old when performing an upgrade 
+  # Depending on the values set below. Other strategyTypes are: Recreate | Blue/ Green (or Red / Black) deployments | Canary | Dark deployments
+  rollingUpdate:
+    maxSurge: "50%"
+    maxUnavailable: "25%"
+  strategyType: "RollingUpdate"
+
+ingress:
+  asMtls:
+    annotations:
+      authTlsSecret: fapi-pep-as-mtls-ca-certs
+    host: "replace-me"
+    tls:
+      host: "replace-me"
+      secretName: fapi-pep-as-mtls-tls-cert
+  asSapig:
+    host: "replace-me"
+    tls:
+      host: "replace-me"
+      secretName: fapi-pep-as-tls-cert
+  asIGSstudio:
+    host: "replace-me"
+    tls:
+      host: "replace-me"
+      secretName: fapi-pep-as-tls-cert
+
+secrets:
+  igAgentID: "replace-me"
+  igAgentPassword: "replace-me"
+  igClientID: "replace-me"
+  igClientSecret: "replace-me"
+  igIDMPassword: "replace-me"
+  igIDMUser: "replace-me"
+  igMetricsPassword: "replace-me"
+  igMetricsUsername: "replace-me"
+  igTruststorePassword: "replace-me"
+
+service:
+  # Version of the Kubernetes API to use
+  apiVersion: "v1"
+  # Container port exposed by a pod or deployment
+  port: 80
+  # Protocol the service will use
+  protocol: "TCP"
+  # Host Machine port that traffic is diverted too - in this case the nodes
+  targetPort: 8080
+  # See - https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
+  # Type of service to create. Other types are: NodePort | LoadBalancer | ExternalName
+  type: "ClusterIP"

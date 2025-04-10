@@ -5,7 +5,7 @@ metadata:
   name: as-sapig-deployment-config
 data:
   #--Fully Qualified Domain Names--
-  BASE_FQDN: "dev.forgerock.financial"
+  BASE_FQDN: "dev-cdk-core.forgerock.financial"
   IDENTITY_PLATFORM_FQDN: "iam.dev.forgerock.financial"
   AS_FQDN: "as.sapig.dev.forgerock.financial"
   AS_MTLS_FQDN: "mtls.sapig.dev.forgerock.financial"

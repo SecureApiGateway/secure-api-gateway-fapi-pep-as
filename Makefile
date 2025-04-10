@@ -1,3 +1,4 @@
+name := secure-api-gateway-fapi-pep-as
 repo := europe-west4-docker.pkg.dev/sbat-gcr-develop/sapig-docker-artifact
 service := fapi-pep-as
 
@@ -51,3 +52,11 @@ clean:
 	mvn clean
 	./bin/config.sh clean
 	rm -rf secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/lib
+
+package_helm:
+ifndef version
+	$(error A version must be supplied, Eg. make helm version=1.0.0)
+endif
+	helm dependency update _infra/helm/${name}
+	helm template _infra/helm/${name}
+	helm package _infra/helm/${name} --version ${version} --app-version ${version}
