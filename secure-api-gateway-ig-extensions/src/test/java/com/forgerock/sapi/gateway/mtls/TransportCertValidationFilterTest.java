@@ -133,7 +133,7 @@ class TransportCertValidationFilterTest {
         assertThatThrownBy(() -> transportCertValidationFilter.filter(context, request, nextHandler)
                                                          .getOrThrowIfInterrupted())
                 .isInstanceOf(IllegalStateException.class)
-                .hasMessage("Required attribute: \"apiClient\" not found in context");
+                .hasMessage("apiClient not found in request context");
     }
 
     @Test
@@ -215,9 +215,7 @@ class TransportCertValidationFilterTest {
     private static Context fapiContext(X509Certificate certificate, ApiClient apiClient) {
         Context transactionIdContext = new TransactionIdContext(new RootContext(), new TransactionId("1234"));
         AttributesContext attributesContext = new AttributesContext(transactionIdContext);
-        attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
-        return new FapiContext(attributesContext)
-                .setClientCertificates(certificate);
+        return new FapiContext(attributesContext).setClientCertificates(certificate).setApiClient(apiClient);
     }
 
     private static void assertErrorResponse(Response response,

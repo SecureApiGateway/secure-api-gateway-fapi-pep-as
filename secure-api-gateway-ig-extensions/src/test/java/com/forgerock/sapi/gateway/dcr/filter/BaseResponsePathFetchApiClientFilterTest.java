@@ -37,7 +37,9 @@ import org.forgerock.json.JsonValue;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.services.context.AttributesContext;
+import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
@@ -61,8 +63,8 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     protected static final String CLIENT_ID = "9999";
 
-    private static AttributesContext createContext() {
-        return new AttributesContext(new RootContext("root"));
+    private static FapiContext createContext() {
+        return new FapiContext(new AttributesContext(new RootContext("root")));
     }
 
     protected abstract Filter createFilter();
@@ -76,7 +78,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         // Mock the success response for the ApiClientService call
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
 
-        final Consumer<AttributesContext> successBehaviourValidator = ctxt -> {
+        final Consumer<FapiContext> successBehaviourValidator = ctxt -> {
             // Verify that the context was updated with the apiClient data
             final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
             assertNotNull(apiClient, "apiClient was not found in context");
@@ -85,20 +87,20 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         callFilter(filter, successBehaviourValidator);
     }
 
-    private void callFilter(Filter filter, Consumer<AttributesContext> contextValidator) throws Exception {
-        final AttributesContext attributesContext = BaseResponsePathFetchApiClientFilterTest.createContext();
+    private void callFilter(Filter filter, Consumer<FapiContext> contextValidator) throws Exception {
+        final FapiContext fapiContext = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final Response upstreamResponse = createValidUpstreamResponse();
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(upstreamResponse);
         final Request request = createRequest();
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(attributesContext, request, upstreamHandler);
+        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(fapiContext, request, upstreamHandler);
 
         final Response response = responsePromise.getOrThrow(1L, TimeUnit.SECONDS);
         // Validate the filter returns the upstream response unaltered on success paths
         assertThat(response).isEqualTo(upstreamResponse);
 
         // Validate the context
-        contextValidator.accept(attributesContext);
+        contextValidator.accept(fapiContext);
     }
 
     protected abstract Request createRequest();
@@ -107,7 +109,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     @Test
     void doesNotFetchApiClientForErrorResponses() throws InterruptedException, TimeoutException {
-        final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(),
                                                                                               new FixedResponseHandler(new Response(Status.BAD_GATEWAY)));
@@ -119,7 +121,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     }
 
     void returnsErrorResponseWhenClientIdParamNotFound(Request request, Response upstreamResponse) throws Exception {
-        final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         request.setUri("/authorize");
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(upstreamResponse);
@@ -138,7 +140,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(ApiClientServiceException.ErrorCode.SERVER_ERROR, "Unexpected error")));
 
-        final AttributesContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);
@@ -148,8 +150,8 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         verifyApiClientNotInContext(context);
     }
 
-    private static void verifyApiClientNotInContext(AttributesContext context) {
-        assertThrows(IllegalStateException.class, () -> FetchApiClientFilter.getApiClientFromContext(context));
+    private static void verifyApiClientNotInContext(Context context) {
+        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
     }
 
     @ParameterizedTest
@@ -160,7 +162,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
                 newExceptionPromise(new ApiClientServiceException(errorCode,
                                                                   "ApiClient " + CLIENT_ID + " does not exist")));
 
-        final AttributesContext context = createContext();
+        final FapiContext context = createContext();
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
 
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);

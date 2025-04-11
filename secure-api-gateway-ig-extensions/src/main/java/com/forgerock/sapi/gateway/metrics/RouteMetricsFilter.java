@@ -30,6 +30,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
@@ -130,8 +131,7 @@ public class RouteMetricsFilter implements Filter {
     }
 
     private static ApiClient getApiClientFromContext(Context context) {
-        return ContextUtils.getAttributeAsType(context, FetchApiClientFilter.API_CLIENT_ATTR_KEY, ApiClient.class)
-                           .orElse(null);
+        return context.asContext(FapiContext.class).getApiClient();
     }
 
     private Promise<Map<String, Object>, NeverThrowsException> getRouteMetricsContext(Context context, Request request) {

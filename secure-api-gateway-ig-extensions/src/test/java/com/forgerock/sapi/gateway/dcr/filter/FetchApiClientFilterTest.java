@@ -45,6 +45,7 @@ import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.handler.Handlers;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
@@ -102,7 +103,7 @@ class FetchApiClientFilterTest {
         // Mock the success response for the ApiClientService call
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
 
-        final BiConsumer<Response, AttributesContext> successBehaviourValidator = (response, ctxt) -> {
+        final BiConsumer<Response, FapiContext> successBehaviourValidator = (response, ctxt) -> {
             // Verify we hit the end of the chain and got the NO_CONTENT response
             assertEquals(Status.NO_CONTENT, response.getStatus());
 
@@ -119,9 +120,9 @@ class FetchApiClientFilterTest {
     }
 
     private static void callFilter(AccessTokenInfo accessToken, FetchApiClientFilter filter,
-                                   BiConsumer<Response, AttributesContext> responseAndContextValidator) throws Exception {
-        final AttributesContext attributesContext = new AttributesContext(new RootContext("root"));
-        final OAuth2Context oauth2Context = new OAuth2Context(attributesContext, accessToken);
+                                   BiConsumer<Response, FapiContext> responseAndContextValidator) throws Exception {
+        final FapiContext fapiContext = new FapiContext(new AttributesContext(new RootContext("root")));
+        final OAuth2Context oauth2Context = new OAuth2Context(fapiContext, accessToken);
 
         // This is the next handler called after the FetchApiClientFilter
         final Handler endOfFilterChainHandler = Handlers.NO_CONTENT;
@@ -130,7 +131,7 @@ class FetchApiClientFilterTest {
         final Response response = responsePromise.get(1L, TimeUnit.SECONDS);
 
         // Do the validation
-        responseAndContextValidator.accept(response, attributesContext);
+        responseAndContextValidator.accept(response, fapiContext);
     }
 
     @Test

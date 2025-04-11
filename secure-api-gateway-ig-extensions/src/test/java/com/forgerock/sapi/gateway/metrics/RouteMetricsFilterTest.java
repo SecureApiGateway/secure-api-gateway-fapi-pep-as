@@ -45,6 +45,7 @@ import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.json.jose.jwt.JwtClaimsSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
+import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -327,8 +328,11 @@ class RouteMetricsFilterTest {
 
     private static Context createContext(ApiClient apiClient) {
         final AttributesContext attributesContext = new AttributesContext(new RootContext());
-        attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
-        return new RoutingContext(attributesContext, RouteMetricsFilterTest.TEST_ROUTE_ID, "test-route-name");
+        FapiContext fapiContext = new FapiContext(attributesContext);
+        if (apiClient != null) {
+            fapiContext.setApiClient(apiClient);
+        }
+        return new RoutingContext(fapiContext, RouteMetricsFilterTest.TEST_ROUTE_ID, "test-route-name");
     }
 
     private void mockTickerForSingleResponseTime(long responseTimeMillis) {

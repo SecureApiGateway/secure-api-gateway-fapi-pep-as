@@ -16,6 +16,7 @@
 package com.forgerock.sapi.gateway.mtls;
 
 import static com.forgerock.sapi.gateway.util.CryptoUtils.createRequestWithCertHeader;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
@@ -156,16 +157,18 @@ public class ResponsePathTransportCertValidationFilterTest {
         }
 
         @Test
-        void shouldFailWhenApiClientNotFound() {
+        void shouldFailWhenApiClientNotFound() throws IOException {
             // Given
             TestHandler nextHandler = createHandlerWithValidResponse();
             X509Certificate mockCert = mock(X509Certificate.class);
             FapiContext fapiContext = fapiContext(mockCert, null);
             // When/Then
-            assertThatThrownBy(() -> certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
-                                                                 .getOrThrowIfInterrupted())
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("Required attribute: \"apiClient\" not found in context");
+            Response response = certMandatoryTransportFilter.filter(fapiContext, new Request(), nextHandler)
+                                                            .getOrThrowIfInterrupted();
+            assertThat(response.getStatus()).isEqualTo(Status.UNAUTHORIZED);
+            final JsonValue json = json(response.getEntity().getJson());
+            assertThat(json.get("error").asString()).isEqualTo("invalid_client");
+            assertThat(json.get("error_description").asString()).isEqualTo("ApiClient not found");
             verifyNoInteractions(transportCertValidator);
         }
 
@@ -235,8 +238,14 @@ public class ResponsePathTransportCertValidationFilterTest {
 
     private FapiContext fapiContext(final X509Certificate certificate, final ApiClient apiClient) {
         AttributesContext attributesContext = new AttributesContext(new RootContext("root"));
-        attributesContext.getAttributes().put(FetchApiClientFilter.API_CLIENT_ATTR_KEY, apiClient);
-        return new FapiContext(attributesContext).setClientCertificates(certificate);
+        FapiContext fapiContext = new FapiContext(attributesContext);
+        if (certificate != null) {
+            fapiContext.setClientCertificates(certificate);
+        }
+        if (apiClient != null) {
+            fapiContext.setApiClient(apiClient);
+        }
+        return fapiContext;
     }
 
     @Nested

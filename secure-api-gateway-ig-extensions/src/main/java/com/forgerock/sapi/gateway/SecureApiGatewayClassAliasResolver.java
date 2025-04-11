@@ -27,9 +27,6 @@ import com.forgerock.sapi.gateway.common.exception.SapiLogAttachedExceptionFilte
 import com.forgerock.sapi.gateway.consent.ConsentRequestAccessAuthorisationFilter;
 import com.forgerock.sapi.gateway.dcr.filter.AuthorizeResponseFetchApiClientFilterHeaplet;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter;
-import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.PathParamClientIdRequestParameterLocator;
-import com.forgerock.sapi.gateway.dcr.filter.ManageApiClientFilter.QueryParamClientIdRequestParameterLocator;
 import com.forgerock.sapi.gateway.dcr.filter.ParResponseFetchApiClientFilterHeaplet;
 import com.forgerock.sapi.gateway.dcr.filter.TokenEndpointResponseFetchApiClientFilter;
 import com.forgerock.sapi.gateway.fapi.FapiInteractionIdTracingFilter;
@@ -65,9 +62,6 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("AccessTokenResponseIdTokenReSignFilter", AccessTokenResponseIdTokenReSignFilter.class);
         ALIASES.put("AuthorizeResponseJwtReSignFilter", AuthorizeResponseJwtReSignFilter.class);
         ALIASES.put("FapiInteractionIdTracingFilter", FapiInteractionIdTracingFilter.class);
-        ALIASES.put("ManageApiClientFilter", ManageApiClientFilter.class);
-        ALIASES.put("PathParamClientIdRequestParameterLocator", PathParamClientIdRequestParameterLocator.class);
-        ALIASES.put("QueryParamClientIdRequestParameterLocator", QueryParamClientIdRequestParameterLocator.class);
         ALIASES.put("TokenEndpointResponseFetchApiClientFilter", TokenEndpointResponseFetchApiClientFilter.class);
     }
 

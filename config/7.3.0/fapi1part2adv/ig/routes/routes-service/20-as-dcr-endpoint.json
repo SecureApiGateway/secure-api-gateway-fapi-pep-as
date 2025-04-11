@@ -78,10 +78,7 @@
           "config": {
             "apiClientService": "IdmApiClientService",
             "apiClientOrgService": "IdmApiClientOrganisationService",
-            "clientIdRequestParameterLocator": {
-              "name": "QueryParamClientIdRequestParameterLocator",
-              "type": "QueryParamClientIdRequestParameterLocator"
-            }
+            "clientId": "${request.queryParams.client_id[0]}"
           }
         },
         {

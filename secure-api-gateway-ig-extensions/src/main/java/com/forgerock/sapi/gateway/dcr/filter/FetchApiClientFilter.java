@@ -49,18 +49,13 @@ import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Fetches {@link ApiClient} data from IDM using the client_id identified from the access_token provided with this request.
- * The {@link ApiClient} retrieved is then made accessible via the AttributesContext as key: "apiClient", other filters
- * in the chain can then access this data using the context.
+ * The {@link ApiClient} retrieved is then made accessible via the FapiContext, other filters in the chain can then
+ * access this data using the context.
  * <p>
  * This filter relies on the OAuth2Context being present, therefore it must be installed after a filter which adds this
  * context, such as OAuth2ResourceServerFilter.
  */
 public class FetchApiClientFilter implements Filter {
-
-    /**
-     * The key to use to get the ApiClient from the AttributesContext
-     */
-    public static final String API_CLIENT_ATTR_KEY = "apiClient";
 
     /**
      * The default claim to use to extract the client_id from the access_token
@@ -81,18 +76,18 @@ public class FetchApiClientFilter implements Filter {
 
     /**
      * Utility method to retrieve an ApiClient object from a Context.
-     * This method can be used by other filters to retrieve the ApiClient installed into the attributes context by
+     * This method can be used by other filters to retrieve the ApiClient installed into the FAPI context by
      * this filter.
      *
      * @param context the context to retrieve the ApiClient from
      * @return the ApiClient from the context
      */
     public static ApiClient getApiClientFromContext(Context context) {
-        return ContextUtils.getRequiredAttributeAsType(context, API_CLIENT_ATTR_KEY, ApiClient.class);
+        return context.asContext(FapiContext.class).getApiClient();
     }
 
     /**
-     * Creates a ResultHandler responsible for adding the ApiClient result to the Attributes Context.
+     * Creates a ResultHandler responsible for adding the ApiClient result to the FAPI Context.
      * <p>
      * A new handler needs to be created per result.
      *
@@ -102,8 +97,8 @@ public class FetchApiClientFilter implements Filter {
      */
     public static ResultHandler<ApiClient> createAddApiClientToContextResultHandler(Context context, Logger logger) {
         return apiClient -> {
-            logger.debug("Adding apiClient: {} to AttributesContext[\"{}\"]", apiClient, API_CLIENT_ATTR_KEY);
-            context.asContext(AttributesContext.class).getAttributes().put(API_CLIENT_ATTR_KEY, apiClient);
+            logger.debug("Adding apiClient: {} to FapiContext", apiClient);
+            context.asContext(FapiContext.class).setApiClient(apiClient);
         };
     }
 

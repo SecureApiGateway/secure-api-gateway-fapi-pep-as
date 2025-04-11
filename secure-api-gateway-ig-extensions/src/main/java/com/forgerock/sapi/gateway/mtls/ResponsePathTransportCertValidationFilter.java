@@ -107,7 +107,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
                 final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(fapiContext);
                 if (apiClient == null) {
                     logger.warn("Unable to validate transport cert - " +
-                            "ApiClient could not be fetched from the attributes context");
+                            "ApiClient could not be fetched from the FAPI context");
                     return Promises.newResultPromise(unauthorizedResponse("ApiClient not found"));
                 }
                 return apiClient.getJwkSetSecretStore()
