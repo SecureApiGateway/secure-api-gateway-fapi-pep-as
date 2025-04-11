@@ -32,14 +32,6 @@
           }
         },
         {
-          "comment": "Initialize FAPI Context",
-          "name": "FapiContextInitializerFilter",
-          "type": "FapiContextInitializerFilter",
-          "config": {
-            "tlsCertificateHeaderName": "ssl-client-cert"
-          }
-        },
-        {
           "name": "FapiAuthorizeRequestValidationFilter",
           "type": "FapiAuthorizeRequestValidationFilter",
           "comment": "Ensure authorize request object is FAPI compliant"
