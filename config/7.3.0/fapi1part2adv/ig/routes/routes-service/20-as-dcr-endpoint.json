@@ -34,7 +34,7 @@
           "name": "FapiContextInitializerFilter",
           "type": "FapiContextInitializerFilter",
           "config": {
-            "tlsCertificateHeaderName": "ssl-client-cert"
+            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
           }
         },
         {
