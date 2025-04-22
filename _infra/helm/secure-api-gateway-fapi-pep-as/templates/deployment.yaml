@@ -63,6 +63,9 @@ spec:
             - mountPath: /var/ig/secrets/truststore
               name: new-truststore
               readOnly: true
+            - mountPath: /var/ig/secrets/open-banking
+              name: ig-ob-signing-key
+              readOnly: true
           env:
             - name: NAMESPACE
               valueFrom:
@@ -118,3 +121,7 @@ spec:
           secret:
             optional: false
             secretName: ig-truststore-pem
+        - name: ig-ob-signing-key
+          secret:
+            optional: false
+            secretName: ig-ob-signing-key

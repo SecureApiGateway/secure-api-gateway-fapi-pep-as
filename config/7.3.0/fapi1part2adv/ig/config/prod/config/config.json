@@ -317,6 +317,56 @@
       "config": {
         "idmService": "IdmService"
       }
+    },
+    {
+      "name": "ObJwtReSigner",
+      "type": "JwtReSigner",
+      "config": {
+        "verificationSecretsProvider": "SecretsProvider-AmJWK",
+        "verificationSecretId": "any.value.in.regex.format",
+        "signingKeyId": "&{ig.ob.aspsp.signing.kid}",
+        "signingSecretsProvider": "SecretsProvider-ASPSP",
+        "signingKeySecretId": "jwt.signer"
+      }
+    },
+    {
+      "name": "SecretsProvider-ASPSP",
+      "type": "SecretsProvider",
+      "config": {
+        "stores": [
+          {
+            "name": "KeyStoreSecretStore-ASPSP",
+            "type": "KeyStoreSecretStore",
+            "config": {
+              "file": "&{ig.instance.dir}&{ig.ob.aspsp.signing.keystore.path}",
+              "storeType": "&{ig.ob.aspsp.signing.keystore.type}",
+              "storePasswordSecretId": "ig.ob.aspsp.signing.keystore.storepass",
+              "entryPasswordSecretId": "ig.ob.aspsp.signing.keystore.keypass",
+              "secretsProvider": "SystemAndEnvSecretStore-IAM",
+              "mappings": [
+                {
+                  "secretId": "jwt.signer",
+                  "aliases": ["&{ig.ob.aspsp.signing.keystore.alias}"]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "SecretsProvider-AmJWK",
+      "type": "SecretsProvider",
+      "config": {
+        "stores": [
+          {
+            "type": "JwkSetSecretStore",
+            "config": {
+              "jwkUrl": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/connect/jwk_uri"
+            }
+          }
+        ]
+      }
     }
   ],
   "monitor": true
