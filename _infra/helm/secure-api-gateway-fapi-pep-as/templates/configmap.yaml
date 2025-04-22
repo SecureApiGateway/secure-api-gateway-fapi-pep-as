@@ -21,8 +21,11 @@ data:
   #--Additional Config--
   AM_REALM: {{ .Values.configmap.amRealm }}
   CERT_ISSUER: {{ .Values.configmap.certIssuer }}
-  # Connection settings for the IG hosted data repo
-  GATEWAY_DATA_REPO_URI: {{ .Values.configmap.gatewayDataRepoURI }}
+  # This should be removed when AM bug is fixed
+  IG_OB_ASPSP_SIGNING_KEYSTORE_ALIAS: {{ .Values.configmap.igOBASPSPSigningKeystoreAlias }}
+  IG_OB_ASPSP_SIGNING_KEYSTORE_PATH: {{ .Values.configmap.igOBASPSPSigningKeystorePath }}
+  IG_OB_ASPSP_SIGNING_KEYSTORE_TYPE: {{ .Values.configmap.igOBASPSPSigningKeystoreType }}
+  IG_OB_ASPSP_SIGNING_KID: {{ .Values.configmap.igOBASPSPSigningKid }}
   # Wherever to use additional TTD other than OB
   IG_TEST_DIRECTORY_ENABLED: {{ .Values.configmap.igTestDirectoryEnabled | quote }}
   # Where to store the IG Truststore
