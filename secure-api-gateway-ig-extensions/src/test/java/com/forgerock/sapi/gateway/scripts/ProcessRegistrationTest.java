@@ -649,13 +649,13 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             // Given
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             Request request = new Request().setMethod("GET").setUri(REQUEST_URI);
+            fapiContext.asContext(FapiContext.class).setApiClient(apiClient(ssa));
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            fapiContext.asContext(AttributesContext.class).getAttributes().put("apiClient", apiClient(ssa));
             // When
             final Response response = filter.filter(fapiContext, request, next).get();
             // Then - request apiClientId manipulated
