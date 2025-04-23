@@ -211,7 +211,7 @@ switch (method.toUpperCase()) {
         rewriteUriToAccessExistingAmRegistration()
         return next.handle(context, request)
                 .thenAsync(response -> {
-                    var apiClient = attributes.apiClient
+                    var apiClient =  contexts.fapi.getApiClient()
                     if (apiClient && apiClient.softwareStatementAssertion) {
                         return addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
                     }
