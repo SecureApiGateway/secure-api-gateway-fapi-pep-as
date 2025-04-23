@@ -131,7 +131,7 @@ public class RouteMetricsFilter implements Filter {
     }
 
     private static ApiClient getApiClientFromContext(Context context) {
-        return context.asContext(FapiContext.class).getApiClient();
+        return context.as(FapiContext.class).map(FapiContext::getApiClient).orElse(null);
     }
 
     private Promise<Map<String, Object>, NeverThrowsException> getRouteMetricsContext(Context context, Request request) {
