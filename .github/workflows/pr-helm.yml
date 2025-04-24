@@ -1,0 +1,14 @@
+name: PR - Build Helm
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '_infra/helm/**'
+jobs:
+  run_pr-helm-template:
+    name: PR - Check Helm
+    uses: SecureApiGateway/secure-api-gateway-ci/.github/workflows/reusable-helm.yml@main
+    secrets: inherit
+    with:
+      componentName: secure-api-gateway-fapi-pep-rs-ob
+      helmLocation: _infra/helm
