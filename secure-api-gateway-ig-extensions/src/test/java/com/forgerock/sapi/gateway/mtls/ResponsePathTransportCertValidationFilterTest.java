@@ -21,13 +21,11 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.forgerock.secrets.Purpose.purpose;
 import static org.forgerock.util.promise.Promises.newExceptionPromise;
 import static org.forgerock.util.promise.Promises.newResultPromise;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -52,9 +50,7 @@ import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Heaplet;
 import org.forgerock.openig.heap.Name;
-import org.forgerock.secrets.Purpose;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
-import org.forgerock.secrets.keys.VerificationKey;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.Options;
@@ -83,9 +79,6 @@ public class ResponsePathTransportCertValidationFilterTest {
 
     // The transport cert JWK's keyUse, and related purpose
     private static final String TRANSPORT_CERT_KEY_USE = "tls";
-    private static final String TRANSPORT_CERT_LABEL = "tls";
-    private static final Purpose<VerificationKey> TRANSPORT_CERT_PURPOSE =
-            purpose(TRANSPORT_CERT_LABEL, VerificationKey.class);
 
     // It's easier to use a real JwkSetSecretStore
     private static JwkSetSecretStore jwkSetSecretStore;
@@ -274,7 +267,7 @@ public class ResponsePathTransportCertValidationFilterTest {
             // ... and heap
             Heaplet heaplet = heapletClass.getDeclaredConstructor().newInstance();
             HeapImpl heap = new HeapImpl(Name.of("heap"));
-            heap.put("transportCertValidator", new DefaultTransportCertValidator(TRANSPORT_CERT_PURPOSE));
+            heap.put("transportCertValidator", new DefaultTransportCertValidator());
             // ... and ResponsePathTransportCertValidationFilter config
             JsonValue config = json(object(field("trustedDirectoryService", "trustedDirectoryService"),
                                            field("jwkSetService", "jwkSetService"),

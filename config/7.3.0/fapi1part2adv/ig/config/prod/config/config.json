@@ -1,8 +1,7 @@
 {
   "properties": {
     "security": {
-      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"},
-      "tlsTransportCertSecretId": "tls.cert.secret.id"
+      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"}
     },
     "oauth2": {
       "tokenEndpointAuthMethodsSupported": {
@@ -214,8 +213,7 @@
       "config": {
         "endpointHandler": "OBClientHandler",
         "cacheMaxSize": 500,
-        "cacheTimeout": "24 hours",
-        "tlsTransportCertSecretId": "&{security.tlsTransportCertSecretId}"
+        "cacheTimeout": "24 hours"
       }
     },
     {
@@ -290,10 +288,7 @@
     },
     {
       "name": "TransportCertValidator",
-      "type": "DefaultTransportCertValidator",
-      "config": {
-        "transportCertSecretId": "&{security.tlsTransportCertSecretId}"
-      }
+      "type": "DefaultTransportCertValidator"
     },
     {
       "name": "IdmService",
