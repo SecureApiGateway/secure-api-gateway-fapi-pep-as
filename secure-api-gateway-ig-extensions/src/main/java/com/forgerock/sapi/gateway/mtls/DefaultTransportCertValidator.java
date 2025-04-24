@@ -16,9 +16,7 @@
 package com.forgerock.sapi.gateway.mtls;
 
 import static java.util.Objects.requireNonNull;
-import static org.forgerock.json.JsonValueFunctions.optionalOf;
-import static org.forgerock.openig.util.JsonValues.purposeOf;
-import static org.forgerock.secrets.Purpose.VERIFY_CERTIFICATE;
+import static org.forgerock.openig.fapi.jwks.JwkSetServicePurposes.transportPurpose;
 import static org.forgerock.util.promise.NeverThrowsException.neverThrown;
 import static org.forgerock.util.promise.Promises.newExceptionPromise;
 
@@ -32,7 +30,8 @@ import java.util.List;
 import java.util.stream.Stream;
 
 import org.forgerock.json.JsonValue;
-import org.forgerock.openig.fapi.jwks.CachingJwkSetService;
+import org.forgerock.json.jose.jwk.KeyUseConstants;
+import org.forgerock.openig.fapi.jwks.JwkSetService;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.Purpose;
@@ -58,10 +57,8 @@ public class DefaultTransportCertValidator implements TransportCertValidator {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(DefaultTransportCertValidator.class);
 
-    private final Purpose<VerificationKey> transportCertPurpose;
 
-    public DefaultTransportCertValidator(final Purpose<VerificationKey> transportCertPurpose) {
-        this.transportCertPurpose = requireNonNull(transportCertPurpose);
+    public DefaultTransportCertValidator() {
     }
 
     public Promise<Void, CertificateException> validate(X509Certificate clientCertificate,
@@ -73,8 +70,8 @@ public class DefaultTransportCertValidator implements TransportCertValidator {
         } catch (CertificateException certException) {
             return newExceptionPromise(certException);
         }
-        Purpose<VerificationKey> certConstrainedPurpose =
-                transportCertPurpose.withConstraints(matchesX509Cert(clientCertificate));
+        Purpose<VerificationKey> certConstrainedPurpose = transportPurpose()
+                .withConstraints(matchesX509Cert(clientCertificate));
         return jwkSetSecretStore.getValid(certConstrainedPurpose)
                 .then(this::keysPresentInRegisteredCerts, neverThrown());
     }
@@ -114,93 +111,45 @@ public class DefaultTransportCertValidator implements TransportCertValidator {
         if (keysList.isEmpty()) {
             throw new CertificateException("Failed to find JWK entry in provided JWKSet which matches the X509 cert");
         }
-        LOGGER.debug("Found {} registered certificates matching request {} certificate", keysList.size(),
-                     transportCertPurpose.getLabel());
+        LOGGER.debug("Found {} registered certificates matching request {} certificate",
+                     keysList.size(),
+                     transportPurpose().getLabel());
         return null;
     }
 
     /**
-     * Heaplet responsible for creating {@link DefaultTransportCertValidator} objects
-     * <pre>
-     * {@code {
-     *      "type": "DefaultTransportCertValidator",
-     *      "config": {
-     *          "transportCertSecretId" : expression<string> [OPTIONAL - The expected purpose to use to retrieve and
-     *                                                                   validate the transport cert (1). Defaults to
-     *                                                                   the generic "verifyCertificate" purpose (2).]
-     *      }
-     *   }
-     * }
-     * }
-     * </pre>
-     * <p>
-     * Notes:
-     * <ol>
-     *     <li>
-     *         Config 'transportCertSecretId' should be aligned with {@link CachingJwkSetService} config
-     *         {@code #tlsTransportCertSecretId} which supports locating the transport cert, while constraining the JWKs
-     *         available for the given purpose by 'use'. This ensures only JWKs with a matching {@code keyUse} are
-     *         available, so preventing cross-JWK usage. For the Open Banking use case, the {@code JWK.use} value is
-     *         expected to be {@value org.forgerock.json.jose.jwk.KeyUseConstants#TLS} for a cert that is used for MTLS
-     *         purposes. This is a custom key use defined by Open Banking. In effect, 'transportCertSecretId' defines
-     *         the purpose to be used to retrieve the transport cert JWKs, while the {@link CachingJwkSetService} config
-     *         states that "on using this purpose, apply this JWK constraint (on keyUse 'tls')".
-     *      </li>
-     *      <li>
-     *         See {@link Purpose#VERIFY_CERTIFICATE} for default purpose label if no key use is supplied, which is the
-     *         general purpose {@link Purpose} to verify certificates.
-     *     </li>
-     *     </li>
-     * </ol>
+     * Heaplet responsible for creating {@link DefaultTransportCertValidator} objects. Note that this filter uses a
      * <p>
      * Example config:
      * <pre>
      * {
      *       "name": "OBTransportCertValidator",
-     *       "type": "DefaultTransportCertValidator",
-     *       "config": {
-     *         "transportCertSecretId": "tls"
-     *       }
+     *       "type": "DefaultTransportCertValidator"
      * }
      * </pre>
      */
     public static class Heaplet extends GenericHeaplet {
 
-        // This key 'use' should align with the CachingJwkSetService.tlsTransportCertSecretId to match expected JWK use
-        static final String CONFIG_TRANSPORT_CERT_SECRET_ID = "transportCertSecretId";
         static final String CONFIG_OLD_TRANSPORT_KEY_USE = "validKeyUse";
-        static final String DEFAULT_TRANSPORT_CERT_SECRET_ID = VERIFY_CERTIFICATE.getLabel();
 
         @Override
         public Object create() throws HeapException {
-            Purpose<VerificationKey> transportCertPurpose =
-                    config.get(CONFIG_TRANSPORT_CERT_SECRET_ID)
-                          .as(evaluatedWithHeapProperties())
-                          .as(optionalOf(purposeOf(VerificationKey.class)))
-                          .orElseGet(() -> this.checkForDeprecatedConfigAndWarn(config)
-                                               .defaultTo(DEFAULT_TRANSPORT_CERT_SECRET_ID)
-                                               .as(purposeOf(VerificationKey.class)));
-            return new DefaultTransportCertValidator(transportCertPurpose);
+            checkForDeprecatedConfigAndWarn(config);
+            return new DefaultTransportCertValidator();
         }
 
-        private JsonValue checkForDeprecatedConfigAndWarn(final JsonValue config) {
-            return config.get(CONFIG_OLD_TRANSPORT_KEY_USE)
-                         // Check for old 'validKeyUse' - and warn of config removal
-                         .as(evaluatedWithHeapProperties())
-                         .as(json -> {
-                             if (json.isNotNull()) {
-                                 String jwkSetServiceConfigName =
-                                         CachingJwkSetService.class.getSimpleName() + ".tlsTransportCertSecretId";
-                                 LOGGER.warn("Config '{}' has been deprecated, please use '{}'." +
-                                                     "Supplied value '{}' will be assumed to mean the secretId to " +
-                                                     "retrieve transport keys (and should be aligned with '{}').",
-                                             CONFIG_OLD_TRANSPORT_KEY_USE,
-                                             CONFIG_TRANSPORT_CERT_SECRET_ID,
-                                             json.asString(),
-                                             jwkSetServiceConfigName);
-                             }
-                             return json;
-                         });
+        private void checkForDeprecatedConfigAndWarn(final JsonValue config) {
+            String validKeyUse = config.get(CONFIG_OLD_TRANSPORT_KEY_USE)
+                                       .as(evaluatedWithHeapProperties())
+                                       .asString();
+            if (validKeyUse != null) {
+                LOGGER.warn("Config '{}' has been deprecated, {}-exposed '{}' purpose is used to obtain valid "
+                                    + "transport secrets, and key use is constrained to '{}'",
+                            CONFIG_OLD_TRANSPORT_KEY_USE,
+                            JwkSetService.class.getSimpleName(),
+                            transportPurpose().getLabel(),
+                            KeyUseConstants.TLS);
+            }
         }
     }
 }

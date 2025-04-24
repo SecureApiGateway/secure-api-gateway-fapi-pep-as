@@ -1,6 +1,6 @@
 import static org.forgerock.http.protocol.Response.newResponsePromise
 import static org.forgerock.json.JsonValue.json
-import static org.forgerock.secrets.Purpose.purpose
+import static org.forgerock.openig.fapi.jwks.JwkSetServicePurposes.transportPurpose
 import static org.forgerock.util.promise.Promises.newExceptionPromise
 import static org.forgerock.util.promise.Promises.newResultPromise
 
@@ -354,8 +354,7 @@ private Promise<Void, NoSuchSecretException> testTlsClientCertInJwksUri(X509Cert
     // TODO: This should be refactored to use the DefaultTransportCertValidator
     return jwkSetService.getJwkSetSecretStore(jwksUri)
                         .thenAsync(jwkSetSecretStore -> {
-                            Purpose<VerificationKey> tlsPurpose =
-                                    purpose(tlsTransportCertSecretId, VerificationKey.class)
+                            Purpose<VerificationKey> tlsPurpose = transportPurpose()
                                             .withConstraints(matchesX509Cert(tlsClientCert))
                             return jwkSetSecretStore.getValid(tlsPurpose)
                                     .then(secrets -> {
