@@ -12,7 +12,7 @@ import java.security.cert.X509Certificate
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException
 import org.forgerock.json.jose.jwk.JWK
 import org.forgerock.json.jose.jwk.JWKSet
-import org.forgerock.openig.fapi.dcr.RegistrationRequest
+import org.forgerock.openig.fapi.dcr.request.RegistrationRequest
 import org.forgerock.openig.fapi.dcr.SoftwareStatement
 import org.forgerock.secrets.NoSuchSecretException
 import org.forgerock.secrets.Purpose
@@ -73,16 +73,16 @@ def method = request.method
 switch (method.toUpperCase()) {
     case "POST":
     case "PUT":
-        if (!contexts.fapi.getRegistrationRequest()) {
+        if (!contexts.FapiRegistrationRequest || !contexts.FapiRegistrationRequest.getRegistrationRequest()) {
             logger.error(SCRIPT_NAME + "FapiInitializerFilter must be run prior to this script")
             return new Response(Status.INTERNAL_SERVER_ERROR)
         }
         logger.debug(SCRIPT_NAME + "required registrationRequest is present")
 
-        RegistrationRequest registrationRequest = contexts.fapi.getRegistrationRequest()
+        RegistrationRequest registrationRequest = contexts.FapiRegistrationRequest.getRegistrationRequest()
 
         // Check we have everything we need from the client certificate
-        if (!contexts.fapi.getClientCertificate()) {
+        if (!contexts.FapiClientCertificate || !contexts.FapiClientCertificate.getClientCertificate()) {
             return errorResponseFactory.invalidClientMetadataErrorResponse("No client certificate for registration")
         }
 
@@ -164,7 +164,7 @@ switch (method.toUpperCase()) {
         }
 
         // Check the transport cert against the software statement
-        X509Certificate tlsClientCert = contexts.fapi.getClientCertificate()
+        X509Certificate tlsClientCert = contexts.FapiClientCertificate.getClientCertificate()
         return softwareStatement.getJwkSetLocator().applyAsync(jwksUri -> {
             registrationRequest.setMetadata("jwks_uri", jwksUri.toString())
             return testTlsClientCertInJwksUri(tlsClientCert, (URI) jwksUri)
@@ -211,10 +211,10 @@ switch (method.toUpperCase()) {
         rewriteUriToAccessExistingAmRegistration()
         return next.handle(context, request)
                 .thenAsync(response -> {
-                    var apiClient =  contexts.fapi.getApiClient()
-                    if (apiClient && apiClient.softwareStatementAssertion) {
+                    contexts.FapiApiClient.getApiClient().ifPresent(apiClient -> {
+                    if (apiClient.softwareStatementAssertion) {
                         return addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
-                    }
+                    }})
                     return newResultPromise(response)
                 })
     default:

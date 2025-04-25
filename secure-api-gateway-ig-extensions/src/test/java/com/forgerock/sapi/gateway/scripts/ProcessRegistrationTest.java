@@ -53,10 +53,12 @@ import org.forgerock.json.JsonValue;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
-import org.forgerock.openig.fapi.context.FapiContext;
-import org.forgerock.openig.fapi.dcr.RegistrationRequest;
 import org.forgerock.openig.fapi.dcr.SoftwareStatement;
+import org.forgerock.openig.fapi.certificate.ClientCertificateFapiContext;
+import org.forgerock.openig.fapi.dcr.request.RegistrationRequest;
+import org.forgerock.openig.fapi.dcr.request.RegistrationRequestFapiContext;
 import org.forgerock.openig.fapi.jwks.JwkSetService;
 import org.forgerock.openig.fapi.trusteddirectory.TrustedDirectoryService;
 import org.forgerock.openig.filter.ScriptableFilter;
@@ -65,7 +67,7 @@ import org.forgerock.openig.heap.Name;
 import org.forgerock.openig.util.Choice;
 import org.forgerock.secrets.Secret;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
-import org.forgerock.services.context.AttributesContext;
+import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.Options;
 import org.forgerock.util.Pair;
@@ -131,8 +133,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
     private SoftwareStatement softwareStatement;
     @Mock
     private SignedJwt ssa;
-
-    private FapiContext fapiContext;
+    private Context fapiContext;
 
     @BeforeAll
     public static void setUpSecrets() throws JOSEException {
@@ -144,9 +145,9 @@ class ProcessRegistrationTest extends AbstractScriptTest {
 
     @BeforeEach
     public void setUpContext() {
-        fapiContext = new FapiContext(new AttributesContext(new RootContext()));
-        fapiContext.setRegistrationRequest(registrationRequest);
-        fapiContext.setClientCertificates(testTlsCert);
+        fapiContext =
+                new RegistrationRequestFapiContext(new ClientCertificateFapiContext(new RootContext(), testTlsCert),
+                                                   registrationRequest);
     }
 
     protected HeapImpl getHeap() throws Exception {
@@ -268,7 +269,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            fapiContext.setRegistrationRequest(null);
+            fapiContext = new ClientCertificateFapiContext(new RootContext(), testTlsCert);
             // When
             final Response response = filter.filter(fapiContext, request, next).get();
             // Then
@@ -284,7 +285,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
-            fapiContext.setClientCertificates(null);
+            fapiContext = new RegistrationRequestFapiContext(new RootContext(), registrationRequest);
             // When
             final Response response = filter.filter(fapiContext, request, next).get();
             // Then
@@ -498,7 +499,10 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             // ... generate a different cert
             Pair<X509Certificate, JWKSet> pair = generateKeyCertAndJwks();
             X509Certificate nonMatchingCert = pair.getFirst();
-            fapiContext.setClientCertificates(nonMatchingCert);
+            fapiContext =
+                    new RegistrationRequestFapiContext(
+                            new ClientCertificateFapiContext(new RootContext(), nonMatchingCert),
+                            registrationRequest);
             // ... registrationRequest content
             when(registrationRequest.getResponseTypes()).thenReturn(List.of(RESPONSE_TYPE));
             when(registrationRequest.getTokenEndpointAuthMethod()).thenReturn("tls_client_auth");
@@ -571,8 +575,10 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()
                     .create(Name.of("ProcessRegistration"), config, getHeap());
-            fapiContext.setClientCertificates(nonMatchingCert);
-            // When
+            fapiContext =
+                    new RegistrationRequestFapiContext(
+                            new ClientCertificateFapiContext(new RootContext(), nonMatchingCert),
+                            registrationRequest);            // When
             final Response response = filter.filter(fapiContext, request, next).get();
             // Then
             assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
@@ -649,9 +655,12 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             // Given
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             Request request = new Request().setMethod("GET").setUri(REQUEST_URI);
-            fapiContext.asContext(FapiContext.class).setApiClient(apiClient(ssa));
+            fapiContext = new ApiClientFapiContext(
+                    new RegistrationRequestFapiContext(new ClientCertificateFapiContext(new RootContext(), testTlsCert),
+                                                       registrationRequest));
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
+            ((ApiClientFapiContext)fapiContext).setApiClient(apiClient(ssa));
             // ... filter and context
             JsonValue config = validProcessRegistrationConfig();
             Filter filter = (Filter) new ScriptableFilter.Heaplet()

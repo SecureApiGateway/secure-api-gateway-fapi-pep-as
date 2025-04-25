@@ -30,7 +30,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
@@ -43,7 +43,6 @@ import org.slf4j.LoggerFactory;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.fapi.FapiUtils;
-import com.forgerock.sapi.gateway.util.ContextUtils;
 import com.google.common.base.Stopwatch;
 import com.google.common.base.Ticker;
 
@@ -131,7 +130,7 @@ public class RouteMetricsFilter implements Filter {
     }
 
     private static ApiClient getApiClientFromContext(Context context) {
-        return context.as(FapiContext.class).map(FapiContext::getApiClient).orElse(null);
+        return context.as(ApiClientFapiContext.class).flatMap(ApiClientFapiContext::getApiClient).orElse(null);
     }
 
     private Promise<Map<String, Object>, NeverThrowsException> getRouteMetricsContext(Context context, Request request) {
