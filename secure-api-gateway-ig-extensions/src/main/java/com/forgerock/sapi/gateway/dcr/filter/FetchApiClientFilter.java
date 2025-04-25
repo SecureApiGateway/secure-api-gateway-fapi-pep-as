@@ -22,6 +22,7 @@ import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 import static org.forgerock.util.promise.Promises.newResultPromise;
 
 import java.util.Map;
+import java.util.Optional;
 
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
@@ -30,13 +31,12 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
-import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
-import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.util.Reject;
 import org.forgerock.util.promise.NeverThrowsException;
@@ -44,8 +44,6 @@ import org.forgerock.util.promise.Promise;
 import org.forgerock.util.promise.ResultHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import com.forgerock.sapi.gateway.util.ContextUtils;
 
 /**
  * Fetches {@link ApiClient} data from IDM using the client_id identified from the access_token provided with this request.
@@ -75,15 +73,15 @@ public class FetchApiClientFilter implements Filter {
     private final ApiClientService apiClientService;
 
     /**
-     * Utility method to retrieve an ApiClient object from a Context.
-     * This method can be used by other filters to retrieve the ApiClient installed into the FAPI context by
-     * this filter.
+     * Utility method to retrieve an ApiClient object from a Context. This method can be used by other filters to
+     * retrieve the ApiClient installed into the FAPI context by this filter.
      *
-     * @param context the context to retrieve the ApiClient from
+     * @param context
+     *         the context to retrieve the ApiClient from
      * @return the ApiClient from the context
      */
-    public static ApiClient getApiClientFromContext(Context context) {
-        return context.asContext(FapiContext.class).getApiClient();
+    public static Optional<ApiClient> getApiClientFromContext(Context context) {
+        return context.as(ApiClientFapiContext.class).flatMap(ApiClientFapiContext::getApiClient);
     }
 
     /**
@@ -98,7 +96,7 @@ public class FetchApiClientFilter implements Filter {
     public static ResultHandler<ApiClient> createAddApiClientToContextResultHandler(Context context, Logger logger) {
         return apiClient -> {
             logger.debug("Adding apiClient: {} to FapiContext", apiClient);
-            context.asContext(FapiContext.class).setApiClient(apiClient);
+            context.asContext(ApiClientFapiContext.class).setApiClient(apiClient);
         };
     }
 
@@ -118,10 +116,10 @@ public class FetchApiClientFilter implements Filter {
             return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
         }
         final String clientId = (String)info.get(accessTokenClientIdClaim);
-
-        return apiClientService.get(context, clientId)
-                               .thenOnResult(createAddApiClientToContextResultHandler(context, logger))
-                               .thenAsync(apiClient -> next.handle(context, request),
+        ApiClientFapiContext apiClientFapiContext = new ApiClientFapiContext(context);
+        return apiClientService.get(apiClientFapiContext, clientId)
+                               .thenOnResult(createAddApiClientToContextResultHandler(apiClientFapiContext, logger))
+                               .thenAsync(apiClient -> next.handle(apiClientFapiContext, request),
                                           this::handleApiClientServiceException, this::handleUnexpectedException);
     }
 
