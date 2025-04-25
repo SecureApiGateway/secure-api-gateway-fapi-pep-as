@@ -20,14 +20,10 @@ import static org.forgerock.http.protocol.Response.newResponsePromise;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.forgerock.json.JsonValueFunctions.optional;
-import static org.forgerock.openig.util.JsonValues.optionalHeapObject;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
-import static org.forgerock.util.LambdaExceptionUtils.rethrowFunction;
-import static org.forgerock.util.LambdaExceptionUtils.rethrowSupplier;
 
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.Optional;
 
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
@@ -36,7 +32,7 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.certificate.ClientCertificateFapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -79,15 +75,15 @@ public class TransportCertValidationFilter implements Filter {
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
         logger.debug("Attempting to validate transport cert");
-        FapiContext fapiContext = context.asContext(FapiContext.class);
-        final X509Certificate certificate = fapiContext.getClientCertificate();
-        if (certificate == null) {
+        Optional<X509Certificate> x509CertificateOptional = context.as(ClientCertificateFapiContext.class)
+                                                       .map(ClientCertificateFapiContext::getClientCertificate);
+        if (x509CertificateOptional.isEmpty()) {
             return newResponsePromise(
                     errorResponse("client tls certificate must be provided as a valid x509 certificate"));
         }
-        return getJwkSetSecretStore(fapiContext)
+        return getJwkSetSecretStore(context)
                 .thenAsync(jwkSetSecretStore ->
-                                   transportCertValidator.validate(certificate, jwkSetSecretStore)
+                                   transportCertValidator.validate(x509CertificateOptional.get(), jwkSetSecretStore)
                                                          .thenAsync(ignored -> next.handle(context, request),
                                                                     ce -> handleCertException()),
                 loadJwkException -> {
@@ -96,13 +92,13 @@ public class TransportCertValidationFilter implements Filter {
                 });
     }
 
-    private Promise<JwkSetSecretStore, FailedToLoadJWKException> getJwkSetSecretStore(FapiContext context) {
-        final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(context);
-        if (apiClient == null) {
+    private Promise<JwkSetSecretStore, FailedToLoadJWKException> getJwkSetSecretStore(Context context) {
+        final Optional<ApiClient> apiClient = FetchApiClientFilter.getApiClientFromContext(context);
+        if (apiClient.isEmpty()) {
             logger.error("apiClient not found in request context");
             throw new IllegalStateException("apiClient not found in request context");
         }
-        return apiClient.getJwkSetSecretStore();
+        return apiClient.get().getJwkSetSecretStore();
     }
 
     private static Promise<Response, NeverThrowsException> handleCertException() {

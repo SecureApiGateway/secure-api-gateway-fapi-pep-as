@@ -44,8 +44,8 @@ import org.forgerock.json.jose.jws.JwsHeader;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.json.jose.jwt.JwtClaimsSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.ApiClientOrganisation;
-import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.handler.router.RoutingContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
@@ -66,7 +66,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.metrics.RouteMetricsFilter.Heaplet;
 import com.forgerock.sapi.gateway.util.TestHandlers.FixedResponseHandler;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
@@ -328,7 +327,7 @@ class RouteMetricsFilterTest {
 
     private static Context createContext(ApiClient apiClient) {
         final AttributesContext attributesContext = new AttributesContext(new RootContext());
-        FapiContext fapiContext = new FapiContext(attributesContext);
+        ApiClientFapiContext fapiContext = new ApiClientFapiContext(attributesContext);
         if (apiClient != null) {
             fapiContext.setApiClient(apiClient);
         }

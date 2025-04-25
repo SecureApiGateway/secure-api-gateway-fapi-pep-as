@@ -102,30 +102,6 @@
       "capture" : [ "response", "request" ]
     },
     {
-      "name": "SBATFapiInteractionFilterChain",
-      "type": "ChainOfFilters",
-      "comment": "This filter chain will set the x-fapi-interaction-id (if not provided in the request), and also set the transaction context to the x-fapi-interaction-id value. This means that if the 'TransactionIdOutboundFilter' is specified on any handlers used by the chain the x-fapi-interaction-id value will be passed onward in the X-ForgeRock-TransactionId header",
-      "config" : {
-        "filters": [
-          {
-            "comment": "Add x-fapi-interaction-id header if one was not present in the request",
-            "name": "FapiInteractionIdFilter",
-            "type": "FapiInteractionIdFilter"
-          },
-          {
-            "name": "FapiInteractionIdTracingFilter",
-            "type": "FapiInteractionIdTracingFilter",
-            "comment": "Copy the x-fapi-interaction-id header to TransactionIdContext"
-          },
-          {
-            "comment": "Log any unhandled exceptions, installed after the FapiTransactionIdFilter so that the txId being logged is set to the x-fapi-interaction-id",
-            "name": "SapiLogAttachedExceptionFilter",
-            "type": "SapiLogAttachedExceptionFilter"
-          }
-        ]
-      }
-    },
-    {
       "name": "FRReverseProxyHandlerNoCapture",
       "comment": "ReverseProxyHandler for calls to the FR services, with the capture decorator disabled",
       "type": "Chain",

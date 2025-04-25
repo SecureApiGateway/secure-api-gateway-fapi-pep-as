@@ -17,29 +17,12 @@
             }
           }
         },
-        "SBATFapiInteractionFilterChain",
         {
-          "comment": "Add host to downstream request",
-          "name": "HeaderFilter-ChangeHostToIAM",
-          "type": "HeaderFilter",
+          "comment": "FAPI Token Filter Chain",
+          "name": "fapiTokenFilterChain",
+          "type": "FapiTokenFilterChain",
           "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "host",
-              "X-Forwarded-Host"
-            ],
-            "add": {
-              "X-Forwarded-Host": [
-                "&{as.fqdn}"
-              ]
-            }
-          }
-        },
-        {
-          "comment": "Initialize FAPI Context",
-          "name": "FapiContextInitializerFilter",
-          "type": "FapiContextInitializerFilter",
-          "config": {
+            "forwardedHost" : "&{as.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
           }
         },

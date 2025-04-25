@@ -19,12 +19,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.util.promise.Promises.newExceptionPromise;
 import static org.forgerock.util.promise.Promises.newResultPromise;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.Consumer;
@@ -35,9 +38,9 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
-import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.services.context.AttributesContext;
 import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
@@ -63,8 +66,8 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     protected static final String CLIENT_ID = "9999";
 
-    private static FapiContext createContext() {
-        return new FapiContext(new AttributesContext(new RootContext("root")));
+    private static Context createContext() {
+        return new ApiClientFapiContext(new RootContext("root"));
     }
 
     protected abstract Filter createFilter();
@@ -77,30 +80,34 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     protected void callFilterValidateSuccessBehaviour(Filter filter) throws Exception {
         // Mock the success response for the ApiClientService call
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
-
-        final Consumer<FapiContext> successBehaviourValidator = ctxt -> {
+        final Consumer<Context> successBehaviourValidator = ctxt -> {
             // Verify that the context was updated with the apiClient data
-            final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
-            assertNotNull(apiClient, "apiClient was not found in context");
-            assertThat(apiClient).isSameAs(testApiClient);
+            final Optional<ApiClient> apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
+            assertThat(apiClient).isPresent()
+                                 .withFailMessage("apiClient was not found in context")
+                                 .contains(testApiClient);
         };
         callFilter(filter, successBehaviourValidator);
     }
 
-    private void callFilter(Filter filter, Consumer<FapiContext> contextValidator) throws Exception {
-        final FapiContext fapiContext = BaseResponsePathFetchApiClientFilterTest.createContext();
+    private void callFilter(Filter filter, Consumer<Context> contextValidator) throws Exception {
+        final Context context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final Response upstreamResponse = createValidUpstreamResponse();
-        final FixedResponseHandler upstreamHandler = new FixedResponseHandler(upstreamResponse);
+        final FixedResponseHandler upstreamHandler = spy(new FixedResponseHandler(upstreamResponse));
         final Request request = createRequest();
-        final Promise<Response, NeverThrowsException> responsePromise = filter.filter(fapiContext, request, upstreamHandler);
+        final Promise<Response, NeverThrowsException> responsePromise =
+                filter.filter(context, request, upstreamHandler);
 
         final Response response = responsePromise.getOrThrow(1L, TimeUnit.SECONDS);
         // Validate the filter returns the upstream response unaltered on success paths
         assertThat(response).isEqualTo(upstreamResponse);
 
         // Validate the context
-        contextValidator.accept(fapiContext);
+        verify(upstreamHandler).handle(argThat(ctx -> {
+            assertDoesNotThrow(() -> contextValidator.accept(ctx));
+            return true;
+        }), any());
     }
 
     protected abstract Request createRequest();
@@ -109,7 +116,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
 
     @Test
     void doesNotFetchApiClientForErrorResponses() throws InterruptedException, TimeoutException {
-        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final Context context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(),
                                                                                               new FixedResponseHandler(new Response(Status.BAD_GATEWAY)));
@@ -121,7 +128,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     }
 
     void returnsErrorResponseWhenClientIdParamNotFound(Request request, Response upstreamResponse) throws Exception {
-        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final Context context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         request.setUri("/authorize");
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(upstreamResponse);
@@ -139,8 +146,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     void returnsErrorResponseWhenApiClientServiceReturnsException() throws Exception {
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(ApiClientServiceException.ErrorCode.SERVER_ERROR, "Unexpected error")));
-
-        final FapiContext context = BaseResponsePathFetchApiClientFilterTest.createContext();
+        final Context context = BaseResponsePathFetchApiClientFilterTest.createContext();
 
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);
@@ -151,7 +157,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
     }
 
     private static void verifyApiClientNotInContext(Context context) {
-        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isNull();
+        assertThat(FetchApiClientFilter.getApiClientFromContext(context)).isEmpty();
     }
 
     @ParameterizedTest
@@ -161,8 +167,7 @@ public abstract class BaseResponsePathFetchApiClientFilterTest {
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(
                 newExceptionPromise(new ApiClientServiceException(errorCode,
                                                                   "ApiClient " + CLIENT_ID + " does not exist")));
-
-        final FapiContext context = createContext();
+        final Context context = createContext();
         final FixedResponseHandler upstreamHandler = new FixedResponseHandler(createValidUpstreamResponse());
 
         final Promise<Response, NeverThrowsException> responsePromise = createFilter().filter(context, createRequest(), upstreamHandler);
