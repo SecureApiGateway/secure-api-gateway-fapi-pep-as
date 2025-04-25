@@ -22,14 +22,18 @@ import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 import static org.forgerock.util.promise.Promises.newExceptionPromise;
 import static org.forgerock.util.promise.Promises.newResultPromise;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import java.util.function.BiConsumer;
@@ -42,15 +46,16 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException.ErrorCode;
-import org.forgerock.openig.fapi.context.FapiContext;
 import org.forgerock.openig.handler.Handlers;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.services.context.AttributesContext;
+import org.forgerock.services.context.Context;
 import org.forgerock.services.context.RootContext;
 import org.forgerock.util.promise.NeverThrowsException;
 import org.forgerock.util.promise.Promise;
@@ -64,6 +69,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter.Heaplet;
+import com.forgerock.sapi.gateway.util.TestHandlers;
 
 /**
  * Unit tests for {@link FetchApiClientFilter}.
@@ -102,15 +108,15 @@ class FetchApiClientFilterTest {
 
         // Mock the success response for the ApiClientService call
         when(apiClientService.get(any(), eq(CLIENT_ID))).thenReturn(newResultPromise(testApiClient));
-
-        final BiConsumer<Response, FapiContext> successBehaviourValidator = (response, ctxt) -> {
+        final BiConsumer<Response, Context> successBehaviourValidator = (response, ctxt) -> {
             // Verify we hit the end of the chain and got the NO_CONTENT response
             assertEquals(Status.NO_CONTENT, response.getStatus());
 
             // Verify that the context was updated with the testApiClient data
-            final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
-            assertNotNull(apiClient, "apiClient was not found in context");
-            assertThat(apiClient).isSameAs(testApiClient);
+            final Optional<ApiClient> apiClient = FetchApiClientFilter.getApiClientFromContext(ctxt);
+            assertThat(apiClient).isPresent()
+                                 .withFailMessage("apiClient was not found in context")
+                                 .contains(testApiClient);
         };
         callFilter(accessToken, filter, successBehaviourValidator);
     }
@@ -120,18 +126,23 @@ class FetchApiClientFilterTest {
     }
 
     private static void callFilter(AccessTokenInfo accessToken, FetchApiClientFilter filter,
-                                   BiConsumer<Response, FapiContext> responseAndContextValidator) throws Exception {
-        final FapiContext fapiContext = new FapiContext(new AttributesContext(new RootContext("root")));
+                                   BiConsumer<Response, Context> responseAndContextValidator)
+            throws Exception {
+        final ApiClientFapiContext fapiContext =
+                new ApiClientFapiContext(new AttributesContext(new RootContext("root")));
         final OAuth2Context oauth2Context = new OAuth2Context(fapiContext, accessToken);
 
         // This is the next handler called after the FetchApiClientFilter
-        final Handler endOfFilterChainHandler = Handlers.NO_CONTENT;
+        final Handler endOfFilterChainHandler = spy(new TestHandlers.FixedResponseHandler(new Response(Status.NO_CONTENT)));
         final Promise<Response, NeverThrowsException> responsePromise = filter.filter(oauth2Context, new Request(), endOfFilterChainHandler);
 
         final Response response = responsePromise.get(1L, TimeUnit.SECONDS);
 
         // Do the validation
-        responseAndContextValidator.accept(response, fapiContext);
+        verify(endOfFilterChainHandler).handle(argThat(ctx -> {
+            assertDoesNotThrow(() -> responseAndContextValidator.accept(response, ctx));
+            return true;
+        }), any());
     }
 
     @Test

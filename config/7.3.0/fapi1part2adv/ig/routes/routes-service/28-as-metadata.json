@@ -7,7 +7,14 @@
     "type": "Chain",
     "config": {
       "filters": [
-        "SBATFapiInteractionFilterChain",
+        {
+          "comment": "FAPI well-known Filter Chain",
+          "name": "fapiWellKnownFilterChain",
+          "type": "FapiWellKnownFilterChain",
+          "config": {
+            "forwardedHost" : "&{as.fqdn}"
+          }
+        },
         {
           "comment": "Update AS well-known config returned by AM",
           "name": "ASWellKnownFilter",
@@ -20,18 +27,6 @@
               "mtlsEndpoints": ["registration_endpoint", "token_endpoint", "pushed_authorization_request_endpoint"],
               "igHost": "&{as.fqdn}",
               "mtlsHost": "&{as.mtls.fqdn}"
-            }
-          }
-        },
-        {
-          "comment": "Set downstream Host header",
-          "name" : "HeaderFilter-ChangeHostToIAM",
-          "type" : "HeaderFilter",
-          "config" : {
-            "messageType" : "REQUEST",
-            "remove" : [ "host", "X-Forwarded-Host" ],
-            "add" : {
-              "X-Forwarded-Host" : [ "&{as.fqdn}" ]
             }
           }
         }

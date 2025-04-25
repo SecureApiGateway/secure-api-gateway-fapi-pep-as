@@ -11,31 +11,12 @@
           "name": "RouteMetricsFilter",
           "type": "RouteMetricsFilter"
         },
-        "SBATFapiInteractionFilterChain",
         {
-          "comment": "Add host to downstream request",
-          "name": "HeaderFilter-ChangeHostToIAM",
-          "type": "HeaderFilter",
+          "comment": "FAPI PAR Filter Chain",
+          "name": "fapiParFilterChain",
+          "type": "FapiParFilterChain",
           "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "host",
-              "X-Forwarded-Host",
-              "origin",
-              "referer"
-            ],
-            "add": {
-              "X-Forwarded-Host": [
-                "&{as.fqdn}"
-              ]
-            }
-          }
-        },
-        {
-          "comment": "Initialize FAPI Context",
-          "name": "FapiContextInitializerFilter",
-          "type": "FapiContextInitializerFilter",
-          "config": {
+            "forwardedHost" : "&{as.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
           }
         },

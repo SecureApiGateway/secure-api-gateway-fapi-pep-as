@@ -6,22 +6,12 @@
     "type": "Chain",
     "config": {
       "filters": [
-        "SBATFapiInteractionFilterChain",
         {
-          "comment": "Add host header to downstream request",
-          "name": "HeaderFilter-ChangeHostToIAM",
-          "type": "HeaderFilter",
+          "comment": "FAPI pass-through Filter Chain",
+          "name": "fapiPassThroughFilterChain",
+          "type": "FapiPassThroughFilterChain",
           "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "host",
-              "X-Forwarded-Host"
-            ],
-            "add": {
-              "X-Forwarded-Host": [
-                "&{as.fqdn}"
-              ]
-            }
+            "forwardedHost" : "&{as.fqdn}"
           }
         }
       ],

@@ -24,6 +24,7 @@ import static org.forgerock.json.JsonValue.object;
 import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
 import java.security.cert.X509Certificate;
+import java.util.Optional;
 
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
@@ -31,7 +32,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.certificate.ClientCertificateFapiContext;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -62,6 +63,9 @@ import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
  * <p>
  * If the validation is successful the Authorisation Server Response is passed on along the filter chain. Otherwise,
  * an error response is returned with 400 BAD_REQUEST status.
+ * <p>
+ * It requires {@link org.forgerock.openig.fapi.apiclient.PrepareApiClientContextFilter} to be present earlier in the
+ * filer chain.
  */
 public class ResponsePathTransportCertValidationFilter implements Filter {
 
@@ -88,13 +92,14 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
 
     @Override
     public Promise<Response, NeverThrowsException> filter(Context context, Request request, Handler next) {
-        FapiContext fapiContext = context.asContext(FapiContext.class);
-        X509Certificate clientCertificate = fapiContext.getClientCertificate();
-        if (!certificateIsMandatory && clientCertificate == null) {
+        Optional<X509Certificate> x509CertificateOpt = context.as(ClientCertificateFapiContext.class)
+                                                       .map(ClientCertificateFapiContext::getClientCertificate);
+
+        if (!certificateIsMandatory && x509CertificateOpt.isEmpty()) {
             // Skip validation for the case where the cert does not exist and it is optional
             logger.debug("Skipping cert validation, cert not found and validation is optional");
             return next.handle(context, request);
-        } else if (certificateIsMandatory && clientCertificate == null) {
+        } else if (certificateIsMandatory && x509CertificateOpt.isEmpty()) {
             return Promises.newResultPromise(unauthorizedResponse("client mtls certificate must be provided"));
         }
 
@@ -104,15 +109,15 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
             if (!response.getStatus().isSuccessful()) {
                 return Promises.newResultPromise(response);
             } else {
-                final ApiClient apiClient = FetchApiClientFilter.getApiClientFromContext(fapiContext);
-                if (apiClient == null) {
+                final Optional<ApiClient> apiClient = FetchApiClientFilter.getApiClientFromContext(context);
+                if (apiClient.isEmpty()) {
                     logger.warn("Unable to validate transport cert - " +
                             "ApiClient could not be fetched from the FAPI context");
                     return Promises.newResultPromise(unauthorizedResponse("ApiClient not found"));
                 }
-                return apiClient.getJwkSetSecretStore()
+                return apiClient.get().getJwkSetSecretStore()
                                 .thenAsync(jwkSetSecretStore ->
-                                                   validateCertificate(clientCertificate, jwkSetSecretStore, response),
+                                                   validateCertificate(x509CertificateOpt.get(), jwkSetSecretStore, response),
                                            loadJwkException ->
                                                    newResponsePromise(newInternalServerError()));
             }

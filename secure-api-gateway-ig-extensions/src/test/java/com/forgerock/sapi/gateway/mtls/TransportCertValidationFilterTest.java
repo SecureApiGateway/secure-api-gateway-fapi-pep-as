@@ -42,7 +42,8 @@ import org.forgerock.json.JsonValueException;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
-import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
+import org.forgerock.openig.fapi.certificate.ClientCertificateFapiContext;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -62,7 +63,6 @@ import org.junit.jupiter.params.provider.MethodSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter.Heaplet;
 import com.forgerock.sapi.gateway.util.TestHandlers.TestSuccessResponseHandler;
 
@@ -127,7 +127,7 @@ class TransportCertValidationFilterTest {
         TransportCertValidationFilter transportCertValidationFilter =
                 new TransportCertValidationFilter(transportCertValidator);
         // ... and no ApiClient on the context
-        Context context = new FapiContext(new AttributesContext(new RootContext())).setClientCertificates(clientCert);
+        Context context = new ClientCertificateFapiContext(new RootContext(), clientCert);
         TestSuccessResponseHandler nextHandler = new TestSuccessResponseHandler();
         // When/ Then
         assertThatThrownBy(() -> transportCertValidationFilter.filter(context, request, nextHandler)
@@ -213,9 +213,14 @@ class TransportCertValidationFilterTest {
     }
 
     private static Context fapiContext(X509Certificate certificate, ApiClient apiClient) {
-        Context transactionIdContext = new TransactionIdContext(new RootContext(), new TransactionId("1234"));
-        AttributesContext attributesContext = new AttributesContext(transactionIdContext);
-        return new FapiContext(attributesContext).setClientCertificates(certificate).setApiClient(apiClient);
+        Context buildCtx = new TransactionIdContext(new RootContext(), new TransactionId("1234"));
+        buildCtx = new AttributesContext(buildCtx);
+        if (certificate != null) {
+            buildCtx = new ClientCertificateFapiContext(buildCtx, certificate);
+        }
+        ApiClientFapiContext apiClientFapiContext = new ApiClientFapiContext(buildCtx);
+        apiClientFapiContext.setApiClient(apiClient);
+        return apiClientFapiContext;
     }
 
     private static void assertErrorResponse(Response response,
