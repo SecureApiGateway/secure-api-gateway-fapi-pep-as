@@ -21,7 +21,6 @@ import org.forgerock.secrets.keys.CryptoKey
 import org.forgerock.secrets.keys.VerificationKey
 import org.forgerock.util.promise.NeverThrowsException
 
-import com.forgerock.securebanking.uk.gateway.jwks.*
 import com.nimbusds.jose.jwk.RSAKey
 import com.securebanking.gateway.dcr.ErrorResponseFactory
 
