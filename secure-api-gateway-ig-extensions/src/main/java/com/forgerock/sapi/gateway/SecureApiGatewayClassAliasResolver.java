@@ -64,9 +64,7 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("AuthorizeResponseJwtReSignFilter", AuthorizeResponseJwtReSignFilter.class);
         ALIASES.put("FapiInteractionIdTracingFilter", FapiInteractionIdTracingFilter.class);
         ALIASES.put("TokenEndpointResponseFetchApiClientFilter", TokenEndpointResponseFetchApiClientFilter.class);
-        ALIASES.put("DcrTransportCertValidationFilter",
-                    com.forgerock.sapi.gateway.dcr.filter.TransportCertValidationFilter.class);
-       ALIASES.put("ProcessRegistrationFilter", ProcessRegistrationFilter.class);
+        ALIASES.put("ProcessRegistrationFilter", ProcessRegistrationFilter.class);
     }
 
     /**
