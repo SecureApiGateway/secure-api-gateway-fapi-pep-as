@@ -21,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.forgerock.http.protocol.Response.newResponsePromise;
 import static org.forgerock.http.protocol.Status.BAD_REQUEST;
+import static org.forgerock.http.protocol.Status.CREATED;
 import static org.forgerock.http.protocol.Status.OK;
 import static org.forgerock.http.protocol.Status.UNAUTHORIZED;
 import static org.forgerock.json.JsonValue.json;
@@ -49,6 +50,7 @@ import javax.imageio.IIOException;
 import org.forgerock.http.Filter;
 import org.forgerock.http.Handler;
 import org.forgerock.http.MutableUri;
+import org.forgerock.http.header.ContentTypeHeader;
 import org.forgerock.http.protocol.Entity;
 import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
@@ -195,12 +197,12 @@ public class ProcessRegistrationFilterTest {
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(apiClient.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
-            Entity entityWithInvalidJson = mock(Entity.class);
             // ... and - getting response entity JSON raises an IOException
-            when(entityWithInvalidJson.getJsonAsync())
-                    .thenReturn(newExceptionPromise(new IOException("BOOM")));
+            Response invalidJsonResponse = new Response(OK).addHeaders(ContentTypeHeader.valueOf("application/json"));
+            invalidJsonResponse.getEntity()
+                               .setString("{ \"field1\": \"value\", \"field2\": invalid }");
             when(next.handle(fapiContext, request))
-                    .thenReturn(newResponsePromise(new Response(OK).setEntity(entityWithInvalidJson)));
+                     .thenReturn(newResponsePromise(invalidJsonResponse));
             // When
             Response response = filter.filter(fapiContext, request, next)
                                       .getOrThrowIfInterrupted();
