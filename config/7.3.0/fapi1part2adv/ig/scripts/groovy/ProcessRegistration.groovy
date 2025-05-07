@@ -73,16 +73,16 @@ def method = request.method
 switch (method.toUpperCase()) {
     case "POST":
     case "PUT":
-        if (!contexts.RegistrationRequestFapi || !contexts.RegistrationRequestFapi.getRegistrationRequest()) {
+        if (!contexts.registrationRequestFapi || !contexts.registrationRequestFapi.getRegistrationRequest()) {
             logger.error(SCRIPT_NAME + "FapiInitializerFilter must be run prior to this script")
             return new Response(Status.INTERNAL_SERVER_ERROR)
         }
         logger.debug(SCRIPT_NAME + "required registrationRequest is present")
 
-        RegistrationRequest registrationRequest = contexts.RegistrationRequestFapi.getRegistrationRequest()
+        RegistrationRequest registrationRequest = contexts.registrationRequestFapi.getRegistrationRequest()
 
         // Check we have everything we need from the client certificate
-        if (!contexts.ClientCertificateFapi || !contexts.ClientCertificateFapi.getClientCertificate()) {
+        if (!contexts.clientCertificateFapi || !contexts.clientCertificateFapi.getClientCertificate()) {
             return errorResponseFactory.invalidClientMetadataErrorResponse("No client certificate for registration")
         }
 
@@ -164,7 +164,7 @@ switch (method.toUpperCase()) {
         }
 
         // Check the transport cert against the software statement
-        X509Certificate tlsClientCert = contexts.ClientCertificateFapi.getClientCertificate()
+        X509Certificate tlsClientCert = contexts.clientCertificateFapi.getClientCertificate()
         return softwareStatement.getJwkSetLocator().applyAsync(jwksUri -> {
             registrationRequest.setMetadata("jwks_uri", jwksUri.toString())
             return testTlsClientCertInJwksUri(tlsClientCert, (URI) jwksUri)
@@ -211,7 +211,7 @@ switch (method.toUpperCase()) {
         rewriteUriToAccessExistingAmRegistration()
         return next.handle(context, request)
                 .thenAsync(response -> {
-                    contexts.ApiClientFapi.getApiClient().ifPresent(apiClient -> {
+                    contexts.apiClientFapi.getApiClient().ifPresent(apiClient -> {
                     if (apiClient.softwareStatementAssertion) {
                         return addSoftwareStatementToResponse(response, apiClient.softwareStatementAssertion)
                     }})

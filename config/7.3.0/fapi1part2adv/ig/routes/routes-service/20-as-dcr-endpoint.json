@@ -13,8 +13,8 @@
         },
         {
           "comment": "FAPI DCR Filter Chain",
-          "name": "fapiDCRFilterChain",
-          "type": "FapiDCRFilterChain",
+          "name": "fapiDcrFilterChain",
+          "type": "FapiDcrFilterChain",
           "config": {
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
