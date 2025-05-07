@@ -11,47 +11,14 @@
           "name": "RouteMetricsFilter",
           "type": "RouteMetricsFilter"
         },
-        "SBATFapiInteractionFilterChain",
         {
-          "comment": "Enforce response content type as application/json",
-          "name": "HeaderFilter-AddResponseHeaders",
-          "type": "HeaderFilter",
+          "comment": "FAPI DCR Filter Chain",
+          "name": "fapiDcrFilterChain",
+          "type": "FapiDcrFilterChain",
           "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "Content-Type",
-              "X-Request-ID"
-            ],
-            "add": {
-              "Content-Type": [
-                "application/json"
-              ]
-            }
-          }
-        },
-        {
-          "comment": "Initialize FAPI Context",
-          "name": "FapiContextInitializerFilter",
-          "type": "FapiContextInitializerFilter",
-          "config": {
-            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
-          }
-        },
-        {
-          "comment": "Pull the registration request from the entity and create a RegistrationRequest object context attribute",
-          "name": "RegistrationRequestBuilderFilter",
-          "type": "RegistrationRequestBuilderFilter",
-          "config": {
+            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
-            "supportedSigningAlgorithms": ["PS256"]
-          }
-        },
-        {
-          "comment": "Validate that the request will result in an OAuth2 client that is FAPI compliant",
-          "name": "FapiAdvancedDCRValidationFilter",
-          "type": "FapiAdvancedDCRValidationFilter",
-          "config": {
             "supportedSigningAlgorithms": ["PS256"],
             "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}"
           }

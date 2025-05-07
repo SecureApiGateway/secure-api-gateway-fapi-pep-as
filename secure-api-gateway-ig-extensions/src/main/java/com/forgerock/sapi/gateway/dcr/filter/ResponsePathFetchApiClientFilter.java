@@ -30,6 +30,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
+import org.forgerock.openig.fapi.apiclient.ApiClientFapiContext;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientService;
 import org.forgerock.openig.fapi.apiclient.service.ApiClientServiceException;
 import org.forgerock.services.context.Context;
@@ -59,8 +60,9 @@ import com.forgerock.sapi.gateway.common.rest.HttpHeaderNames;
  *     <li>{@link #createFilterWithResponseClientIdRetriever(ApiClientService, Function)}</li>
  * </ul>
  * <p>
- * The {@link ApiClient} that is fetched is made accessible via the AttributesContext as key: "apiClient",
- * other filters in the chain can then access this data using the context.
+ * The {@link ApiClient} that is fetched is made accessible via the {@link ApiClientFapiContext} ,
+ * other filters in the chain can then access this data using the context. It requires
+ * {@link org.forgerock.openig.fapi.apiclient.PrepareApiClientContextFilter} previous in the filer chain.
  */
 public class ResponsePathFetchApiClientFilter implements Filter {
 

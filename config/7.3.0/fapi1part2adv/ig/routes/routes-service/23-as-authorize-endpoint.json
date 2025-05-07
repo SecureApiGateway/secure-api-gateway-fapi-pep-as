@@ -11,25 +11,10 @@
           "name": "RouteMetricsFilter",
           "type": "RouteMetricsFilter"
         },
-        "SBATFapiInteractionFilterChain",
         {
-          "comment": "Add host to downstream request",
-          "name": "HeaderFilter-ChangeHostToIAM",
-          "type": "HeaderFilter",
-          "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "host",
-              "X-Forwarded-Host",
-              "origin",
-              "referer"
-            ],
-            "add": {
-              "X-Forwarded-Host": [
-                "&{as.fqdn}"
-              ]
-            }
-          }
+          "comment": "FAPI Authorize Filter Chain",
+          "name": "fapiAuthorizeFilterChain",
+          "type": "FapiAuthorizeFilterChain"
         },
         {
           "name": "FapiAuthorizeRequestValidationFilter",
