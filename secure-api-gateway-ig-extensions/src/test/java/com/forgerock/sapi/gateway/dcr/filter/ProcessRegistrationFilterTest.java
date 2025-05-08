@@ -168,7 +168,6 @@ public class ProcessRegistrationFilterTest {
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(apiClient.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
@@ -179,45 +178,6 @@ public class ProcessRegistrationFilterTest {
             verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             assertThat(response.getStatus()).isEqualTo(OK);
-            assertThat(response.getEntity().getJson())
-                    .asInstanceOf(type(JsonValue.class))
-                    .satisfies(jsonValue -> {
-                        assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString()).isEqualTo(SSA_AS_JWT_STR);
-                    });
-        }
-
-        @Test
-        void shouldFailOnInvalidRegistrationResponseJson() throws IOException {
-            // Given
-            Filter filter = new ProcessRegistrationFilter();
-            Request request = request("POST");
-            when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
-            when(softwareStatement.getOrganisationId()).thenReturn("someorg");
-            when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
-            when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(apiClient.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
-            // ... and - getting response entity JSON raises an IOException
-            Response invalidJsonResponse = new Response(OK).addHeaders(ContentTypeHeader.valueOf("application/json"));
-            invalidJsonResponse.getEntity()
-                               .setString("{ \"field1\": \"value\", \"field2\": invalid }");
-            when(next.handle(fapiContext, request))
-                     .thenReturn(newResponsePromise(invalidJsonResponse));
-            // When
-            Response response = filter.filter(fapiContext, request, next)
-                                      .getOrThrowIfInterrupted();
-            // Then
-            verify(next).handle(fapiContext, request);
-            verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            assertThat(response.getStatus()).isEqualTo(BAD_REQUEST);
-            assertThat(response.getEntity().getJson())
-                    .asInstanceOf(type(JsonValue.class))
-                    .satisfies((entityJson -> {
-                        assertThat(entityJson.get("error").asString())
-                                .isEqualTo(UNKNOWN.getCode());
-                        assertThat(entityJson.get("error_description").asString())
-                                .isEqualTo("Error transforming response JSON");
-                    }));
         }
 
         @Test
@@ -254,8 +214,6 @@ public class ProcessRegistrationFilterTest {
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(apiClient.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             when(next.handle(fapiContext, request))
                      .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // When
@@ -265,11 +223,6 @@ public class ProcessRegistrationFilterTest {
             verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);            assertThat(response.getStatus()).isEqualTo(OK);
             assertThat(request.getUri().toString()).isEqualTo(REQUEST_URI_TRANSFORMED);
-            assertThat(response.getEntity().getJson())
-                    .asInstanceOf(type(JsonValue.class))
-                    .satisfies(jsonValue -> {
-                        assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString()).isEqualTo(SSA_AS_JWT_STR);
-                    });
         }
     }
 
@@ -284,8 +237,6 @@ public class ProcessRegistrationFilterTest {
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(apiClient.getSoftwareStatementAssertion()).thenReturn(ssa);
-            when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
             // When
@@ -295,11 +246,6 @@ public class ProcessRegistrationFilterTest {
             verify(next).handle(fapiContext, request);
             assertThat(request.getUri().toString()).isEqualTo(REQUEST_URI_TRANSFORMED);
             assertThat(response.getStatus()).isEqualTo(OK);
-            assertThat(response.getEntity().getJson())
-                    .asInstanceOf(type(JsonValue.class))
-                    .satisfies(jsonValue -> {
-                        assertThat(jsonValue.get(F_SOFTWARE_STATEMENT).asString()).isEqualTo(SSA_AS_JWT_STR);
-                    });
         }
     }
 

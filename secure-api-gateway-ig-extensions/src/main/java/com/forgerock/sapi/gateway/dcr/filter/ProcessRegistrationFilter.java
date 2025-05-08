@@ -110,8 +110,7 @@ public final class ProcessRegistrationFilter implements Filter {
         }
         registrationRequest.setMetadata(METADATA_TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKENS, true);
         attachRawRegistrationRequest(request, registrationRequest);
-        return next.handle(context, request)
-                   .thenAsync(response -> checkResponseAndAddSsa(fapiContext, response));
+        return next.handle(context, request);
     }
 
     private Promise<Response, NeverThrowsException> handlePut(final Context context,
@@ -126,8 +125,7 @@ public final class ProcessRegistrationFilter implements Filter {
         }
         registrationRequest.setMetadata(METADATA_TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKENS, true);
         rewriteUriToAccessExistingAmRegistration(request);
-        return next.handle(context, request)
-                   .thenAsync(response -> checkResponseAndAddSsa(fapiContext, response));
+        return next.handle(context, request);
     }
 
     private Promise<Response, NeverThrowsException> handleGet(final Context context,
@@ -135,8 +133,7 @@ public final class ProcessRegistrationFilter implements Filter {
                                                               final Handler next) {
         FapiContext fapiContext = fapiContext(context);
         rewriteUriToAccessExistingAmRegistration(request);
-        return next.handle(context, request)
-                   .thenAsync(response -> checkResponseAndAddSsa(fapiContext, response));
+        return next.handle(context, request);
     }
 
     private Promise<Response, NeverThrowsException> handleDelete(final Context context,
@@ -193,33 +190,6 @@ public final class ProcessRegistrationFilter implements Filter {
         } catch (URISyntaxException e) {
             throw new IllegalStateException("API Client ID path parameter not found");
         }
-    }
-
-    /*
-     * Check registration response successful and, if so, add the software statement assertion in the response entity.
-     * Note that this should really be managed internally to AM (see OPENAM-23858).
-     */
-    private static Promise<Response, NeverThrowsException> checkResponseAndAddSsa(
-            final FapiContext fapiContext,
-            final Response response) {
-        if (!response.getStatus().isSuccessful()) {
-            // Return failure responses as-is
-            return newResponsePromise(response);
-        }
-        ApiClient apiClient = fapiContext.getApiClient();
-        SignedJwt softwareStatementAssertion = apiClient.getSoftwareStatementAssertion();
-        return response.getEntity()
-                       .getJsonAsync()
-                       .then(JsonValue::json)   // transform
-                       .then(json -> {
-                           if (!json.isDefined(CLAIM_SOFTWARE_STATEMENT)) {
-                               json.put(CLAIM_SOFTWARE_STATEMENT, softwareStatementAssertion.build());
-                           }
-                           response.getEntity().setJson(json);
-                           return response;
-                       }, ioe -> errorResponse(new RegistrationException(UNKNOWN,
-                                                                         "Error transforming response JSON",
-                                                                         ioe)));
     }
 
     public static class Heaplet extends GenericHeaplet {
