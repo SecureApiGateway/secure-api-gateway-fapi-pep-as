@@ -162,6 +162,11 @@ switch (method.toUpperCase()) {
             rewriteUriToAccessExistingAmRegistration()
         }
 
+        // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it
+        // on. However, this might not be the best place to do that?
+        def regJson = registrationRequest.toJsonValue()
+        logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
+        request.setEntity(regJson)
         return next.handle(context, request)
                 .thenAsync(response -> addSoftwareStatementToResponse(response,
                                                                  softwareStatement.getSoftwareStatementAssertion()))
