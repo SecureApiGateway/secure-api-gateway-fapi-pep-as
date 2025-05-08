@@ -304,14 +304,17 @@ private void rewriteUriToAccessExistingAmRegistration() {
     request.uri.setRawQuery("client_id=" + apiClientId)
 }
 
-private static Promise<Response, NeverThrowsException> addSoftwareStatementToResponse(response,
-                                                                                      softwareStatementAssertion) {
+private Promise<Response, NeverThrowsException> addSoftwareStatementToResponse(response,
+                                                                               softwareStatementAssertion) {
     if (response.status.isSuccessful()) {
         return response.getEntity().getJsonAsync()
                 .then(jsonAsObj -> json(jsonAsObj))  // transform
                 .then(json -> {
                     if (!json.isDefined("software_statement")) {
+                        logger.debug(SCRIPT_NAME + "XXX software_statement not defined")
                         json.put("software_statement", softwareStatementAssertion.build())
+                    } else {
+                        logger.debug(SCRIPT_NAME + "XXX software_statement IS defined")
                     }
                     response.entity.setJson(json)
                     return response
