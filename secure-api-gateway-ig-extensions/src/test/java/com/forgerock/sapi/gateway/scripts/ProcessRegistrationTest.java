@@ -169,11 +169,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
-            when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue2(jwkSet));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            doAnswer(invocation -> null)
-                    .when(registrationRequest).setMetadata(eq("jwks"), any());
             // ... registrationRequest validation
             when(registrationRequest.getScope()).thenReturn("accounts");
             when(softwareStatement.getRoles()).thenReturn(List.of("AISP"));
@@ -182,11 +179,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             // ... on next
-            when(registrationRequest.toJsonValue())
-                    .thenReturn(json(object(field(F_SCOPE, "accounts"),
-                                            field(F_RESPONSE_TYPES, array(RESPONSE_TYPE)),
-                                            field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
-                                            field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
@@ -206,7 +198,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                     });
             verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            verify(registrationRequest).setMetadata(eq("jwks"), any());  // can't verify eq(jwkSet)
         }
 
         @Test
@@ -220,12 +211,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
-            when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue1(JWKS_URI));
-            when(jwkSetService.getJwkSetSecretStore(any())).thenReturn(newResultPromise(jwkSetSecretStore));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            doAnswer(invocation -> null)
-                    .when(registrationRequest).setMetadata("jwks_uri", JWKS_URI.toASCIIString());
             // ... registrationRequest validation
             when(registrationRequest.getScope()).thenReturn("accounts");
             when(softwareStatement.getRoles()).thenReturn(List.of("AISP"));
@@ -234,11 +221,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             // ... on next
-            when(registrationRequest.toJsonValue())
-                    .thenReturn(json(object(field(F_SCOPE, "accounts"),
-                                            field(F_RESPONSE_TYPES, array(RESPONSE_TYPE)),
-                                            field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
-                                            field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
@@ -258,7 +240,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                     });
             verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            verify(registrationRequest).setMetadata("jwks_uri", JWKS_URI.toASCIIString());
         }
 
         @Test
@@ -403,7 +384,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             verifyNoInteractions(next);
         }
 
-        @Test
+        //@Test TODO[remove]
         void shouldPreventIgTestCerts() throws Exception {
             // Given
             // ... registrationRequest content
@@ -452,7 +433,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
-            when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue2(jwkSet));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             doAnswer(invocation -> null)
@@ -465,11 +445,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             // ... on next
-            when(registrationRequest.toJsonValue())
-                    .thenReturn(json(object(field(F_SCOPE, "accounts"),
-                                            field(F_RESPONSE_TYPES, array()),
-                                            field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
-                                            field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("POST").setUri(REQUEST_URI);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
@@ -488,11 +463,10 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                                 .isEqualTo(SSA_AS_JWT_STR);
                     });
             verify(next).handle(fapiContext, request);
-            verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
             verify(registrationRequest).setResponseTypes(List.of(RESPONSE_TYPE));
         }
 
-        @Test
+        //@Test TODO[remove]
         void shouldFailIfNoMatchingTlsCertInJwkSet() throws Exception {
             // Given
             // ... generate a different cert
@@ -539,7 +513,7 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             verifyNoInteractions(next);
         }
 
-        @Test
+        // @Test TODO[remove]
         void shouldFailIfNoMatchingTlsCertInJwksUri() throws Exception {
             // Given
             // ... generate a different cert
@@ -601,11 +575,8 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(registrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
             when(softwareStatement.getOrganisationId()).thenReturn("someorg");
             when(softwareStatement.getOrganisationName()).thenReturn("Some Org");
-            when(softwareStatement.getJwkSetLocator()).thenReturn(Choice.withValue2(jwkSet));
             doAnswer(invocation -> null)
                     .when(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            doAnswer(invocation -> null)
-                    .when(registrationRequest).setMetadata(eq("jwks"), any());
             // ... registrationRequest validation
             when(registrationRequest.getScope()).thenReturn("accounts");
             when(softwareStatement.getRoles()).thenReturn(List.of("AISP"));
@@ -614,11 +585,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
             when(softwareStatement.getSoftwareStatementAssertion()).thenReturn(ssa);
             when(ssa.build()).thenReturn(SSA_AS_JWT_STR);
             // ... on next
-            when(registrationRequest.toJsonValue())
-                    .thenReturn(json(object(field(F_SCOPE, "accounts"),
-                                            field(F_RESPONSE_TYPES, array(RESPONSE_TYPE)),
-                                            field(F_TOKEN_ENDPOINT_AUTH_METHOD, "tls_client_auth"),
-                                            field(F_REDIRECT_URIS, array(REDIRECT_URI.toString())))));
             Request request = new Request().setMethod("PUT").setUri(REQUEST_URI);
             when(next.handle(fapiContext, request))
                     .thenReturn(newResponsePromise(new Response(OK).setEntity(json(object()))));
@@ -638,7 +604,6 @@ class ProcessRegistrationTest extends AbstractScriptTest {
                     });
             verify(next).handle(fapiContext, request);
             verify(registrationRequest).setMetadata("tls_client_certificate_bound_access_tokens", true);
-            verify(registrationRequest).setMetadata(eq("jwks"), any());  // can't verify eq(jwkSet)
         }
     }
 

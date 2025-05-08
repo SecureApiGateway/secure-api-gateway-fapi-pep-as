@@ -66,9 +66,20 @@
           }
         },
         {
-          "comment": "Perform necessary AM transformations",
-          "name": "ProcessRegistrationFilter",
-          "type": "ProcessRegistrationFilter"
+          "comment": "Pre process registration request",
+          "name": "ProcessRegistration",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "ProcessRegistration.groovy",
+            "args": {
+              "jwkSetService": "${heap['JwkSetService']}",
+              "tlsTransportCertSecretId": "&{security.tlsTransportCertSecretId}",
+              "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
+              "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
+              "trustedDirectoryService": "${heap['TrustedDirectoryService']}"
+            }
+          }
         },
         {
           "name": "ManageApiClientFilter",

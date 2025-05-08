@@ -162,46 +162,13 @@ switch (method.toUpperCase()) {
             rewriteUriToAccessExistingAmRegistration()
         }
 
-        // Check the transport cert against the software statement
-        X509Certificate tlsClientCert = contexts.fapi.getClientCertificate()
-        return softwareStatement.getJwkSetLocator().applyAsync(jwksUri -> {
-            registrationRequest.setMetadata("jwks_uri", jwksUri.toString())
-            return testTlsClientCertInJwksUri(tlsClientCert, (URI) jwksUri)
-        }, apiClientJwkSet -> {
-            if (!allowIgIssuedTestCerts) {
-                return newExceptionPromise(new FailedToLoadJWKException(
-                        "software_statement must contain software_jwks_endpoint"))
-            }
-            // We need to set the jwks claim in the registration request because the software statement might not have
-            // the jwks in the jwks claim in the software statement. If that were the case it would result in AM being
-            // unable to validate client credential jws used in `private_key_jwt` as the `token_endpoint_auth_method`.
-            registrationRequest.setMetadata("jwks", apiClientJwkSet.toJsonValue())
-            return testClientCertInJwkSet(tlsClientCert, (JWKSet) apiClientJwkSet)
-        })
-        .thenAsync(ignore -> {
-            // AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it
-            // on. However, this might not be the best place to do that?
-            def regJson = registrationRequest.toJsonValue()
-            logger.debug(SCRIPT_NAME + "final json [" + regJson + "]")
-            request.setEntity(regJson)
-            next.handle(context, request)
+        return next.handle(context, request)
                 .thenAsync(response -> addSoftwareStatementToResponse(response,
                                                                  softwareStatement.getSoftwareStatementAssertion()))
                 .then(response -> {
                     logger.debug(SCRIPT_NAME + "Returning response" + response)
                     return response
                 })
-        }, exception -> {
-            if (exception instanceof FailedToLoadJWKException) {
-                return newResponsePromise(
-                        errorResponseFactory.invalidClientMetadataErrorResponse(exception.getMessage()))
-            }
-            // NoSuchSecretException
-            String errorDescription = "tls transport cert does not match any certs " +
-                    "registered in jwks for software statement"
-            logger.debug("{}{}", SCRIPT_NAME, errorDescription)
-            return newResponsePromise(errorResponseFactory.invalidSoftwareStatementErrorResponse(errorDescription))
-        })
 
     case "DELETE":
         rewriteUriToAccessExistingAmRegistration()
