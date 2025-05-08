@@ -109,6 +109,7 @@ public final class ProcessRegistrationFilter implements Filter {
                                                                 "request object is invalid or missing"));
         }
         registrationRequest.setMetadata(METADATA_TLS_CLIENT_CERTIFICATE_BOUND_ACCESS_TOKENS, true);
+        attachRawRegistrationRequest(request, registrationRequest);
         return next.handle(context, request)
                    .thenAsync(response -> checkResponseAndAddSsa(fapiContext, response));
     }
@@ -155,6 +156,14 @@ public final class ProcessRegistrationFilter implements Filter {
                                   + "been configured: FapiContext not found");
                           return new IllegalStateException(errorMessage);
                       });
+    }
+
+    /*
+     * AM doesn't understand JWS encoded registration requests, so we need to convert the jwt JSON and pass it
+     * on.
+     */
+    private void attachRawRegistrationRequest(final Request request, final RegistrationRequest registrationRequest) {
+        request.getEntity().setJson(registrationRequest.toJsonValue());
     }
 
     /**
