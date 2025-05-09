@@ -63,6 +63,8 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
  * }
  * }
  * </pre>
+ * @see org.forgerock.openig.fapi.dcr.filter.DcrTransportCertValidationFilter
+ * @see ResponsePathTransportCertValidationFilter
  */
 public class TransportCertValidationFilter implements Filter {
 

@@ -48,21 +48,27 @@ import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.filter.ResponsePathFetchApiClientFilter;
 
 /**
- * Filter to validate that the client's MTLS transport certificate is valid when making a request to an Authorisation
- * Server endpoint.
- * <p>
- * This is a specialised version of {@link TransportCertValidationFilter}, it does the same validation,
- * but has been adapted to do its validation on the response path. By deferring the validation to the response
- * path then we can be sure that we have an authenticated client.
- * <p>
- * This filter depends on the {@link ApiClient} being present in the {@link AttributesContext}.
- * This is typically achieved by installing a {@link ResponsePathFetchApiClientFilter} after this filter in the chain.
- * <p>
- * The client's MTLS certificate is then validated against the JWKSet for the ApiClient by using a
- * {@link TransportCertValidator}.
- * <p>
- * If the validation is successful the Authorisation Server Response is passed on along the filter chain. Otherwise,
- * an error response is returned with 400 BAD_REQUEST status.
+ * {@link Filter} responsible for validating the inbound request's {@link X509Certificate TLS transport certificate},
+ * when making a request to an Authorisation Server endpoint.
+ *
+ * <p>Note that this is a specialised alternative to the {@link TransportCertValidationFilter}, which does the same
+ * validation, but does so on the <i>response path</i>. By deferring the validation to the response path we can be sure
+ * that we have an authenticated client, and been provisioned with the client's {@link ApiClient} (via the authorization
+ * response).
+ *
+ * <p>This filter should be used in flows where, the JWKs to verify the certificate against are obtained from
+ * the {@link ApiClient} associated with the <i>authenticated</i> registration request, which should be present on the
+ * {@link FapiContext} following authorization, through inclusion of a {@link ResponsePathFetchApiClientFilter} later
+ * in the chain.
+ *
+ * <pre>
+ * {@code {
+ *    "type": "TransportCertValidationFilter"
+ * }
+ * }
+ * </pre>
+ * @see TransportCertValidationFilter
+ * @see TransportCertValidator TransportCertValidator is used to validate an X509Certificate against a JwkSetSecretStore
  */
 public class ResponsePathTransportCertValidationFilter implements Filter {
 
