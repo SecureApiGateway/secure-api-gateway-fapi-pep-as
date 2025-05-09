@@ -287,10 +287,6 @@
       }
     },
     {
-      "name": "TransportCertValidator",
-      "type": "DefaultTransportCertValidator"
-    },
-    {
       "name": "IdmService",
       "type": "IdmService",
       "config": {

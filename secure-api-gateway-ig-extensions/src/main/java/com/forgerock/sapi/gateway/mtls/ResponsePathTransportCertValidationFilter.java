@@ -21,7 +21,6 @@ import static org.forgerock.http.protocol.Responses.newInternalServerError;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
-import static org.forgerock.openig.util.JsonValues.requiredHeapObject;
 
 import java.security.cert.X509Certificate;
 
@@ -32,6 +31,8 @@ import org.forgerock.http.protocol.Response;
 import org.forgerock.http.protocol.Status;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.dcr.filter.DefaultTransportCertValidator;
+import org.forgerock.openig.fapi.dcr.filter.TransportCertValidator;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -169,10 +170,7 @@ public class ResponsePathTransportCertValidationFilter implements Filter {
 
         @Override
         public Object create() throws HeapException {
-            TransportCertValidator transportCertValidator =
-                    config.get("transportCertValidator")
-                          .required()
-                          .as(requiredHeapObject(heap, TransportCertValidator.class));
+            TransportCertValidator transportCertValidator = new DefaultTransportCertValidator();
             return new ResponsePathTransportCertValidationFilter(transportCertValidator,
                                                                  certificateIsMandatory);
 

@@ -15,7 +15,6 @@
  */
 package com.forgerock.sapi.gateway.mtls;
 
-import static com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter.Heaplet.CONFIG_CERT_VALIDATOR;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.forgerock.json.JsonValue.field;
@@ -43,6 +42,7 @@ import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.json.jose.jwk.JWKSet;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.dcr.filter.TransportCertValidator;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -175,40 +175,12 @@ class TransportCertValidationFilterTest {
     @Nested
     public class HeapletTests {
 
-        private static Stream<Arguments> invalidConfigurations() {
-            return Stream.of(
-                    // Missing required CONFIG_CERT_VALIDATOR field
-                    arguments(json(object()),
-                              "/%s: Expecting a value".formatted(CONFIG_CERT_VALIDATOR)));
-        }
-
-        @ParameterizedTest
-        @MethodSource("invalidConfigurations")
-        void shouldFailToConstructFilterWithInvalidConfig(final JsonValue config, final String expectedExceptionMessage) {
-            final Name test = Name.of("test");
-            HeapImpl heap = new HeapImpl(test);
-            heap.put("TransportCertValidator", transportCertValidator);
-            Heaplet heaplet = new Heaplet();
-            assertThatThrownBy(() -> heaplet.create(test, config, heap))
-                    .isInstanceOf(JsonValueException.class)
-                    .hasMessage(expectedExceptionMessage);
-        }
-
-        @SuppressWarnings("deprecated")
-        private static Stream<JsonValue> validConfigurations() {
-            return Stream.of(
-                    // Full config
-                    json(object(field(CONFIG_CERT_VALIDATOR, "TransportCertValidator"))));
-        }
-
-        @ParameterizedTest
-        @MethodSource("validConfigurations")
-        void shouldCreateFilterWithValidAndDeprecatedConfig(final JsonValue config) throws Exception {
+        @Test
+        void shouldCreateFilter() throws Exception {
             Name test = Name.of("test");
             HeapImpl heap = new HeapImpl(test);
-            heap.put("TransportCertValidator", transportCertValidator);
             Heaplet heaplet = new Heaplet();
-            assertThat(heaplet.create(test, config, heap)).isNotNull();
+            assertThat(heaplet.create(test, json(object()), heap)).isNotNull();
         }
     }
 

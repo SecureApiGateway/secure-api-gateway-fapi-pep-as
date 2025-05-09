@@ -37,6 +37,8 @@ import org.forgerock.http.protocol.Status;
 import org.forgerock.json.jose.exceptions.FailedToLoadJWKException;
 import org.forgerock.openig.fapi.apiclient.ApiClient;
 import org.forgerock.openig.fapi.context.FapiContext;
+import org.forgerock.openig.fapi.dcr.filter.DefaultTransportCertValidator;
+import org.forgerock.openig.fapi.dcr.filter.TransportCertValidator;
 import org.forgerock.openig.heap.GenericHeaplet;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.secrets.jwkset.JwkSetSecretStore;
@@ -50,13 +52,17 @@ import org.slf4j.LoggerFactory;
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 
 /**
- * Filter to validate that the client's MTLS transport certificate is valid.
- * <p>
- * This filter depends on the {@link ApiClient} being present in the {@link AttributesContext}.
- * Once the {@link X509Certificate} and JWKSet have been obtained, then the filter delegates to a {@link TransportCertValidator}
- * to do the validation.
- * If the validator successfully validates the certificate, then the request is passed to the next filter in the chain,
- * otherwise a HTTP 400 response is returned.
+ * {@link Filter} responsible for validating the inbound request's {@link X509Certificate TLS transport certificate}, as
+ * found in the {@link FapiContext}.
+ *
+ * <p>Note that this filter should be used in flows where, the JWKs to verify the certificate against are obtained from
+ * the {@link ApiClient} associated with the registration request, which should be present on the {@link FapiContext}.
+ * <pre>
+ * {@code {
+ *    "type": "TransportCertValidationFilter"
+ * }
+ * }
+ * </pre>
  */
 public class TransportCertValidationFilter implements Filter {
 
@@ -117,24 +123,20 @@ public class TransportCertValidationFilter implements Filter {
      *  - transportCertValidator: the name of a {@link TransportCertValidator} object on the heap to use to validate the certs
      * <p>
      * Example config:
-     * {
+     * <pre>
+     *     {@code {
      *           "comment": "Validate the MTLS transport cert",
      *           "name": "TransportCertValidationFilter",
-     *           "type": "TransportCertValidationFilter",
-     *           "config": {
-     *             "transportCertValidator": "TransportCertValidator"
-     *           }
-     * }
+     *           "type": "TransportCertValidationFilter"
+     *        }
+     *     }
+     * </pre>
      */
     public static class Heaplet extends GenericHeaplet {
-        static final String CONFIG_CERT_VALIDATOR = "transportCertValidator";
 
         @Override
         public Object create() throws HeapException {
-            TransportCertValidator transportCertValidator = config.get(CONFIG_CERT_VALIDATOR)
-                                                                  .required()
-                                                                  .as(requiredHeapObject(heap,
-                                                                                         TransportCertValidator.class));
+            TransportCertValidator transportCertValidator = new DefaultTransportCertValidator();
             return new TransportCertValidationFilter(transportCertValidator);
         }
     }
