@@ -35,15 +35,6 @@
           }
         },
         {
-          "name": "ParEndpointTransportCertValidationFilter",
-          "type": "ParEndpointTransportCertValidationFilter",
-          "comment": "If the client provides a certificate for authentication, verify that it is valid and is mapped to their SSA",
-          "config": {
-            "trustedDirectoryService": "TrustedDirectoryService",
-            "jwkSetService": "JwkSetService"
-          }
-        },
-        {
           "name": "ErrorResponseFilter",
           "type": "ScriptableFilter",
           "config": {

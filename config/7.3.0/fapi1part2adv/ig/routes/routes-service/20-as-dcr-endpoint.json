@@ -24,20 +24,6 @@
           }
         },
         {
-          "comment": "Validate that transport cert",
-          "name": "DcrTransportCertValidationFilter",
-          "type": "DcrTransportCertValidationFilter",
-          "config": {
-            "jwkSetService": "JwkSetService",
-            "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}"
-          }
-        },
-        {
-          "comment": "Preprocess registration request, working around AM gaps",
-          "name": "ProcessRegistrationFilter",
-          "type": "ProcessRegistrationFilter"
-        },
-        {
           "name": "ManageApiClientFilter",
           "type": "ManageApiClientFilter",
           "config": {
