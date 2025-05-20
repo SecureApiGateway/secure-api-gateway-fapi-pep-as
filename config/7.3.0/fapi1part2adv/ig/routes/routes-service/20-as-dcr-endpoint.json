@@ -8,14 +8,11 @@
     "config": {
       "filters": [
         {
-          "name": "RouteMetricsFilter",
-          "type": "RouteMetricsFilter"
-        },
-        {
           "comment": "FAPI DCR Filter Chain",
           "name": "fapiDcrFilterChain",
           "type": "FapiDcrFilterChain",
           "config": {
+            "auditService" : "fapiAuditService",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
