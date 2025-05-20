@@ -8,14 +8,11 @@
     "config": {
       "filters": [
         {
-          "name": "RouteMetricsFilter",
-          "type": "RouteMetricsFilter"
-        },
-        {
           "comment": "FAPI Authorize Filter Chain",
           "name": "fapiAuthorizeFilterChain",
           "type": "FapiAuthorizeFilterChain",
           "config": {
+            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}"
           }
         },

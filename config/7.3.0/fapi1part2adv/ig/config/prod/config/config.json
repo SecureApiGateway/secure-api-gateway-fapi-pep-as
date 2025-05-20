@@ -56,6 +56,24 @@
       }
     },
     {
+      "name": "fapiAuditService",
+      "type": "AuditService",
+      "config": {
+        "eventHandlers": [
+          {
+            "class": "org.forgerock.audit.handlers.json.stdout.JsonStdoutAuditEventHandler",
+            "config": {
+              "name": "jsonstdout",
+              "elasticsearchCompatible": false,
+              "topics": [
+                "fapi"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "ReverseProxyHandler",
       "type": "ReverseProxyHandler",
       "capture": [
