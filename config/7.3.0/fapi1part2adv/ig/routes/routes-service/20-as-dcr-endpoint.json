@@ -25,6 +25,11 @@
           }
         },
         {
+          "comment": "FAPI/ OB Scope validation versus SSA",
+          "name": "scopeValidationFilter",
+          "type": "RegistrationRequestRoleBasedScopeValidationFilter"
+        },
+        {
           "name": "AddIgAccessTokenForNewRegistrations",
           "comment": "When creating a new registration we need to obtain credentials to allow IG to talk to AM. For flows which operate on an existing registration, the TPP must supply the registration_access_token returned in the DCR response",
           "type": "ConditionalFilter",
