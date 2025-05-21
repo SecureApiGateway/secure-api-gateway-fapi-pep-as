@@ -24,6 +24,11 @@
           }
         },
         {
+          "comment": "FAPI/ OB Scope validation versus SSA",
+          "name": "scopeValidationFilter",
+          "type": "RegistrationRequestScopeValidationFilter"
+        },
+        {
           "name": "ManageApiClientFilter",
           "type": "ManageApiClientFilter",
           "config": {
