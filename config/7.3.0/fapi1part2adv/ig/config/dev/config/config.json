@@ -94,9 +94,9 @@
       "name" : "ForgeRockClientHandler",
       "type" : "Chain",
       "config" : {
-        "filters" : [ 
+        "filters" : [
           "TransactionIdOutboundFilter"
-       ],
+        ],
         "handler" : "ClientHandler"
       },
       "capture" : [ "response", "request" ]
