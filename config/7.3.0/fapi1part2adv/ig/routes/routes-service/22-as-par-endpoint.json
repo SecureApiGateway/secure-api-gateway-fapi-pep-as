@@ -8,14 +8,11 @@
     "config": {
       "filters": [
         {
-          "name": "RouteMetricsFilter",
-          "type": "RouteMetricsFilter"
-        },
-        {
           "comment": "FAPI PAR Filter Chain",
           "name": "fapiParFilterChain",
           "type": "FapiParFilterChain",
           "config": {
+            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
           }
