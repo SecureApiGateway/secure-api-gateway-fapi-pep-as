@@ -54,16 +54,6 @@
           }
         },
         {
-          "comment": "Verify that the client's transport cert is valid and is mapped to their SSA",
-          "name": "TokenEndpointTransportCertValidationFilter",
-          "type": "TokenEndpointTransportCertValidationFilter",
-          "config": {
-            "trustedDirectoryService": "TrustedDirectoryService",
-            "jwkSetService": "JwkSetService",
-            "transportCertValidator": "TransportCertValidator"
-          }
-        },
-        {
           "name": "ErrorResponseFilter",
           "type": "ScriptableFilter",
           "config": {

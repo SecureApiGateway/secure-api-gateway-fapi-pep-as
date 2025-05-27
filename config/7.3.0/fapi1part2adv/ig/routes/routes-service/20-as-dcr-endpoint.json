@@ -24,21 +24,6 @@
           }
         },
         {
-          "comment": "Pre process registration request",
-          "name": "ProcessRegistration",
-          "type": "ScriptableFilter",
-          "config": {
-            "type": "application/x-groovy",
-            "file": "ProcessRegistration.groovy",
-            "args": {
-              "jwkSetService": "${heap['JwkSetService']}",
-              "allowIgIssuedTestCerts": "${security.enableTestTrustedDirectory}",
-              "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
-              "trustedDirectoryService": "${heap['TrustedDirectoryService']}"
-            }
-          }
-        },
-        {
           "name": "ManageApiClientFilter",
           "type": "ManageApiClientFilter",
           "config": {

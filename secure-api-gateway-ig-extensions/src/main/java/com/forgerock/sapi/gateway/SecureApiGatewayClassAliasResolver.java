@@ -34,21 +34,13 @@ import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiParRequestValidationFilt
 import com.forgerock.sapi.gateway.jws.signer.CompactSerializationJwsSigner;
 import com.forgerock.sapi.gateway.metrics.RouteMetricsFilter;
 import com.forgerock.sapi.gateway.metrics.TokenEndpointMetricsContextSupplier;
-import com.forgerock.sapi.gateway.mtls.DefaultTransportCertValidator;
-import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.ParEndpointTransportCertValidationFilterHeaplet;
-import com.forgerock.sapi.gateway.mtls.ResponsePathTransportCertValidationFilter.TokenEndpointTransportCertValidationFilterHeaplet;
-import com.forgerock.sapi.gateway.mtls.TransportCertValidationFilter;
 
 public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
     private static final Map<String, Class<?>> ALIASES = new HashMap<>();
 
     static {
         ALIASES.put("FetchApiClientFilter", FetchApiClientFilter.class);
-        ALIASES.put("TransportCertValidationFilter", TransportCertValidationFilter.class);
-        ALIASES.put("DefaultTransportCertValidator", DefaultTransportCertValidator.class);
         ALIASES.put("ConsentRequestAccessAuthorisationFilter", ConsentRequestAccessAuthorisationFilter.class);
-        ALIASES.put("TokenEndpointTransportCertValidationFilter", TokenEndpointTransportCertValidationFilterHeaplet.class);
-        ALIASES.put("ParEndpointTransportCertValidationFilter", ParEndpointTransportCertValidationFilterHeaplet.class);
         ALIASES.put("SapiLogAttachedExceptionFilter", SapiLogAttachedExceptionFilterHeaplet.class);
         ALIASES.put("CompactSerializationJwsSigner", CompactSerializationJwsSigner.class);
         ALIASES.put("RouteMetricsFilter", RouteMetricsFilter.class);
