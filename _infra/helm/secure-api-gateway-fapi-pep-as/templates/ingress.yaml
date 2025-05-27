@@ -42,6 +42,13 @@ spec:
                   number: 80
             path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/par
             pathType: Prefix
+          - backend:
+              service:
+                name: {{ .Chart.Name }}
+                port:
+                  number: 80
+            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/authorize
+            pathType: Prefix
   tls:
     - hosts:
         - {{ .Values.ingress.asMtls.tls.host }}
