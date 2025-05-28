@@ -10,6 +10,7 @@ configmap:
   cloudType: "CDK"
   identityGoogleSecretStoreProject: "sbat-dev"
   identityPlatformFQDN: "iam.dev-cdk-core.forgerock.financial"
+  igOauth2TokenEndpointAuthMethods: "private_key_jwt,tls_client_auth"
   igOBASPSPSigningKeystoreAlias: "jwtsigner"
   igOBASPSPSigningKeystorePath: "/secrets/open-banking/ig-ob-signing-key.p12"
   igOBASPSPSigningKeystoreType: "PKCS12"
