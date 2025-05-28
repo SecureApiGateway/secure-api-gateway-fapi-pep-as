@@ -8,6 +8,7 @@ configmap:
   baseFQDN: "dev-cdk-core.forgerock.financial"
   certIssuer: "null-issuer"
   cloudType: "CDK"
+  identityGoogleSecretStoreProject: "sbat-dev"
   identityPlatformFQDN: "iam.dev-cdk-core.forgerock.financial"
   igOBASPSPSigningKeystoreAlias: "jwtsigner"
   igOBASPSPSigningKeystorePath: "/secrets/open-banking/ig-ob-signing-key.p12"

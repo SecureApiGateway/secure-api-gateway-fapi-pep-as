@@ -32,6 +32,8 @@ data:
   IG_TRUSTSTORE_PATH: {{ .Values.configmap.igTruststorePath }}
   TEST_DIRECTORY_FQDN: {{ .Values.configmap.testDirectoryFQDN }}
   USER_OBJECT: {{ .Values.configmap.userObject }}
+  # What Google Cloud project to pull secrets from - internal fidc initialiser use
+  IDENTITY_GOOGLE_SECRET_STORE_PROJECT: {{ .Values.configmap.identityGoogleSecretStoreProject }}
 ---
 apiVersion: {{ .Values.configmap.apiVersion }}
 kind: ConfigMap
