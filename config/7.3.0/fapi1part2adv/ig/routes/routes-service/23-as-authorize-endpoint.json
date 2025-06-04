@@ -17,11 +17,6 @@
           }
         },
         {
-          "name": "FapiAuthorizeRequestValidationFilter",
-          "type": "FapiAuthorizeRequestValidationFilter",
-          "comment": "Ensure authorize request object is FAPI compliant"
-        },
-        {
           "name": "ErrorResponseFilter",
           "type": "ScriptableFilter",
           "config": {
