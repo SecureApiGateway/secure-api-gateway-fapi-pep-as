@@ -18,11 +18,6 @@
           }
         },
         {
-          "name": "FapiParRequestValidationFilter",
-          "type": "FapiParRequestValidationFilter",
-          "comment": "Ensure authorize request object is FAPI compliant"
-        },
-        {
           "name": "FixParParamsForAm",
           "comment": "Workaround for an AM bug in the /par endpoint",
           "type": "ScriptableFilter",

@@ -29,8 +29,6 @@ import com.forgerock.sapi.gateway.dcr.filter.AuthorizeResponseFetchApiClientFilt
 import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.filter.ParResponseFetchApiClientFilterHeaplet;
 import com.forgerock.sapi.gateway.dcr.filter.TokenEndpointResponseFetchApiClientFilter;
-import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiAuthorizeRequestValidationFilter;
-import com.forgerock.sapi.gateway.fapi.v1.authorize.FapiParRequestValidationFilter;
 import com.forgerock.sapi.gateway.jws.signer.CompactSerializationJwsSigner;
 
 public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
@@ -42,8 +40,6 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
         ALIASES.put("SapiLogAttachedExceptionFilter", SapiLogAttachedExceptionFilterHeaplet.class);
         ALIASES.put("CompactSerializationJwsSigner", CompactSerializationJwsSigner.class);
         ALIASES.put("AuthorizeResponseFetchApiClientFilter", AuthorizeResponseFetchApiClientFilterHeaplet.class);
-        ALIASES.put("FapiAuthorizeRequestValidationFilter", FapiAuthorizeRequestValidationFilter.class);
-        ALIASES.put("FapiParRequestValidationFilter", FapiParRequestValidationFilter.class);
         ALIASES.put("ParResponseFetchApiClientFilter", ParResponseFetchApiClientFilterHeaplet.class);
         ALIASES.put("JwtReSigner", JwtReSigner.class);
         ALIASES.put("AccessTokenResponseIdTokenReSignFilter", AccessTokenResponseIdTokenReSignFilter.class);
