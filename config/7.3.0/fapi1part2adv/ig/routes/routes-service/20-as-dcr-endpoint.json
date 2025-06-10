@@ -8,6 +8,14 @@
     "config": {
       "filters": [
         {
+          "name": "DebugLogging",
+          "type": "ScriptableFilter",
+          "config": {
+            "type": "application/x-groovy",
+            "file": "DebugLogging.groovy"
+          }
+        },
+        {
           "comment": "FAPI DCR Filter Chain",
           "name": "fapiDcrFilterChain",
           "type": "FapiDcrFilterChain",
