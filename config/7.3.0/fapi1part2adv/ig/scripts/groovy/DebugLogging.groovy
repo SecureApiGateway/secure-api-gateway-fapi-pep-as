@@ -7,26 +7,42 @@
  *
  * This filter adds the client_id param if it is missing, sourcing the value from the request JWT param's iss claim.
  */
+
+import static org.forgerock.http.protocol.Response.newResponsePromise
+
 SCRIPT_NAME = "XXX [DebugLogging]"
 
-logger.debug("{} request: method={}, uri={}, params=",
+logger.debug("{} request: method={}, uri={}, params={}",
              SCRIPT_NAME,
              request.getMethod(),
              request.getUri(),
              request.getQueryParams().toQueryString())
 return next.handle(context, request)
-           .then(response -> {
-               response.getEntity()
-                       .getJsonAsync()
-                       .then(JsonValue::new)
-                       .then(json -> {
-                           logger.debug("{} response: entity={} | request: method={}, uri={}, params={}",
-                                        SCRIPT_NAME,
-                                        json,
-                                        request.getMethod(),
-                                        request.getUri(),
-                                        request.getQueryParams().toQueryString())
-                           return response;
-                       });
-           });
-
+           .thenAsync(response -> {
+               List<String> mediaTypes = response.getHeaders().getAll(ContentTypeHeader.NAME);
+               if (mediaTypes.stream().anyMatch(mediaType -> mediaType.startsWith("application/json"))) {
+                   return response.getEntity()
+                                  .getJsonAsync()
+                                  .then(JsonValue::new)
+                                  .thenAsync(json -> {
+                                      logger.debug("{} response: entity-json={} | request: method={}, uri={}, params={}",
+                                                   SCRIPT_NAME,
+                                                   json,
+                                                   request.getMethod(),
+                                                   request.getUri(),
+                                                   request.getQueryParams().toQueryString())
+                                      return newResponsePromise(response)
+                                  })
+               }
+               return response.getEntity()
+                              .getStringAsync()
+                              .thenAsync(error -> {
+                                  logger.debug("{} response: entity={} | request: method={}, uri={}, params={}",
+                                               SCRIPT_NAME,
+                                               error,
+                                               request.getMethod(),
+                                               request.getUri(),
+                                               request.getQueryParams().toQueryString())
+                                  return newResponsePromise(response)
+                              })
+           })
