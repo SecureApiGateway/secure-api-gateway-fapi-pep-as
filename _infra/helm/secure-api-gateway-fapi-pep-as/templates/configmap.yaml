@@ -21,6 +21,8 @@ data:
   #--Additional Config--
   AM_REALM: {{ .Values.configmap.amRealm }}
   CERT_ISSUER: {{ .Values.configmap.certIssuer }}
+  # If this setting is disabled, then the default of private_key_jwt,tls_client_auth will be used
+  IG_OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS: {{ .Values.configmap.igOauth2TokenEndpointAuthMethods }}
   # This should be removed when AM bug is fixed
   IG_OB_ASPSP_SIGNING_KEYSTORE_ALIAS: {{ .Values.configmap.igOBASPSPSigningKeystoreAlias }}
   IG_OB_ASPSP_SIGNING_KEYSTORE_PATH: {{ .Values.configmap.igOBASPSPSigningKeystorePath }}
@@ -32,6 +34,8 @@ data:
   IG_TRUSTSTORE_PATH: {{ .Values.configmap.igTruststorePath }}
   TEST_DIRECTORY_FQDN: {{ .Values.configmap.testDirectoryFQDN }}
   USER_OBJECT: {{ .Values.configmap.userObject }}
+  # What Google Cloud project to pull secrets from - internal fidc initialiser use
+  IDENTITY_GOOGLE_SECRET_STORE_PROJECT: {{ .Values.configmap.identityGoogleSecretStoreProject }}
 ---
 apiVersion: {{ .Values.configmap.apiVersion }}
 kind: ConfigMap
