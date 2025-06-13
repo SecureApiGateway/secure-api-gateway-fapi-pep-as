@@ -26,7 +26,6 @@ import com.forgerock.sapi.gateway.am.JwtReSigner;
 import com.forgerock.sapi.gateway.common.exception.SapiLogAttachedExceptionFilterHeaplet;
 import com.forgerock.sapi.gateway.consent.ConsentRequestAccessAuthorisationFilter;
 import com.forgerock.sapi.gateway.dcr.filter.AuthorizeResponseFetchApiClientFilterHeaplet;
-import com.forgerock.sapi.gateway.dcr.filter.FetchApiClientFilter;
 import com.forgerock.sapi.gateway.dcr.filter.ParResponseFetchApiClientFilterHeaplet;
 import com.forgerock.sapi.gateway.dcr.filter.TokenEndpointResponseFetchApiClientFilter;
 import com.forgerock.sapi.gateway.jws.signer.CompactSerializationJwsSigner;
@@ -35,7 +34,6 @@ public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
     private static final Map<String, Class<?>> ALIASES = new HashMap<>();
 
     static {
-        ALIASES.put("FetchApiClientFilter", FetchApiClientFilter.class);
         ALIASES.put("ConsentRequestAccessAuthorisationFilter", ConsentRequestAccessAuthorisationFilter.class);
         ALIASES.put("SapiLogAttachedExceptionFilter", SapiLogAttachedExceptionFilterHeaplet.class);
         ALIASES.put("CompactSerializationJwsSigner", CompactSerializationJwsSigner.class);
