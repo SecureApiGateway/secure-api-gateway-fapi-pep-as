@@ -14,7 +14,17 @@
           "config": {
             "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
-            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
+            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
+            "apiClientService": "IdmApiClientService",
+            "accessTokenResolver": {
+              "name": "token-resolver",
+              "type": "StatelessAccessTokenResolver",
+              "config": {
+                "secretsProvider": "SecretsProvider-AmJWK",
+                "issuer": "https://&{as.fqdn}/am/oauth2/realms/root/realms/&{am.realm}",
+                "verificationSecretId": "any.value.in.regex.format"
+              }
+            }
           }
         },
         {
@@ -42,14 +52,6 @@
                 ]
               }
             }
-          }
-        },
-        {
-          "name": "TokenEndpointResponseFetchApiClientFilter",
-          "type": "TokenEndpointResponseFetchApiClientFilter",
-          "comment": "Fetches the ApiClient and adds it to the attributes context if the AS returns with a success response",
-          "config": {
-            "apiClientService": "IdmApiClientService"
           }
         }
       ],
