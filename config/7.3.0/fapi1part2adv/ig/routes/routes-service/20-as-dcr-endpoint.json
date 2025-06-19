@@ -13,37 +13,15 @@
           "type": "FapiDcrFilterChain",
           "config": {
             "auditService" : "fapiAuditService",
+            "forwardedHost" : "&{identity.platform.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
             "supportedSigningAlgorithms": ["PS256"],
-            "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}"
-          }
-        },
-        {
-          "name": "ManageApiClientFilter",
-          "type": "ManageApiClientFilter",
-          "config": {
+            "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}",
             "apiClientService": "IdmApiClientService",
             "apiClientOrgService": "IdmApiClientOrganisationService",
             "clientId": "${request.queryParams.client_id[0]}"
-          }
-        },
-        {
-          "comment": "Set Host header for downstream",
-          "name": "HeaderFilter-ChangeHostToIAM",
-          "type": "HeaderFilter",
-          "config": {
-            "messageType": "REQUEST",
-            "remove": [
-              "host",
-              "X-Forwarded-Host"
-            ],
-            "add": {
-              "X-Forwarded-Host": [
-                "&{identity.platform.fqdn}"
-              ]
-            }
           }
         },
         {

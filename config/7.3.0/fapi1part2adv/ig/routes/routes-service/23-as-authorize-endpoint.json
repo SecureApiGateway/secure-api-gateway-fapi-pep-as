@@ -13,14 +13,7 @@
           "type": "FapiAuthorizeFilterChain",
           "config": {
             "auditService" : "fapiAuditService",
-            "forwardedHost" : "&{as.fqdn}"
-          }
-        },
-        {
-          "name": "AuthorizeResponseFetchApiClientFilter",
-          "type": "AuthorizeResponseFetchApiClientFilter",
-          "comment": "Add ApiClient data to the context attributes",
-          "config": {
+            "forwardedHost" : "&{as.fqdn}",
             "apiClientService": "IdmApiClientService"
           }
         },

@@ -14,7 +14,8 @@
           "config": {
             "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
-            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
+            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
+            "apiClientService": "IdmApiClientService"
           }
         },
         {
@@ -24,14 +25,6 @@
           "config": {
             "type": "application/x-groovy",
             "file": "FixParParamsForAm.groovy"
-          }
-        },
-        {
-          "name": "ParResponseFetchApiClientFilter",
-          "type": "ParResponseFetchApiClientFilter",
-          "comment": "Add ApiClient data to the context attributes",
-          "config": {
-            "apiClientService": "IdmApiClientService"
           }
         }
       ],
