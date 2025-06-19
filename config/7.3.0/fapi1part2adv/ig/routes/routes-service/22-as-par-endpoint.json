@@ -17,15 +17,6 @@
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "apiClientService": "IdmApiClientService"
           }
-        },
-        {
-          "name": "FixParParamsForAm",
-          "comment": "Workaround for an AM bug in the /par endpoint",
-          "type": "ScriptableFilter",
-          "config": {
-            "type": "application/x-groovy",
-            "file": "FixParParamsForAm.groovy"
-          }
         }
       ],
       "handler": "FRReverseProxyHandler"
