@@ -12,21 +12,16 @@
           "name": "fapiWellKnownFilterChain",
           "type": "FapiWellKnownFilterChain",
           "config": {
-            "forwardedHost" : "&{as.fqdn}"
-          }
-        },
-        {
-          "comment": "Update AS well-known config returned by AM",
-          "name": "ASWellKnownFilter",
-          "type": "ScriptableFilter",
-          "config": {
-            "type": "application/x-groovy",
-            "file": "ASWellKnownFilter.groovy",
-            "args": {
-              "tokenEndpointAuthMethodsSupported": "${oauth2.tokenEndpointAuthMethodsSupported}",
-              "mtlsEndpoints": ["registration_endpoint", "token_endpoint", "authorization_endpoint", "pushed_authorization_request_endpoint"],
-              "igHost": "&{as.fqdn}",
-              "mtlsHost": "&{as.mtls.fqdn}"
+            "forwardedHost": "&{as.fqdn}",
+            "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}",
+            "mtlsEndpoints": {
+              "endpointNames": [
+                "registration_endpoint",
+                "token_endpoint",
+                "authorization_endpoint",
+                "pushed_authorization_request_endpoint"
+              ],
+              "mtlsHostname": "&{as.mtls.fqdn}"
             }
           }
         }
