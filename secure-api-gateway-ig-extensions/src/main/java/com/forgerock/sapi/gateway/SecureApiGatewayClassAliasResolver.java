@@ -23,15 +23,11 @@ import org.forgerock.openig.alias.ClassAliasResolver;
 import com.forgerock.sapi.gateway.am.AccessTokenResponseIdTokenReSignFilter;
 import com.forgerock.sapi.gateway.am.AuthorizeResponseJwtReSignFilter;
 import com.forgerock.sapi.gateway.am.JwtReSigner;
-import com.forgerock.sapi.gateway.common.exception.SapiLogAttachedExceptionFilterHeaplet;
-import com.forgerock.sapi.gateway.consent.ConsentRequestAccessAuthorisationFilter;
 
 public class SecureApiGatewayClassAliasResolver implements ClassAliasResolver {
     private static final Map<String, Class<?>> ALIASES = new HashMap<>();
 
     static {
-        ALIASES.put("ConsentRequestAccessAuthorisationFilter", ConsentRequestAccessAuthorisationFilter.class);
-        ALIASES.put("SapiLogAttachedExceptionFilter", SapiLogAttachedExceptionFilterHeaplet.class);
         ALIASES.put("JwtReSigner", JwtReSigner.class);
         ALIASES.put("AccessTokenResponseIdTokenReSignFilter", AccessTokenResponseIdTokenReSignFilter.class);
         ALIASES.put("AuthorizeResponseJwtReSignFilter", AuthorizeResponseJwtReSignFilter.class);
