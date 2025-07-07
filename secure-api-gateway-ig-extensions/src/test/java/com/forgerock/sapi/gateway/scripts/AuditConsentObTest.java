@@ -160,8 +160,8 @@ public class AuditConsentObTest extends AbstractScriptTest {
                            field("args",
                                  object(field("auditService", "${heap['AuditService']}"),
                                         field("clock", "${heap['Clock']}"),
-                                        field("consentIdLocator", "contexts.attributes.openbanking_intent_id"),
-                                        // TODO[use-me-to-fix] field("consentIdLocator", "contexts.attributes.attributes.openbanking_intent_id"),
+                                        // TODO[use-me-to-break-the-script-again] field("consentIdLocator", "contexts.attributes.openbanking_intent_id"),
+                                        field("consentIdLocator", "contexts.attributes.attributes.openbanking_intent_id"),
                                         field("role", "CBPII"),
                                         field("event", "EXEC")))));
     }
