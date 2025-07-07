@@ -58,6 +58,11 @@
             <scope>provided</scope>
         </dependency>
         <dependency>
+            <groupId>org.forgerock.commons</groupId>
+            <artifactId>forgerock-audit-handler-json</artifactId>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
             <groupId>org.forgerock.openig</groupId>
             <artifactId>openig-core</artifactId>
             <scope>provided</scope>
