@@ -156,9 +156,8 @@ public class JwtReconstruction {
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
     public <T extends Jwt> T reconstructJwtFromString(String jwtString, Class<T> jwtClass) {
-        if (jwtClass.isAssignableFrom(EncryptedJwt.class) || jwtClass.isAssignableFrom(EncryptedThenSignedJwt.class)) {
-            throw new IllegalStateException("EncryptedJwt and EncryptedThenSignedJwt do not yet"
-                                                    + " support string-based JWT payloads");
+        if (jwtClass.equals(SignedJwt.class)) {
+            throw new IllegalStateException("Only plain SignedJwt currently supports string-based JWT payloads");
         }
         return reconstructJwt(jwtString, jwtClass, this::reconstructSignedJwtFromStringBasedPayload);
     }
