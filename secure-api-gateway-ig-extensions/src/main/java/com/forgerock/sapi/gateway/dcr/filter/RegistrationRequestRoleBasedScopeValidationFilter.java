@@ -16,6 +16,7 @@
 package com.forgerock.sapi.gateway.dcr.filter;
 
 import static org.forgerock.http.protocol.Response.newResponsePromise;
+import static org.forgerock.openig.fapi.dcr.common.Constants.VALIDATABLE_HTTP_REQUEST_METHODS;
 import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_CLIENT_METADATA;
 import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_SOFTWARE_STATEMENT;
 import static org.forgerock.openig.fapi.error.ErrorResponseUtils.errorResponse;
@@ -87,6 +88,9 @@ public class RegistrationRequestRoleBasedScopeValidationFilter implements Filter
     public Promise<Response, NeverThrowsException> filter(final Context context,
                                                           final Request request,
                                                           final Handler next) {
+        if (!VALIDATABLE_HTTP_REQUEST_METHODS.contains(request.getMethod())) {
+            return next.handle(context, request);
+        }
         RegistrationRequest registrationRequest = context.asContext(RegistrationRequestFapiContext.class)
                                                          .getRegistrationRequest();
         return validate(registrationRequest)

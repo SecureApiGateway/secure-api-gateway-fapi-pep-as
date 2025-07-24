@@ -31,6 +31,8 @@ import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_CLIENT_METADATA;
 import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_SOFTWARE_STATEMENT;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -55,6 +57,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -98,8 +101,10 @@ class RegistrationRequestRoleBasedScopeValidationFilterTest {
         when(mockRegistrationRequest.getSoftwareStatement()).thenReturn(softwareStatement);
         when(softwareStatement.getRoles()).thenReturn(ssaRoles);
         when(next.handle(context, request)).thenReturn(newResponsePromise(new Response(OK)));
-        // When/ Then
+        // When
         Response response = scopeValidationFilter.filter(context, request, next).getOrThrowIfInterrupted();
+        // Then
+        verify(next).handle(any(), any());
         assertThat(response.getStatus()).isEqualTo(OK);
     }
 
@@ -183,5 +188,18 @@ class RegistrationRequestRoleBasedScopeValidationFilterTest {
                     assertThat(errorResponseJson.get("error_description").asString())
                             .contains("The request jwt does not contain the required scopes claim");
                 });
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"GET", "DELETE"})
+    void shouldNotValidateScopesForGetAndDelete(final String method) {
+        //Given - non-validatable request method
+        request = new Request().setMethod(method);
+        when(next.handle(context, request)).thenReturn(newResponsePromise(new Response(OK)));
+        // When
+        Response response = scopeValidationFilter.filter(context, request, next).getOrThrowIfInterrupted();
+        // Then
+        verify(next).handle(any(), any());
+        assertThat(response.getStatus()).isEqualTo(OK);
     }
 }
