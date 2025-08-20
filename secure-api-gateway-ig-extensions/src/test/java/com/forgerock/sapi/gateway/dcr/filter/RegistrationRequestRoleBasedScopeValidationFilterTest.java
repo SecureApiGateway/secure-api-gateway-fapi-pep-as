@@ -23,13 +23,11 @@ import static com.forgerock.sapi.gateway.dcr.filter.RegistrationRequestRoleBased
 import static com.forgerock.sapi.gateway.dcr.filter.RegistrationRequestRoleBasedScopeValidationFilter.SCOPE_PAYMENTS;
 import static java.util.Collections.emptyList;
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.InstanceOfAssertFactories.type;
 import static org.forgerock.http.protocol.Response.newResponsePromise;
 import static org.forgerock.http.protocol.Status.OK;
-import static org.forgerock.json.JsonValue.json;
-import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_CLIENT_METADATA;
-import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_SOFTWARE_STATEMENT;
+import static org.forgerock.openig.fapi.dcr.common.DcrErrorCode.INVALID_CLIENT_METADATA;
+import static org.forgerock.openig.fapi.dcr.common.DcrErrorCode.INVALID_SOFTWARE_STATEMENT;
 import static org.junit.jupiter.params.provider.Arguments.arguments;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
@@ -46,7 +44,7 @@ import org.forgerock.http.protocol.Request;
 import org.forgerock.http.protocol.Response;
 import org.forgerock.json.JsonValue;
 import org.forgerock.openig.fapi.dcr.SoftwareStatement;
-import org.forgerock.openig.fapi.dcr.common.ErrorCode;
+import org.forgerock.openig.fapi.dcr.common.DcrErrorCode;
 import org.forgerock.openig.fapi.dcr.request.RegistrationRequest;
 import org.forgerock.openig.fapi.dcr.request.RegistrationRequestFapiContext;
 import org.forgerock.services.context.Context;
@@ -134,7 +132,7 @@ class RegistrationRequestRoleBasedScopeValidationFilterTest {
     @MethodSource("invalidScopesAndSsaRoles")
     void shouldFailWithIncompatibleScopesAndSsaRoles(final List<String> scopes,
                                                      final List<String> ssaRoles,
-                                                     final ErrorCode expectedErrorCode,
+                                                     final DcrErrorCode expectedErrorCode,
                                                      final String expectedErrorMessage) throws IOException {
         //Given
         when(mockRegistrationRequest.getScope()).thenReturn(String.join(" ", scopes));
