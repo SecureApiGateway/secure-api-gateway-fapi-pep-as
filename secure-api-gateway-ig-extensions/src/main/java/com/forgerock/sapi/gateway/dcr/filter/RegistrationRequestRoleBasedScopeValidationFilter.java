@@ -17,8 +17,8 @@ package com.forgerock.sapi.gateway.dcr.filter;
 
 import static org.forgerock.http.protocol.Response.newResponsePromise;
 import static org.forgerock.openig.fapi.dcr.common.Constants.VALIDATABLE_HTTP_REQUEST_METHODS;
-import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_CLIENT_METADATA;
-import static org.forgerock.openig.fapi.dcr.common.ErrorCode.INVALID_SOFTWARE_STATEMENT;
+import static org.forgerock.openig.fapi.dcr.common.DcrErrorCode.INVALID_CLIENT_METADATA;
+import static org.forgerock.openig.fapi.dcr.common.DcrErrorCode.INVALID_SOFTWARE_STATEMENT;
 import static org.forgerock.openig.fapi.error.ErrorResponseUtils.errorResponse;
 import static org.forgerock.util.promise.Promises.newExceptionPromise;
 import static org.forgerock.util.promise.Promises.newVoidResultPromise;
