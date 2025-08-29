@@ -4,6 +4,7 @@ on:
   pull_request:
     branches:
       - main
+      - v5.0.1
     paths-ignore:
       - '**/README.md'
 jobs:
