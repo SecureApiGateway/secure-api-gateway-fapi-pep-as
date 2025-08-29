@@ -18,20 +18,25 @@ package com.forgerock.sapi.gateway.jwt;
 import static java.util.Objects.requireNonNull;
 
 import org.forgerock.json.jose.jwt.Payload;
+import org.forgerock.json.jose.utils.Utils;
 
 /**
- * Class representing a string-based {@link Payload}.
+ * Class representing an octet-sequence-based {@link Payload}, which is managed as an immutable {@link String}.
  */
-public class StringPayload implements Payload {
+public class OctetSequencePayload implements Payload {
 
     private String payload;
 
     /**
-     * Construct a {@code StringPayload}.
-     * @param payload string payload
+     * Construct an {@code OctetSequencePayload}.
+     * @param octetSequence octetSequence payload
      */
-    public StringPayload(final String payload) {
-        this.payload = requireNonNull(payload);
+    public OctetSequencePayload(final byte[] octetSequence) {
+        this.payload = new String(requireNonNull(octetSequence), Utils.CHARSET);
+    }
+
+    private OctetSequencePayload(final OctetSequencePayload other) {
+        this.payload = other.payload;
     }
 
     @Override
@@ -40,7 +45,7 @@ public class StringPayload implements Payload {
     }
 
     @Override
-    public Payload copy() {
-        return new StringPayload(payload);
+    public OctetSequencePayload copy() {
+        return new OctetSequencePayload(this);
     }
 }
