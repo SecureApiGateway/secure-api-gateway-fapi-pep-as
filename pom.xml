@@ -46,7 +46,7 @@
     </parent>
 
     <properties>
-        <openig.version>2025.6.0-SNAPSHOT</openig.version>
+        <openig.version>2025.6.2</openig.version>
         <nimbus-jose.version>9.40</nimbus-jose.version>
         <bouncy-castle.version>1.78.1</bouncy-castle.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
@@ -75,7 +75,7 @@
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
         <url>https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-as.git</url>
-        <tag>v5.0.0</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <repositories>
