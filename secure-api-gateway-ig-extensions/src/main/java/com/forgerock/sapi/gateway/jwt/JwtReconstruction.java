@@ -15,6 +15,9 @@
  */
 package com.forgerock.sapi.gateway.jwt;
 
+import static com.forgerock.sapi.gateway.jwt.JwtReconstruction.SignedJwtTransformation.TransformContext;
+import static com.forgerock.sapi.gateway.jwt.JwtReconstruction.SignedJwtTransformation.claimSetTransformer;
+import static com.forgerock.sapi.gateway.jwt.JwtReconstruction.SignedJwtTransformation.octetSequenceTransformer;
 import static org.forgerock.json.jose.utils.Utils.decodeJwtComponent;
 
 import java.util.ArrayList;
@@ -27,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 import org.forgerock.json.JsonValue;
+import com.forgerock.sapi.gateway.jwt.JwtReconstruction.SignedJwtTransformation.Transformer;
 import org.forgerock.json.jose.exceptions.InvalidJwtException;
 import org.forgerock.json.jose.exceptions.JwtReconstructionException;
 import org.forgerock.json.jose.exceptions.JwtRuntimeException;
@@ -67,18 +71,63 @@ public class JwtReconstruction {
 
     private final Set<String> recognizedHeaders = new CopyOnWriteArraySet<>();
 
-    /**
-     * Functional interface supporting building a {@link Jwt} from its component parts. This interface supports building
-     * of the {@link Jwt} with varying payload types.
-     */
-    @FunctionalInterface
-    interface JwtBuilder {
+    /** Utility class supporting payload to {@link SignedJwt} transformation. */
+    static final class SignedJwtTransformation {
+
         /**
-         * Build a {@link Jwt} from its component parts.
-         * @param jwtParts The {@link Jwt} component parts
-         * @return a built {@link Jwt}
+         * Functional interface supporting building a {@link SignedJwt} from its varying payload types.
          */
-        Jwt build(String[] jwtParts);
+        @FunctionalInterface
+        interface Transformer {
+            /**
+             * Build a {@link Jwt} from its component parts.
+             *
+             * @param payloadBytes The payload as bytes
+             * @param transformContext The transform context
+             * @return a built {@link SignedJwt}
+             */
+            SignedJwt transform(byte[] payloadBytes, final TransformContext transformContext);
+        }
+
+        /**
+         * Context supporting {@link SignedJwt} construction.
+         * @param header The {@link JwsHeader} used to sign the payload
+         * @param signingInput The raw signed payload
+         * @param signature The signature
+         */
+        record TransformContext(JwsHeader header, byte[] signingInput, byte[] signature) { }
+
+        /**
+         * Return a {@link Transformer} to transform the supplied payload and {@link TransformContext context} into a
+         * {@link SignedJwt} with a {@link JwtClaimsSet} payload.
+         * @return a {@link Transformer}
+         * @see Transformer
+         */
+        static Transformer claimSetTransformer() {
+            return (payloadBytes, transformContext) -> {
+                JwtClaimsSet claimsSet = new JwtClaimsSet(Utils.parseJson(new String(payloadBytes, Utils.CHARSET)));
+                return new SignedJwt(transformContext.header(),
+                                     claimsSet,
+                                     transformContext.signingInput(),
+                                     transformContext.signature());
+            };
+        }
+
+        /**
+         * Return a {@link Transformer} to transform the supplied payload and {@link TransformContext context} into a
+         * {@link OctetSequenceSignedJwt} with a {@link OctetSequencePayload} payload.
+         * @return a {@link Transformer}
+         * @see Transformer
+         */
+        static Transformer octetSequenceTransformer() {
+            return (payloadBytes, transformContext) -> {
+                OctetSequencePayload octetSequencePayload = new OctetSequencePayload(payloadBytes);
+                return new OctetSequenceSignedJwt(transformContext.header(),
+                                                  octetSequencePayload,
+                                                  transformContext.signingInput(),
+                                                  transformContext.signature());
+            };
+        }
     }
 
     /**
@@ -122,7 +171,7 @@ public class JwtReconstruction {
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
     public <T extends Jwt> T reconstructJwt(String jwtString, Class<T> jwtClass) {
-            return reconstructJwtFromJsonClaims(jwtString, jwtClass);
+        return reconstructJwtFromJsonClaims(jwtString, jwtClass);
     }
 
     /**
@@ -139,7 +188,7 @@ public class JwtReconstruction {
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
     public <T extends Jwt> T reconstructJwtFromJsonClaims(String jwtString, Class<T> jwtClass) {
-        return reconstructJwt(jwtString, jwtClass, this::reconstructSignedJwtFromJsonPayload);
+        return reconstructJwt(jwtString, jwtClass, claimSetTransformer());
     }
 
     /**
@@ -155,11 +204,11 @@ public class JwtReconstruction {
      * @throws UnrecognizedCriticalHeaderException If the JWT contains critical headers ("crit") that are
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
-    public <T extends Jwt> T reconstructJwtFromString(String jwtString, Class<T> jwtClass) {
-        if (!jwtClass.equals(SignedJwt.class)) {
-            throw new IllegalStateException("Only plain SignedJwt currently supports string-based JWT payloads");
+    public <T extends Jwt> T reconstructJwtFromOctetSequence(String jwtString, Class<T> jwtClass) {
+        if (!SignedJwt.class.isAssignableFrom(jwtClass)) {
+            throw new IllegalStateException("Only plain SignedJwt currently supports octet sequence JWT payloads");
         }
-        return reconstructJwt(jwtString, jwtClass, this::reconstructSignedJwtFromStringBasedPayload);
+        return reconstructJwt(jwtString, jwtClass, octetSequenceTransformer());
     }
 
     /**
@@ -168,13 +217,14 @@ public class JwtReconstruction {
      * @param jwtString The JWT string.
      * @param jwtClass The JWT class to reconstruct the JWT string to.
      * @param <T> The type of JWT the JWT string represents.
+     * @param transformer Payload to SignedJwt {@link Transformer}
      * @return The reconstructed JWT object.
      * @throws InvalidJwtException If the jwt does not consist of the correct number of parts or is malformed.
      * @throws JwtReconstructionException If the jwt does not consist of the correct number of parts.
      * @throws UnrecognizedCriticalHeaderException If the JWT contains critical headers ("crit") that are
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
-    public <T extends Jwt> T reconstructJwt(String jwtString, Class<T> jwtClass, JwtBuilder jwtBuilder) {
+    private <T extends Jwt> T reconstructJwt(String jwtString, Class<T> jwtClass, Transformer transformer) {
         //split into parts
         if (null == jwtString) {
             throw new InvalidJwtException("JWT is empty");
@@ -212,14 +262,14 @@ public class JwtReconstruction {
         } else if (headerJson.isDefined(ALGORITHM)) {
             //is signed jwt
             verifyNumberOfParts(jwtParts, JWS_NUM_PARTS);
-            jwt = jwtBuilder.build(jwtParts);
+            jwt = reconstructSignedJwt(jwtParts, transformer);
         } else {
             //plaintext jwt
             verifyNumberOfParts(jwtParts, JWS_NUM_PARTS);
             if (!jwtParts[2].isEmpty()) {
                 throw new InvalidJwtException("Third part of Plaintext JWT not empty.");
             }
-            jwt = jwtBuilder.build(jwtParts);
+            jwt = reconstructSignedJwt(jwtParts, transformer);
         }
 
         return jwtClass.cast(jwt);
@@ -248,37 +298,7 @@ public class JwtReconstruction {
      * @param jwtParts The three base64url UTF-8 encoded string parts of a plaintext or signed JWT.
      * @return A SignedJwt object.
      */
-    private SignedJwt reconstructSignedJwtFromJsonPayload(String[] jwtParts) {
-
-        String encodedHeader = jwtParts[0];
-        String encodedClaimsSet = jwtParts[1];
-        String encodedSignature = jwtParts[2];
-
-        String header = decodeJwtComponent(encodedHeader);
-
-
-        try {
-            byte[] signature = Base64url.decodeStrict(encodedSignature);
-            JwsHeader jwsHeader = new JwsHeader(Utils.parseJson(header));
-            byte[] payload = new CompressionManager().decompress(jwsHeader.getCompressionAlgorithm(), encodedClaimsSet);
-            JwtClaimsSet claimsSet = new JwtClaimsSet(Utils.parseJson(new String(payload, Utils.CHARSET)));
-            return new SignedJwt(jwsHeader, claimsSet, (encodedHeader + "." + encodedClaimsSet).getBytes(Utils.CHARSET),
-                                 signature);
-        } catch (IllegalArgumentException | JwtRuntimeException e) {
-            throw new InvalidJwtException(e);
-        }
-    }
-
-    /**
-     * Reconstructs a Signed JWT from the given JWT string parts.
-     * <p>
-     * As a plaintext JWT is a JWS with an empty signature, this method should be used to reconstruct plaintext JWTs
-     * as well as signed JWTs.
-     *
-     * @param jwtParts The three base64url UTF-8 encoded string parts of a plaintext or signed JWT.
-     * @return A SignedJwt object.
-     */
-    private SignedJwt reconstructSignedJwtFromStringBasedPayload(String[] jwtParts) {
+    private SignedJwt reconstructSignedJwt(String[] jwtParts, Transformer transformer) {
 
         String encodedHeader = jwtParts[0];
         String encodedClaimsSet = jwtParts[1];
@@ -290,11 +310,9 @@ public class JwtReconstruction {
             byte[] signature = Base64url.decodeStrict(encodedSignature);
             JwsHeader jwsHeader = new JwsHeader(Utils.parseJson(header));
             byte[] payload = new CompressionManager().decompress(jwsHeader.getCompressionAlgorithm(), encodedClaimsSet);
-            StringPayload stringPayload = new StringPayload(new String(payload, Utils.CHARSET));
-            return new SignedJwtWithStringPayload(jwsHeader,
-                                                  stringPayload,
-                                                  (encodedHeader + "." + encodedClaimsSet).getBytes(Utils.CHARSET),
-                                                  signature);
+            byte[] signingInput = (encodedHeader + "." + encodedClaimsSet).getBytes(Utils.CHARSET);
+            TransformContext transformContext = new TransformContext(jwsHeader, signingInput, signature);
+            return transformer.transform(payload, transformContext);
         } catch (IllegalArgumentException | JwtRuntimeException e) {
             throw new InvalidJwtException(e);
         }
