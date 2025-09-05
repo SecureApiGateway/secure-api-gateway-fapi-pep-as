@@ -33,7 +33,7 @@ public class OctetSequenceSignedJwt extends SignedJwt {
     }
 
     /**
-     * Constructs a fresh, new {@code OctetSequenceSignedJwt} from the given {}JwsHeader and nested Encrypted JWT.
+     * Constructs a fresh, new {@code OctetSequenceSignedJwt} from the given {@link JwsHeader} and nested Encrypted JWT.
      * <p>
      * The specified private key will be used in the creation of the JWS signature.
      *
