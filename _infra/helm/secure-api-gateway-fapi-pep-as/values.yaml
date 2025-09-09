@@ -108,6 +108,8 @@ secrets:
   igMetricsPassword: "replace-me"
   igMetricsUsername: "replace-me"
   igTruststorePassword: "replace-me"
+  igOBASPSPSigningKeystoreStorepass: "replace-me"
+  igOBASPSPSigningKeystoreKeypass: "replace-me"
 
 service:
   # Version of the Kubernetes API to use
