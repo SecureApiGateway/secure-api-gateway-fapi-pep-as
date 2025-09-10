@@ -65,19 +65,20 @@ public class AccessTokenResponseIdTokenReSignFilter implements Filter {
                         return newResultPromise(response);
                     } else {
                         return response.getEntity().getJsonAsync().thenAsync(jsonObj -> {
-                            logger.debug("Locating id_token in response json");
+                            logger.debug("Locating id_token in access_token response");
                             final JsonValue json = json(jsonObj);
                             final JsonValue idTokenValue = json.get(ID_TOKEN_FIELD_NAME);
 
                             // id_token is optional in the response - skip if not present
                             if (idTokenValue.isNull() || !idTokenValue.isString()) {
-                                logger.debug("No id_token in response json - passing original response on");
+                                logger.debug("No id_token found in access_token response - re-signing skipped");
                                 return newResultPromise(response);
                             }
+                            logger.debug("Found id_token in access_token response - re-signing");
                             final String idToken = idTokenValue.asString();
                             return reSignIdTokenInResponse(response, json, idToken);
                         }, ex -> {
-                            logger.error("Failed to re-sign id_token JWT", ex);
+                            logger.error("Failed to re-sign access_token response id_token", ex);
                             return newResultPromise(new Response(Status.INTERNAL_SERVER_ERROR));
                         });
 
@@ -87,7 +88,7 @@ public class AccessTokenResponseIdTokenReSignFilter implements Filter {
 
     private Promise<Response, NeverThrowsException> reSignIdTokenInResponse(Response response, JsonValue responseJson, String idToken) {
         return jwtReSigner.reSignJwt(idToken).then(reSignedIdToken -> {
-            logger.debug("Successfully re-signed id_token: {} -> {}", idToken, reSignedIdToken);
+            logger.debug("Successfully re-signed access_token response id_token: {} -> {}", idToken, reSignedIdToken);
             responseJson.put(ID_TOKEN_FIELD_NAME, reSignedIdToken);
             response.getEntity().setJson(responseJson);
             return response;
