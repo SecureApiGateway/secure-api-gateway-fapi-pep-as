@@ -21,7 +21,7 @@
 
     <groupId>com.forgerock.sapi.gateway</groupId>
     <artifactId>secure-api-gateway-fapi-pep-as</artifactId>
-    <version>5.0.2-SNAPSHOT</version>
+    <version>5.0.2</version>
 
     <packaging>pom</packaging>
     <name>secure-api-gateway-fapi-pep-as</name>
@@ -75,7 +75,7 @@
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
         <url>https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-as.git</url>
-        <tag>HEAD</tag>
+        <tag>v5.0.2</tag>
     </scm>
 
     <repositories>
