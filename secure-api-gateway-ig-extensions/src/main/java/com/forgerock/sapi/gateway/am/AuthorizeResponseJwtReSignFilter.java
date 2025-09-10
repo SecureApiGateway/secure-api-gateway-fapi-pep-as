@@ -76,7 +76,7 @@ public class AuthorizeResponseJwtReSignFilter implements Filter {
      * misconfiguration or a change in AM behaviour.
      */
     private static final org.forgerock.util.Function<SignatureException, Response, NeverThrowsException> signatureExceptionResponseHandler = ex -> {
-        LOGGER.error("Failed to re-sign JWT due to exception", ex);
+        LOGGER.error("Failed to re-sign authorize response id_token", ex);
         return newInternalServerError();
     };
     /**
@@ -105,14 +105,16 @@ public class AuthorizeResponseJwtReSignFilter implements Filter {
             } else {
                 final Optional<MutableUri> optionalLocationUri = getLocationHeader(response);
                 if (optionalLocationUri.isEmpty()) {
-                    LOGGER.debug("No location header found, skipping");
+                    LOGGER.debug("No location header found in authorize response, re-signing skipped");
                     return newResultPromise(response);
                 }
                 final MutableUri locationUri = optionalLocationUri.get();
-                if (isJwtResponseMode(request)) {
-                    return handleJwtResponseMode(locationUri, response);
+                final Form locationFormParams = getFormParams(locationUri);
+                boolean isJarmResponse = (locationFormParams.getFirst(RESPONSE_JWT_PARAM_NAME) != null);
+                if (isJarmResponse) {
+                    return handleJwtResponseMode(locationUri, locationFormParams, response);
                 } else {
-                    return handlePlainResponseMode(locationUri, response);
+                    return handlePlainResponseMode(locationUri, locationFormParams, response);
                 }
             }
         });
@@ -122,20 +124,23 @@ public class AuthorizeResponseJwtReSignFilter implements Filter {
      * handles re-signing data for the plain (default) response mode i.e. not JARM.
      *
      * @param locationUri the URI from the Location header in the redirect response which contains the JWT to re-sign
+     * @param formParams the location URI form parameters
      * @param response    the Response to update
      * @return Promise with the updated Response or an HTTP 500 Internal Server Error Response if an error occurs
      */
-    private Promise<Response, NeverThrowsException> handlePlainResponseMode(MutableUri locationUri, Response response) {
+    private Promise<Response, NeverThrowsException> handlePlainResponseMode(MutableUri locationUri,
+                                                                            Form formParams,
+                                                                            Response response) {
         LOGGER.debug("handling plain response_mode re-signing");
-        final Form formParams = getFormParams(locationUri);
         final String idTokenJwtString = formParams.getFirst(ID_TOKEN_FIELD_NAME);
         // May not be present on the first redirect call if the user
         if (idTokenJwtString == null) {
-            LOGGER.debug("No id_token found in response, doing nothing.");
+            LOGGER.debug("No id_token found in authorize response - re-signing skipped");
             return newResultPromise(response);
         }
+        LOGGER.debug("Found id_token in authorize response - re-signing");
         return jwtReSigner.reSignJwt(idTokenJwtString).then(reSignedIdToken -> {
-            LOGGER.debug("Successfully re-signed id_token: {}", reSignedIdToken);
+            LOGGER.debug("Successfully re-signed authorize response id_token: {} -> {}", idTokenJwtString, reSignedIdToken);
             formParams.replace(ID_TOKEN_FIELD_NAME, List.of(reSignedIdToken));
             updateResponseLocationHeader(locationUri, response, formParams.toQueryString());
             return response;
@@ -146,12 +151,14 @@ public class AuthorizeResponseJwtReSignFilter implements Filter {
      * handles re-signing data for JWT response mode aka JARM.
      *
      * @param locationUri the URI from the Location header in the redirect response which contains the JWT to re-sign
+     * @param formParams the location URI form parameters
      * @param response    the Response to update
      * @return Promise with the updated Response or an HTTP 500 Internal Server Error Response if an error occurs
      */
-    private Promise<Response, NeverThrowsException> handleJwtResponseMode(MutableUri locationUri, Response response) {
+    private Promise<Response, NeverThrowsException> handleJwtResponseMode(MutableUri locationUri,
+                                                                          Form formParams,
+                                                                          Response response) {
         LOGGER.debug("handling jwt response_mode re-signing");
-        final Form formParams = getFormParams(locationUri);
         final String responseJwtString = formParams.getFirst(RESPONSE_JWT_PARAM_NAME);
         if (responseJwtString == null) {
             LOGGER.debug("No response JWT found in response, doing nothing.");
@@ -205,23 +212,6 @@ public class AuthorizeResponseJwtReSignFilter implements Filter {
         }
         response.getHeaders().replace(LocationHeader.NAME, locationUri.toString());
         return response;
-    }
-
-    /**
-     * Determines whether jwt response_mode is specified in the {@link Request} object's request JWT URI Query Param
-     *
-     * @param request the {@link Request} to inspect
-     * @return true if the response_mode is set to jwt or false if it is not specified or has another value.
-     */
-    @VisibleForTesting
-    boolean isJwtResponseMode(Request request) {
-        final String requestJwtString = request.getQueryParams().getFirst("request");
-        if (requestJwtString == null) {
-            return false;
-        }
-        final SignedJwt requestJwt = jwtReconstruction.reconstructJwt(requestJwtString, SignedJwt.class);
-        final String responseMode = requestJwt.getClaimsSet().getClaim("response_mode", String.class);
-        return responseMode != null && responseMode.contains("jwt");
     }
 
     private static boolean isFragmentResponse(MutableUri locationUri) {
