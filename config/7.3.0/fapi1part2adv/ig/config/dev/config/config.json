@@ -145,9 +145,10 @@
       "name": "SystemAndEnvSecretStore-IAM",
       "type": "SystemAndEnvSecretStore",
       "config": {
-        "format": "PLAIN"      
+        "format": "PLAIN"
       }
     },
+    
     {
       "name": "IDMClientHandler",
       "type": "Chain",
