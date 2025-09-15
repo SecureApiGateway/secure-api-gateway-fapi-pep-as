@@ -2,7 +2,7 @@
   "comment": "OIDC well known config",
   "name" : "28 - AS well known metadata",
   "baseURI" : "https://&{identity.platform.fqdn}",
-  "condition" : "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/.well-known/openid-configuration')}",
+  "condition" : "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/fapi/.well-known/openid-configuration')}",
   "handler": {
     "type": "Chain",
     "config": {

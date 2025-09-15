@@ -2,7 +2,7 @@
   "name": "20 - DCR - Dynamic Client Registration",
   "comment": "Ensure FAPI compliant registration requests",
   "baseURI": "https://&{identity.platform.fqdn}",
-  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/register')}",
+  "condition": "${find(request.uri.path, '^/am/oauth2/realms/root/realms/&{am.realm}/fapi/register')}",
   "handler": {
     "type": "Chain",
     "config": {
