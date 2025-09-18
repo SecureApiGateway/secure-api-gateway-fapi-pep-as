@@ -149,43 +149,6 @@
       }
     },
     {
-      "name": "IDMClientHandler",
-      "type": "Chain",
-      "config": {
-        "filters": [
-          {
-            "type": "ResourceOwnerOAuth2ClientFilter",
-            "config": {
-              "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
-              "username": "&{ig.idm.user}",
-              "passwordSecretId": "ig.idm.password",
-              "secretsProvider": "SystemAndEnvSecretStore-IAM",
-              "scopes": [
-                "fr:idm:*"
-              ],
-              "endpointHandler": {
-                "type": "Chain",
-                "config": {
-                  "handler": "ForgeRockClientHandler",
-                  "filters": [
-                    {
-                      "type": "ClientSecretBasicAuthenticationFilter",
-                      "config": {
-                        "clientId": "&{ig.client.id}",
-                        "clientSecretId": "ig.client.secret",
-                        "secretsProvider": "SystemAndEnvSecretStore-IAM"
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        ],
-        "handler": "ForgeRockClientHandler"
-      }
-    },
-    {
       "name": "TrustManager-OB",
       "type": "TrustManager",
       "config": {
@@ -297,7 +260,15 @@
       "type": "IdmService",
       "config": {
         "baseEndpoint": "&{urls.idmBaseUri}",
-        "endpointHandler": "IDMClientHandler"
+        "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
+        "username": "&{ig.idm.user}",
+        "passwordSecretId": "ig.idm.password",
+        "secretsProvider": "SystemAndEnvSecretStore-IAM",
+        "authMethod": "CLIENT_SECRET_BASIC",
+        "authConfig": {
+          "clientId": "&{ig.client.id}",
+          "clientSecretId": "ig.client.secret"
+        }
       }
     },
     {
