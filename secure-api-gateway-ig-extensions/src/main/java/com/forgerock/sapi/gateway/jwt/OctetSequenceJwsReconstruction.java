@@ -133,6 +133,7 @@ public class OctetSequenceJwsReconstruction {
         }
 
         final Jwt jwt;
+        // Only signed JWT format is acceptable
         if (headerJson.isDefined(ENCRYPTION_METHOD)) {
             //is encrypted jwt
             throw new InvalidJwtException("Octet-sequence payload only supported with JWS");
