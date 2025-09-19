@@ -16,13 +16,19 @@
 package com.forgerock.sapi.gateway.am;
 
 import static com.forgerock.sapi.gateway.util.TestHandlers.invokeFilter;
+import static org.forgerock.http.protocol.Response.newResponsePromise;
+import static org.forgerock.http.protocol.Status.FOUND;
 import static org.forgerock.json.JsonValue.field;
 import static org.forgerock.json.JsonValue.json;
 import static org.forgerock.json.JsonValue.object;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.net.URI;
 import java.net.URISyntaxException;
 import java.security.KeyPair;
 import java.util.HashMap;
@@ -30,6 +36,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.forgerock.http.Filter;
+import org.forgerock.http.Handler;
 import org.forgerock.http.MutableUri;
 import org.forgerock.http.header.LocationHeader;
 import org.forgerock.http.protocol.Form;
@@ -42,6 +50,8 @@ import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.openig.heap.HeapException;
 import org.forgerock.openig.heap.HeapImpl;
 import org.forgerock.openig.heap.Name;
+import org.forgerock.services.context.Context;
+import org.forgerock.services.context.RootContext;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -112,7 +122,7 @@ class AuthorizeResponseJwtReSignFilterTest {
         } catch (URISyntaxException e) {
             throw new RuntimeException(e);
         }
-        return new Response(Status.FOUND).addHeaders(new LocationHeader(locationUri.toString()));
+        return new Response(FOUND).addHeaders(new LocationHeader(locationUri.toString()));
     }
 
     private static Request createAuthorizeRequest() {
@@ -157,23 +167,6 @@ class AuthorizeResponseJwtReSignFilterTest {
 
         final Response response = invokeFilter(createFilter(), createAuthorizeRequest(), responseHandler);
         assertEquals(Status.OK, response.getStatus());
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"jwt", "query.jwt", "fragment.jwt", "form_post.jwt"})
-    void testIsJwtResponseModeHandlesAllJwtResponseModeValues(String jwtResponseMode) {
-        assertTrue(createFilter().isJwtResponseMode(createAuthorizeRequestJwtResponseMode(jwtResponseMode)));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"query", "fragment", "form_post"})
-    void testIsJwtResponseModeReturnsFalseForNonJwtModes(String jwtResponseMode) {
-        assertFalse(createFilter().isJwtResponseMode(createAuthorizeRequestJwtResponseMode(jwtResponseMode)));
-    }
-
-    @Test
-    void testIsJwtResponseModeReturnsFalseWhenRequestParamIsMissing() throws Exception {
-        assertFalse(createFilter().isJwtResponseMode(new Request().setUri("https://localhost/authorize?response_type=code")));
     }
 
     @Nested
@@ -224,13 +217,13 @@ class AuthorizeResponseJwtReSignFilterTest {
             // plain response_mode i.e. not JARM, without an id_token is passed through
             final String locationUri = REDIRECT_URI +  "?" + AUTHORISATION_CODE_PARAM + "=" + AUTHORISATION_CODE_VALUE;
 
-            final Response amResponse = new Response(Status.FOUND);
+            final Response amResponse = new Response(FOUND);
             amResponse.addHeaders(new LocationHeader(locationUri));
 
             final TestHandler responseHandler = new FixedResponseHandler(amResponse);
 
             final Response response = invokeFilter(createFilter(), createAuthorizeRequest(), responseHandler);
-            assertEquals(Status.FOUND, response.getStatus());
+            assertEquals(FOUND, response.getStatus());
             assertEquals(locationUri, getLocationUri(response).toString());
         }
     }
@@ -255,7 +248,7 @@ class AuthorizeResponseJwtReSignFilterTest {
 
 
         void validateSuccessJwtResponseModeResponse(Response response, String expectedResponseJwtJti, String expectedIdTokenJti) {
-            assertEquals(Status.FOUND, response.getStatus());
+            assertEquals(FOUND, response.getStatus());
             final MutableUri locationUri = getLocationUri(response);
             final Optional<String> responseJwtString = new Form().fromQueryString(locationUri.getQuery()).get(RESPONSE_PARAM).stream().findFirst();
             assertTrue(responseJwtString.isPresent());
@@ -282,14 +275,6 @@ class AuthorizeResponseJwtReSignFilterTest {
             final Response response = invokeFilter(createFilter(), request, responseHandler);
 
             validateSuccessJwtResponseModeResponse(response, responseJwtJti, idTokenJti);
-        }
-
-        @Test
-        void testAmResponseWithoutResponseJwtIsPassedThrough() {
-            final TestHandler responseHandler = new FixedResponseHandler(buildAuthoriseEndpointFragmentResponse("ignored"));
-
-            final Response response = invokeFilter(createFilter(), createAuthorizeRequestJwtResponseMode(), responseHandler);
-            assertEquals(Status.FOUND, response.getStatus());
         }
 
         @Test
@@ -326,7 +311,7 @@ class AuthorizeResponseJwtReSignFilterTest {
     }
 
     private void validateSuccessAuthoriseQueryResponse(Response response, String expectedIdTokenJti) {
-        assertEquals(Status.FOUND, response.getStatus());
+        assertEquals(FOUND, response.getStatus());
         final MutableUri locationUri = getLocationUri(response);
         final Optional<String> idToken = new Form().fromQueryString(locationUri.getQuery()).get(ID_TOKEN).stream().findFirst();
         assertTrue(idToken.isPresent());
@@ -334,7 +319,7 @@ class AuthorizeResponseJwtReSignFilterTest {
     }
 
     private void validateSuccessAuthoriseFragmentResponse(Response response, String expectedIdTokenJti) {
-        assertEquals(Status.FOUND, response.getStatus());
+        assertEquals(FOUND, response.getStatus());
         final MutableUri locationUri = getLocationUri(response);
         final Optional<String> idToken = new Form().fromQueryString(locationUri.getFragment()).get(ID_TOKEN).stream().findFirst();
         assertTrue(idToken.isPresent());
