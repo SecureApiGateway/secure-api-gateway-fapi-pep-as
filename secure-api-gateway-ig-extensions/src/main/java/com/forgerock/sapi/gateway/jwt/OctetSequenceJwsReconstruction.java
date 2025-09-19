@@ -179,7 +179,6 @@ public class OctetSequenceJwsReconstruction {
      * @return A SignedJwt object.
      */
     private SignedJwt reconstructOctetSequenceJws(String[] jwtParts) {
-
         String encodedHeader = jwtParts[0];
         String encodedClaimsSet = jwtParts[1];
         String encodedSignature = jwtParts[2];
