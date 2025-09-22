@@ -35,7 +35,6 @@ import org.forgerock.json.jose.jws.JwsHeader;
 import org.forgerock.json.jose.jws.JwsHeaderKey;
 import org.forgerock.json.jose.jws.JwtSecureHeader;
 import org.forgerock.json.jose.jws.SignedJwt;
-import org.forgerock.json.jose.jwt.Jwt;
 import org.forgerock.json.jose.jwt.JwtHeaderKey;
 import org.forgerock.json.jose.jwt.Payload;
 import org.forgerock.json.jose.utils.Utils;
@@ -94,26 +93,19 @@ public class OctetSequenceJwsReconstruction {
      * {@code jwtString} is expected to contain an octet-sequence UTF-8 payload.
      *
      * @param jwtString The JWT string.
-     * @param jwtClass The JWT class to reconstruct the JWT string to.
-     * @param <T> The type of JWT the JWT string represents.
      * @return The reconstructed JWT object.
      * @throws InvalidJwtException If the jwt does not consist of the correct number of parts or is malformed.
      * @throws JwtReconstructionException If the jwt does not consist of the correct number of parts.
      * @throws UnrecognizedCriticalHeaderException If the JWT contains critical headers ("crit") that are
      * not {@linkplain #recognizedHeaders(String...) recognized by the application}.
      */
-    public <T extends Jwt> T reconstructJwt(String jwtString, Class<T> jwtClass) {
-        if (!SignedJwt.class.isAssignableFrom(jwtClass)) {
-            throw new IllegalStateException("Only plain SignedJwt currently supports octet sequence JWT payloads");
-        }
+    public OctetSequenceSignedJwt reconstructJwt(String jwtString) {
         //split into parts
         if (null == jwtString) {
             throw new InvalidJwtException("JWT is empty");
         }
         String[] jwtParts = jwtString.split("\\.", -1);
-        if (jwtParts.length != 3) {
-            throw new InvalidJwtException("not right number of dots for a JWS, " + jwtParts.length);
-        }
+        verifyNumberOfParts(jwtParts, JWS_NUM_PARTS);
 
         //first part always header
         //turn into json value
@@ -132,27 +124,22 @@ public class OctetSequenceJwsReconstruction {
             contentType = headerJson.get(PAYLOAD_CONTENT_TYPE).asString();
         }
 
-        final Jwt jwt;
+        final OctetSequenceSignedJwt jwt;
         // Only signed JWT format is acceptable
         if (headerJson.isDefined(ENCRYPTION_METHOD)) {
             //is encrypted jwt
             throw new InvalidJwtException("Octet-sequence payload only supported with JWS");
-        } else if ("JWT".equalsIgnoreCase(contentType) || "JWE".equalsIgnoreCase(contentType)) {
-            throw new InvalidJwtException("Octet-sequence payload is not expected to contain nested JWT or JWE");
-        } else if (headerJson.isDefined(ALGORITHM)) {
-            //is signed jwt
-            verifyNumberOfParts(jwtParts, JWS_NUM_PARTS);
-            jwt = reconstructOctetSequenceJws(jwtParts);
-        } else {
-            //plaintext jwt
-            verifyNumberOfParts(jwtParts, JWS_NUM_PARTS);
-            if (!jwtParts[2].isEmpty()) {
-                throw new InvalidJwtException("Third part of Plaintext JWT not empty.");
-            }
-            jwt = reconstructOctetSequenceJws(jwtParts);
         }
-
-        return jwtClass.cast(jwt);
+        if ("JWT".equalsIgnoreCase(contentType) || "JWE".equalsIgnoreCase(contentType)) {
+            //nested JWT
+            throw new InvalidJwtException("Octet-sequence payload is not expected to contain nested JWT or JWE");
+        }
+        if (!headerJson.isDefined(ALGORITHM)) {
+            //plaintext jwt
+            throw new InvalidJwtException("Octet-sequence payload must be signed");
+        }
+        //is signed jwt
+        return reconstructOctetSequenceJws(jwtParts);
     }
 
     /**
@@ -170,24 +157,22 @@ public class OctetSequenceJwsReconstruction {
     }
 
     /**
-     * Reconstructs a Signed JWT from the given JWT string parts.
-     * <p>
-     * As a plaintext JWT is a JWS with an empty signature, this method should be used to reconstruct plaintext JWTs
-     * as well as signed JWTs.
+     * Reconstructs an OctetSequenceSignedJwt from the given JWT string parts.
      *
      * @param jwtParts The three base64url UTF-8 encoded string parts of a plaintext or signed JWT.
-     * @return A SignedJwt object.
+     * @return A OctetSequenceSignedJwt object.
      */
-    private SignedJwt reconstructOctetSequenceJws(String[] jwtParts) {
+    private OctetSequenceSignedJwt reconstructOctetSequenceJws(String[] jwtParts) {
         String encodedHeader = jwtParts[0];
-        String encodedClaimsSet = jwtParts[1];
+        String encodedPayload = jwtParts[1];
         String encodedSignature = jwtParts[2];
         String header = decodeJwtComponent(encodedHeader);
         try {
             byte[] signature = Base64url.decodeStrict(encodedSignature);
             JwsHeader jwsHeader = new JwsHeader(Utils.parseJson(header));
-            byte[] payloadBytes = new CompressionManager().decompress(jwsHeader.getCompressionAlgorithm(), encodedClaimsSet);
-            byte[] signingInput = (encodedHeader + "." + encodedClaimsSet).getBytes(Utils.CHARSET);
+            byte[] payloadBytes = new CompressionManager().decompress(jwsHeader.getCompressionAlgorithm(),
+                                                                      encodedPayload);
+            byte[] signingInput = (encodedHeader + "." + encodedPayload).getBytes(Utils.CHARSET);
             OctetSequencePayload octetSequencePayload = new OctetSequencePayload(payloadBytes);
             return new OctetSequenceSignedJwt(jwsHeader, octetSequencePayload, signingInput, signature);
         } catch (IllegalArgumentException | JwtRuntimeException e) {
