@@ -18,6 +18,7 @@ package com.forgerock.sapi.gateway.jwt;
 import org.forgerock.json.jose.jws.JwsHeader;
 import org.forgerock.json.jose.jws.SignedJwt;
 import org.forgerock.json.jose.jws.handlers.SigningHandler;
+import org.forgerock.json.jose.jwt.JwtClaimsSet;
 
 /**
  * Extension of {@link SignedJwt} supporting octet-sequence payloads represented by a {@link OctetSequencePayload}.
@@ -70,5 +71,10 @@ public class OctetSequenceSignedJwt extends SignedJwt {
     @Override
     public OctetSequencePayload getPayload() {
         return (OctetSequencePayload) super.getPayload();
+    }
+
+    @Override
+    public JwtClaimsSet getClaimsSet() {
+        throw new IllegalStateException("OctetSequenceSignedJwt payload cannot be represented as a claims set");
     }
 }
