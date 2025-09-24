@@ -194,23 +194,14 @@ init_config()
     cp -r "${PROFILE_ROOT}/$1/config/$_arg_environment/config" "$DOCKER_ROOT/$1/"
     jq --arg mode "$(echo $_arg_ig_mode | tr '[:lower:]' '[:upper:]')" '.mode = $mode' "$DOCKER_ROOT/$1/config/"admin.json > "$DOCKER_ROOT/$1/config/"admin.json.tmp
     mv "$DOCKER_ROOT/$1/config/"admin.json.tmp "$DOCKER_ROOT/$1/config/"admin.json
-    echo "IG mode $_arg_ig_mode"
-    if [ "$_arg_ig_mode" == "development" ]; then
-      init_routes_dev "$1"
-    else
-      echo "copy ${PROFILE_ROOT}/$1/routes/ to $DOCKER_ROOT/$1/config"
-      cp -r "${PROFILE_ROOT}/$1/routes/" "$DOCKER_ROOT/$1/config"
+    echo "IG mode $_arg_ig_mode, environment $_arg_environment"
+    echo "copy ${PROFILE_ROOT}/$1/routes-service/ to $DOCKER_ROOT/$1/config"
+    cp -r "${PROFILE_ROOT}/$1/routes-service/" "$DOCKER_ROOT/$1/config"
+    if [ "$_arg_environment" == "prod" ]; then
+      echo "copy ${PROFILE_ROOT}/$1/routes-pod/ to $DOCKER_ROOT/$1/config"
+      cp -r "${PROFILE_ROOT}/$1/routes-pod/" "$DOCKER_ROOT/$1/config"
     fi
   fi
-}
-
-init_routes_dev(){
-  echo "copy ${PROFILE_ROOT}/$1/routes/ to $DOCKER_ROOT/$1/config"
-  if [ ! -d "$DOCKER_ROOT/ig-local/config/routes" ]; then
-    echo "Creating the Directory $DOCKER_ROOT/$1/config/routes"
-    mkdir "$DOCKER_ROOT/$1/config/routes"
-  fi
-  find "${PROFILE_ROOT}/$1/routes/"*/ -type f -print0 | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/"
 }
 
 # Show the differences between the source configuration and the current Docker configuration
