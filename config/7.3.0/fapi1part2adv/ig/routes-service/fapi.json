@@ -1,0 +1,337 @@
+{
+  "properties": {
+    "security": {
+      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"}
+    },
+    "oauth2": {
+      "tokenEndpointAuthMethodsSupported": {
+        "$list": "&{ig.oauth2.token.endpoint.auth.methods|private_key_jwt,tls_client_auth}"
+      }
+    },
+    "urls": {
+      "idmBaseUri": "https://&{identity.platform.fqdn}/openidm"
+    },
+    "vertxConfig": {
+      "maxHeaderSize": 16384,
+      "initialSettings": {
+        "maxHeaderListSize": 16384
+      }
+    }
+  },
+  "handler": "_router",
+  "heap": [
+    {
+      "name": "_router",
+      "type": "Router",
+      "config": {
+        "scanInterval": "&{routesServiceScanInterval}",
+        "directory": "${openig.configDirectory}/routes-service/routes"
+      }
+    },
+    {
+      "name": "capture",
+      "type": "CaptureDecorator",
+      "config": {
+        "captureEntity": true
+      }
+    },
+    {
+      "name": "fapiAuditService",
+      "type": "AuditService",
+      "config": {
+        "eventHandlers": [
+          {
+            "class": "org.forgerock.audit.handlers.json.stdout.JsonStdoutAuditEventHandler",
+            "config": {
+              "name": "jsonstdout",
+              "elasticsearchCompatible": false,
+              "topics": [
+                "fapi"
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "ReverseProxyHandler",
+      "type": "ReverseProxyHandler",
+      "capture": [
+        "request",
+        "response"
+      ],
+      "config": {
+        "vertx": "${vertxConfig}"
+      }
+    },
+    {
+      "name": "ReverseProxyHandlerNoCapture",
+      "type": "ReverseProxyHandler",
+      "comment": "ReverseProxyHandler with no capture decorator configuration",
+      "config": {
+        "vertx": "${vertxConfig}"
+      }
+    },
+    {
+      "name": "JwtSession",
+      "type": "JwtSession"
+    },
+    {
+      "name" : "ForgeRockClientHandler",
+      "type" : "Chain",
+      "config" : {
+        "filters" : [
+          "TransactionIdOutboundFilter"
+        ],
+        "handler" : "ClientHandler"
+      },
+      "capture" : [ "response", "request" ]
+    },
+    {
+      "name": "FRReverseProxyHandlerNoCapture",
+      "comment": "ReverseProxyHandler for calls to the FR services, with the capture decorator disabled",
+      "type": "Chain",
+      "config": {
+        "filters" : [
+          "TransactionIdOutboundFilter"
+        ],
+        "handler" : "ReverseProxyHandlerNoCapture"
+      }
+    },
+    {
+      "name": "FRReverseProxyHandler",
+      "comment": "ReverseProxyHandler for calls to the FR services",
+      "type": "Chain",
+      "config": {
+        "filters": [
+          "TransactionIdOutboundFilter"
+        ],
+        "handler": "ReverseProxyHandler"
+      }
+    },
+    {
+      "name": "SystemAndEnvSecretStore-IAM",
+      "type": "SystemAndEnvSecretStore",
+      "config": {
+        "format": "PLAIN"
+      }
+    },
+    {
+      "name": "IDMClientHandler",
+      "type": "Chain",
+      "config": {
+        "filters": [
+          {
+            "type": "ResourceOwnerOAuth2ClientFilter",
+            "config": {
+              "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
+              "username": "&{ig.idm.user}",
+              "passwordSecretId": "ig.idm.password",
+              "secretsProvider": "SystemAndEnvSecretStore-IAM",
+              "scopes": [
+                "fr:idm:*"
+              ],
+              "endpointHandler": {
+                "type": "Chain",
+                "config": {
+                  "handler": "ForgeRockClientHandler",
+                  "filters": [
+                    {
+                      "type": "ClientSecretBasicAuthenticationFilter",
+                      "config": {
+                        "clientId": "&{ig.client.id}",
+                        "clientSecretId": "ig.client.secret",
+                        "secretsProvider": "SystemAndEnvSecretStore-IAM"
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          }
+        ],
+        "handler": "ForgeRockClientHandler"
+      }
+    },
+    {
+      "name": "TrustManager-OB",
+      "type": "TrustManager",
+      "config": {
+        "keystore": {
+          "type": "KeyStore",
+          "config": {
+            "url": "file://&{ig.instance.dir}&{ig.truststore.path}",
+            "type": "PKCS12",
+            "passwordSecretId": "ig.truststore.password",
+            "secretsProvider": "SystemAndEnvSecretStore-IAM"
+          }
+        }
+      }
+    },
+    {
+      "name": "OBClientHandler",
+      "type": "ClientHandler",
+      "capture": "all",
+      "config": {
+        "tls": {
+          "type": "ClientTlsOptions",
+          "config": {
+            "trustManager": "TrustManager-OB"
+          }
+        }
+      }
+    },
+    {
+      "name": "JwkSetService",
+      "type": "CachingJwkSetService",
+      "config": {
+        "endpointHandler": "OBClientHandler",
+        "cacheMaxSize": 500,
+        "cacheTimeout": "24 hours"
+      }
+    },
+    {
+      "name": "TrustedDirectoryService",
+      "type": "TrustedDirectoryService",
+      "config": {
+        "trustedDirectories": [
+          "OpenBankingTestDirectory",
+          "SecureAPIGatewayTestDirectory"
+        ]
+      }
+    },
+    {
+      "name": "OpenBankingTestDirectory",
+      "type": "TrustedDirectory",
+      "config": {
+        "issuer": "OpenBanking Ltd",
+        "softwareStatementClaims": {
+          "organisationIdClaimName": "org_id",
+          "organisationNameClaimName": "org_name",
+          "softwareIdClaimName": "software_id",
+          "clientNameClaimName": "software_client_name",
+          "redirectUrisClaimName": "software_redirect_uris",
+          "rolesClaimName": "software_roles",
+          "jwksUriClaimName": "software_jwks_endpoint"
+        },
+        "secretsProvider": {
+          "type": "SecretsProvider",
+          "config": {
+            "stores": [
+              {
+                "type": "JwkSetSecretStore",
+                "config": {
+                  "jwkUrl": "https://keystore.openbankingtest.org.uk/keystore/openbanking.jwks",
+                  "handler": "OBClientHandler"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "SecureAPIGatewayTestDirectory",
+      "type": "TrustedDirectory",
+      "config": {
+        "issuer": "test-publisher",
+        "softwareStatementClaims": {
+          "organisationIdClaimName": "org_id",
+          "organisationNameClaimName": "org_name",
+          "softwareIdClaimName": "software_id",
+          "clientNameClaimName": "software_client_name",
+          "redirectUrisClaimName": "software_redirect_uris",
+          "rolesClaimName": "software_roles",
+          "jwksUriClaimName": "software_jwks_endpoint"
+        },
+        "secretsProvider": {
+          "type": "SecretsProvider",
+          "config": {
+            "stores": [
+              {
+                "type": "JwkSetSecretStore",
+                "config": {
+                  "jwkUrl": "https://&{test.directory.fqdn}/jwkms/testdirectory/jwks",
+                  "handler": "OBClientHandler"
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+    {
+      "name": "IdmService",
+      "type": "IdmService",
+      "config": {
+        "baseEndpoint": "&{urls.idmBaseUri}",
+        "endpointHandler": "IDMClientHandler"
+      }
+    },
+    {
+      "name": "IdmApiClientService",
+      "type": "IdmApiClientService",
+      "config": {
+        "idmService": "IdmService",
+        "jwkSetService": "JwkSetService"
+      }
+    },
+    {
+      "name": "IdmApiClientOrganisationService",
+      "type": "IdmApiClientOrganisationService",
+      "config": {
+        "idmService": "IdmService"
+      }
+    },
+    {
+      "name": "ObJwtReSigner",
+      "type": "JwtReSigner",
+      "config": {
+        "verificationSecretsProvider": "SecretsProvider-AmJWK",
+        "verificationSecretId": "any.value.in.regex.format",
+        "signingKeyId": "&{ig.ob.aspsp.signing.kid}",
+        "signingSecretsProvider": "SecretsProvider-ASPSP",
+        "signingKeySecretId": "jwt.signer"
+      }
+    },
+    {
+      "name": "SecretsProvider-ASPSP",
+      "type": "SecretsProvider",
+      "config": {
+        "stores": [
+          {
+            "name": "KeyStoreSecretStore-ASPSP",
+            "type": "KeyStoreSecretStore",
+            "config": {
+              "file": "&{ig.instance.dir}&{ig.ob.aspsp.signing.keystore.path}",
+              "storeType": "&{ig.ob.aspsp.signing.keystore.type}",
+              "storePasswordSecretId": "ig.ob.aspsp.signing.keystore.storepass",
+              "entryPasswordSecretId": "ig.ob.aspsp.signing.keystore.keypass",
+              "secretsProvider": "SystemAndEnvSecretStore-IAM",
+              "mappings": [
+                {
+                  "secretId": "jwt.signer",
+                  "aliases": ["&{ig.ob.aspsp.signing.keystore.alias}"]
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "SecretsProvider-AmJWK",
+      "type": "SecretsProvider",
+      "config": {
+        "stores": [
+          {
+            "type": "JwkSetSecretStore",
+            "config": {
+              "jwkUrl": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/connect/jwk_uri"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
