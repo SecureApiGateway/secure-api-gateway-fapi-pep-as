@@ -197,13 +197,6 @@ init_config()
     echo "IG mode $_arg_ig_mode, environment $_arg_environment"
     echo "copy ${PROFILE_ROOT}/$1/routes-service/ to $DOCKER_ROOT/$1/config"
     cp -r "${PROFILE_ROOT}/$1/routes-service/" "$DOCKER_ROOT/$1/config"
-    if [ "$_arg_ig_mode" == "development" ]; then
-      echo "copy ${PROFILE_ROOT}/$1/routes-pod/* to $DOCKER_ROOT/$1/config/routes-service/routes"
-      find "${PROFILE_ROOT}/$1/routes-pod" -type f -print0 | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes-service/routes/"
-    else
-      echo "copy ${PROFILE_ROOT}/$1/routes-pod/ to $DOCKER_ROOT/$1/config"
-      cp -r "${PROFILE_ROOT}/$1/routes-pod/" "$DOCKER_ROOT/$1/config"
-    fi
   fi
 }
 

@@ -45,7 +45,7 @@ spec:
           readinessProbe:
             httpGet:
               path: {{ .Values.deployment.readinessProbe.path }}
-              port: {{ .Values.deployment.containerPort }}
+              port: {{ .Values.deployment.containerAdminPort }}
             periodSeconds: {{ .Values.deployment.readinessProbe.periodSeconds }}
             failureThreshold: {{ .Values.deployment.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.deployment.readinessProbe.successThreshold }}
@@ -53,7 +53,7 @@ spec:
           livenessProbe:
             httpGet:
               path: {{ .Values.deployment.livenessProbe.path }}
-              port: {{ .Values.deployment.containerPort }}
+              port: {{ .Values.deployment.containerAdminPort }}
             initialDelaySeconds: {{ .Values.deployment.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.deployment.livenessProbe.periodSeconds }}
             failureThreshold: {{ .Values.deployment.livenessProbe.failureThreshold }}

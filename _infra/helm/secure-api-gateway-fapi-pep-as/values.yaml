@@ -32,6 +32,8 @@ deployment:
   apiVersion: "apps/v1"
   # Container port exposed by a pod or deployment
   containerPort: 8080
+  # Container admin port exposed by a pod or deployment
+  containerAdminPort: 8085
   image:
     # Repo And Tag are not provided here as the value for the repo will be unique for each user/customer as they will be building their own docker images and push to their own Container Registries 
     # The tag will use the .AppVersion as the default, meaning that customers who want to install V1 will get V1.0.0 of the software - you may supply a hard coded version if required  
@@ -46,7 +48,7 @@ deployment:
   livenessProbe:
     initialDelaySeconds: 160
     failureThreshold: 5
-    path: "/kube/liveness"
+    path: "/health/liveness"
     periodSeconds: 5
     successThreshold: 1
     timeoutSeconds: 5
@@ -58,7 +60,7 @@ deployment:
   readinessProbe:
     failureThreshold: 3
     periodSeconds: 5
-    path: "/kube/readiness"
+    path: "/health/readiness"
     successThreshold: 1
     timeoutSeconds: 5
   # How many pods are to run in the deployment
