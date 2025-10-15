@@ -1,4 +1,5 @@
-# Ingress for routes requiring MTLS with Open Banking Directory issued certs
+# Ingress for routes requiring MTLS with Open Banking Directory issued certs - May not be required in all deployments
+{{- if eq .Values.ingress.asMtls.enableMtls true }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,7 +14,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "on"
     nginx.ingress.kubernetes.io/proxy-buffers: "4 256k"
     nginx.ingress.kubernetes.io/proxy-busy-buffers_size: "256k"
-    nginx.ingress.kubernetes.io/error-log-level: "debug"
+    nginx.ingress.kubernetes.io/error-log-level: {{ .Values.ingress.asMtls.logLevel }}
   name: as-mtls
 spec:
   ingressClassName: nginx
@@ -53,8 +54,9 @@ spec:
     - hosts:
         - {{ .Values.ingress.asMtls.tls.host }}
       secretName: {{ .Values.ingress.asMtls.tls.secretName }}
+{{ end }}
 ---
-# Ingress for access to routes protected with TLS by a ForgeRock cert
+# Ingress for access to routes protected with TLS
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -66,7 +68,7 @@ metadata:
     nginx.ingress.kubernetes.io/proxy-buffering: "on"
     nginx.ingress.kubernetes.io/proxy-buffers: "4 256k"
     nginx.ingress.kubernetes.io/proxy-busy-buffers_size: "256k"
-    nginx.ingress.kubernetes.io/error-log-level: "debug"
+    nginx.ingress.kubernetes.io/error-log-level: {{ .Values.ingress.asSapig.logLevel }}
   name: as-sapig
 spec:
   ingressClassName: nginx
@@ -87,6 +89,7 @@ spec:
       secretName: {{ .Values.ingress.asSapig.tls.secretName}}
 ---
 # Ingress for dev only, provides access to the IG Studio UI
+{{- if eq .Values.ingress.asIGSstudio.enableStudio true }}
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -111,3 +114,4 @@ spec:
     - hosts:
         - {{ .Values.ingress.asIGSstudio.tls.host }}
       secretName: {{ .Values.ingress.asIGSstudio.tls.secretName }}
+{{ end }}

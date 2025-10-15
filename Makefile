@@ -1,4 +1,4 @@
-name := secure-api-gateway-fapi-pep-as
+whaname := secure-api-gateway-fapi-pep-as
 repo := europe-west4-docker.pkg.dev/sbat-gcr-develop/sapig-docker-artifact
 service := fapi-pep-as
 helm_repo := forgerock-helm/secure-api-gateway/${name}/
