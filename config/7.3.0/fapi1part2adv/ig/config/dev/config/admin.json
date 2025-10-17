@@ -25,7 +25,8 @@
       "vertx": {
         "maxInitialLineLength": 8192,
         "maxTotalHeadersSize": 24576,
-        "http2RstFloodMaxRstFramePerWindow" : 2000
+        "http2RstFloodMaxRstFramePerWindow" : 2000,
+        "http2MultiplexImplementation" : true
       }
     }
   ],
