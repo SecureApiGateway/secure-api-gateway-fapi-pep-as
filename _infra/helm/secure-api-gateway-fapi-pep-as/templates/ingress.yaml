@@ -92,7 +92,6 @@ kind: Ingress
 metadata:
   annotations:
     nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
-    nginx.ingress.kubernetes.io/rewrite-target: "/$2"
   name: as-ig-studio
 spec:
   ingressClassName: nginx
