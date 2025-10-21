@@ -92,11 +92,7 @@ ingress:
     tls:
       host: "replace-me"
       secretName: fapi-pep-as-tls-cert
-  asIGSstudio:
-    host: "replace-me"
-    tls:
-      host: "replace-me"
-      secretName: fapi-pep-as-tls-cert
+  enableStudio: true
 
 secrets:
   igAgentID: "replace-me"
@@ -118,8 +114,8 @@ service:
   protocol: "TCP"
   # Host Machine port that traffic is diverted too - in this case the nodes
   targetPort: 8080
+  # Host Machine port that traffic is diverted too for Admin - in this case the nodes
+  targetPortAdmin: 8085
   # See - https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   # Type of service to create. Other types are: NodePort | LoadBalancer | ExternalName
   type: "ClusterIP"
-  # Host Machine port that traffic is diverted too for studio - in this case the nodes
-  targetPortStudio: 8085
