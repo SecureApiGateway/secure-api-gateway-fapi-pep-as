@@ -38,6 +38,17 @@
                 }
               },
               {
+                "condition": "${request.uri.path == '/mna'}",
+                "handler": {
+                  "type": "StaticResponseHandler",
+                  "config": {
+                    "status": 405,
+                    "reason": "Method Not Allowed",
+                    "entity": "XXX: Method not allowed(mna)"
+                  }
+                }
+              },
+              {
                 "condition": "${request.uri.path == '/'}",
                 "handler": {
                   "type": "StaticResponseHandler",
@@ -45,6 +56,17 @@
                     "status": 405,
                     "reason": "Method Not Allowed",
                     "entity": "XXX: Method not allowed"
+                  }
+                }
+              },
+              {
+                "condition": "${request.uri.path == '/notfound'}",
+                "handler": {
+                  "type": "StaticResponseHandler",
+                  "config": {
+                    "status": 404,
+                    "reason": "Not Found",
+                    "entity": "XXX: real 404(notfound)"
                   }
                 }
               },
