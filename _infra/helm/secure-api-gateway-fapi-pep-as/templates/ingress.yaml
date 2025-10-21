@@ -74,13 +74,15 @@ spec:
     - host: {{ .Values.ingress.asSapig.host }}
       http:
         paths:
+          {{- if eq .Values.ingress.enableStudio true }}
           - backend:
               service:
-                name: {{ .Chart.Name }}-studio
+                name: {{ .Chart.Name }}-admin
                 port:
                   number: 80
             path: /studio
             pathType: Prefix
+          {{ end }}
           - backend:
               service:
                 name: {{ .Chart.Name }}
