@@ -43,7 +43,8 @@
                   "type": "StaticResponseHandler",
                   "config": {
                     "status": 405,
-                    "reason": "Method Not Allowed"
+                    "reason": "Method Not Allowed",
+                    "entity": "XXX: Method not allowed"
                   }
                 }
               },
@@ -52,7 +53,8 @@
                   "type": "StaticResponseHandler",
                   "config": {
                     "status": 404,
-                    "reason": "Not Found"
+                    "reason": "Not Found",
+                    "entity": "XXX: real 404"
                   }
                 }
               }
