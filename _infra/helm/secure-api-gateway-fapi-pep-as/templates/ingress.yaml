@@ -79,7 +79,7 @@ spec:
                 name: {{ .Chart.Name }}
                 port:
                   number: 80
-            path: /
+            path: /am
             pathType: Prefix
   tls:
     - hosts:
