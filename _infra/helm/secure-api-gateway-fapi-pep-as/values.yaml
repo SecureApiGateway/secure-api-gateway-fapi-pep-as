@@ -121,3 +121,5 @@ service:
   # See - https://kubernetes.io/docs/concepts/services-networking/service/#publishing-services-service-types
   # Type of service to create. Other types are: NodePort | LoadBalancer | ExternalName
   type: "ClusterIP"
+  # Host Machine port that traffic is diverted too for studio - in this case the nodes
+  targetPortStudio: 8085

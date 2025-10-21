@@ -102,7 +102,7 @@ spec:
         paths:
           - backend:
               service:
-                name: {{ .Chart.Name }}
+                name: {{ .Chart.Name }}-studio
                 port:
                   number: 80
             path: /studio
