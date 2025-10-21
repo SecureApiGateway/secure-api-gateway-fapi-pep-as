@@ -14,8 +14,7 @@
 # limitations under the License.
 #
 
-ARG base_image=gcr.io/forgerock-io/ig/docker-build:2025.9.0-latest-postcommit
-
+ARG base_image=gcr.io/forgerock-io/ig/pull-requests:2025.9.1-PR-7229-9-5bb72394cfce4d09b50cf3e1b1a95481b49d1929
 FROM ${base_image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
