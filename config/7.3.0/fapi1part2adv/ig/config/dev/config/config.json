@@ -50,7 +50,7 @@
                 "handler": {
                   "type": "StaticResponseHandler",
                   "config": {
-                    "status": 404,
+                    "status": 418,
                     "reason": "Not Found"
                   }
                 }
