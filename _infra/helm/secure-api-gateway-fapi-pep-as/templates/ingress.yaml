@@ -54,7 +54,7 @@ spec:
         - {{ .Values.ingress.asMtls.tls.host }}
       secretName: {{ .Values.ingress.asMtls.tls.secretName }}
 ---
-# Ingress for access to routes protected with TLS by a ForgeRock cert
+# Ingress for access to routes protected with TLS
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
