@@ -15,7 +15,8 @@
       "maxHeaderSize": 16384,
       "initialSettings": {
         "maxHeaderListSize": 16384
-      }
+      },
+      "http2MultiplexImplementation" : true
     }
   },
   "handler": "_router",
@@ -37,12 +38,35 @@
                 }
               },
               {
+                "condition": "${request.uri.path == '/mna'}",
+                "handler": {
+                  "type": "StaticResponseHandler",
+                  "config": {
+                    "status": 405,
+                    "reason": "Method Not Allowed",
+                    "entity": "XXX: Method not allowed(mna)"
+                  }
+                }
+              },
+              {
                 "condition": "${request.uri.path == '/'}",
                 "handler": {
                   "type": "StaticResponseHandler",
                   "config": {
                     "status": 405,
-                    "reason": "Method Not Allowed"
+                    "reason": "Method Not Allowed",
+                    "entity": "XXX: Method not allowed"
+                  }
+                }
+              },
+              {
+                "condition": "${request.uri.path == '/notfound'}",
+                "handler": {
+                  "type": "StaticResponseHandler",
+                  "config": {
+                    "status": 404,
+                    "reason": "Not Found",
+                    "entity": "XXX: real 404(notfound)"
                   }
                 }
               },
@@ -51,7 +75,8 @@
                   "type": "StaticResponseHandler",
                   "config": {
                     "status": 404,
-                    "reason": "Not Found"
+                    "reason": "Not Found",
+                    "entity": "XXX: real 404"
                   }
                 }
               }
