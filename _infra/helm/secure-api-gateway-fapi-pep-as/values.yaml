@@ -14,7 +14,7 @@ configmap:
   igOBASPSPSigningKeystoreAlias: "jwtsigner"
   igOBASPSPSigningKeystorePath: "/secrets/open-banking/ig-ob-signing-key.p12"
   igOBASPSPSigningKeystoreType: "PKCS12"
-  igOBASPSPSigningKid: "sU72Qz8tTtH9W6EoG-vhEYiQTJc"
+  igOBASPSPSigningKid: "0QidrUZc2Qk-PHqbYD5VEYGm_og"
   igTestDirectoryEnabled: "true"
   igTruststorePath: "/secrets/truststore/igtruststore"
   sapigType: "core"
