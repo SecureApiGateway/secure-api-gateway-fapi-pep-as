@@ -15,7 +15,8 @@
       "maxHeaderSize": 16384,
       "initialSettings": {
         "maxHeaderListSize": 16384
-      }
+      },
+      "http2MultiplexImplementation" : true
     }
   },
   "handler": "_router",

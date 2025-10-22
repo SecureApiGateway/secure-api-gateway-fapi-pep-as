@@ -24,7 +24,9 @@
       "port": 8080,
       "vertx": {
         "maxInitialLineLength": 8192,
-        "maxTotalHeadersSize": 24576
+        "maxTotalHeadersSize": 24576,
+        "http2RstFloodMaxRstFramePerWindow" : 2000,
+        "http2MultiplexImplementation" : true
       }
     }
   ],
