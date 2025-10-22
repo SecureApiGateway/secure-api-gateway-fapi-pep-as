@@ -82,6 +82,13 @@ spec:
                   number: 80
             path: /studio
             pathType: Prefix
+          - backend:
+              service:
+                name: {{ .Chart.Name }}-admin
+                port:
+                  number: 80
+            path: /api
+            pathType: Prefix
           {{ end }}
           - backend:
               service:
