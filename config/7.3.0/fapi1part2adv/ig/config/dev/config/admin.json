@@ -6,6 +6,64 @@
       "capture": "all"
     },
     {
+      "name": "SystemAndEnvSecretStore-Admin",
+      "type": "SystemAndEnvSecretStore",
+      "config": {
+        "format": "PLAIN"
+      }
+    },
+    {
+      "name": "AmService",
+      "type": "AmService",
+      "config": {
+        "url": "https://&{identity.platform.fqdn}/am",
+        "realm": "/&{am.realm}",
+        "agent": {
+          "username": "ig-agent",
+          "passwordSecretId": "ig.agent.password"
+        },
+        "secretsProvider": "SystemAndEnvSecretStore-Admin",
+        "sessionCache": {
+          "enabled": false
+        },
+        "notifications": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "name": "StudioProtectionFilter",
+      "type": "ChainOfFilters",
+      "config": {
+        "filters": [
+          {
+            "type": "SingleSignOnFilter",
+            "config": {
+              "amService": "AmService-1"
+            }
+          },
+          {
+            "type": "CsrfFilter",
+            "config": {
+              "cookieName": "&{SsoTokenCookieOrHeader}",
+              "failureHandler": {
+                "type": "StaticResponseHandler",
+                "config": {
+                  "status": 403,
+                  "headers": {
+                    "Content-Type": [
+                      "text/plain"
+                    ]
+                  },
+                  "entity": "Request forbidden"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
       "name": "MetricsProtectionFilter",
       "type": "ScriptableFilter",
       "config": {
@@ -28,5 +86,8 @@
       }
     }
   ],
-  "mode": "DEVELOPMENT"
+  "mode": "DEVELOPMENT",
+  "studioProtectionFilter": "StudioProtectionFilter",
+  "_apiProtectionFilter": "StudioProtectionFilter",
+  "metricsProtectionFilter": "MetricsProtectionFilter"
 }
