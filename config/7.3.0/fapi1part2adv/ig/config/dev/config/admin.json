@@ -105,5 +105,6 @@
   "mode": "DEVELOPMENT",
   "studioProtectionFilter": "StudioProtectionFilter",
   "apiProtectionFilter": "ApiProtectionFilter",
-  "metricsProtectionFilter": "MetricsProtectionFilter"
+  "_metricsProtectionFilter": "MetricsProtectionFilter",
+  "_metricsProtectionFilter.comment": "The referenced script is not found in the pod, so removing for now"
 }
