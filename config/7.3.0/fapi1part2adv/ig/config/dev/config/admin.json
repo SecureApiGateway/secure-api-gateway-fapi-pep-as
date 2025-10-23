@@ -1,6 +1,6 @@
 {
   "properties": {
-    "SsoTokenCookieOrHeader": "iPlanetDirectoryPro"
+    "SsoTokenCookieOrHeader": "&{identity.platform.cookie|iPlanetDirectoryPro}"
   },
   "heap": [
     {
@@ -67,6 +67,19 @@
       }
     },
     {
+      "name": "ApiProtectionFilter",
+      "type": "CorsFilter",
+      "config": {
+        "policies": [
+          {
+            "acceptedOrigins": ["https://&{as.fqdn}/"],
+            "acceptedMethods": ["GET", "POST", "DELETE"],
+            "acceptedHeaders": ["Content-Type"]
+          }
+        ]
+      }
+    },
+    {
       "name": "MetricsProtectionFilter",
       "type": "ScriptableFilter",
       "config": {
@@ -91,6 +104,6 @@
   ],
   "mode": "DEVELOPMENT",
   "studioProtectionFilter": "StudioProtectionFilter",
-  "_apiProtectionFilter": "StudioProtectionFilter",
+  "apiProtectionFilter": "ApiProtectionFilter",
   "metricsProtectionFilter": "MetricsProtectionFilter"
 }
