@@ -47,8 +47,8 @@ spec:
           imagePullPolicy: Always
           livenessProbe:
             httpGet:
-              path: /kube/liveness
-              port: 8080
+              path: /health/liveness
+              port: 8085
             periodSeconds: 30
             timeoutSeconds: 5
           name: fapi-pep-as
@@ -56,8 +56,8 @@ spec:
             - containerPort: 8080
           readinessProbe:
             httpGet:
-              path: /kube/readiness
-              port: 8080
+              path: /health/readiness
+              port: 8085
             initialDelaySeconds: 5
           resources:
             limits:
