@@ -1,4 +1,7 @@
 {
+  "properties": {
+    "SsoTokenCookieOrHeader": "iPlanetDirectoryPro"
+  },
   "heap": [
     {
       "name": "ClientHandler",
