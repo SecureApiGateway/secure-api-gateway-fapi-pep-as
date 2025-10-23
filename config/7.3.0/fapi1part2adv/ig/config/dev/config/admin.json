@@ -1,4 +1,7 @@
 {
+  "properties": {
+    "SsoTokenCookieOrHeader": "&{identity.platform.cookie|iPlanetDirectoryPro}"
+  },
   "heap": [
     {
       "name": "ClientHandler",
@@ -6,7 +9,78 @@
       "capture": "all"
     },
     {
-      "name": "MetricsProtectionFilter",
+      "name": "SystemAndEnvSecretStore-Admin",
+      "type": "SystemAndEnvSecretStore",
+      "config": {
+        "format": "PLAIN"
+      }
+    },
+    {
+      "name": "AmService",
+      "type": "AmService",
+      "config": {
+        "url": "https://&{identity.platform.fqdn}/am",
+        "realm": "/&{am.realm}",
+        "agent": {
+          "username": "ig-agent",
+          "passwordSecretId": "ig.agent.password"
+        },
+        "secretsProvider": "SystemAndEnvSecretStore-Admin",
+        "sessionCache": {
+          "enabled": false
+        },
+        "notifications": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "name": "StudioProtectionFilter-SSO",
+      "type": "ChainOfFilters",
+      "config": {
+        "filters": [
+          {
+            "type": "SingleSignOnFilter",
+            "config": {
+              "amService": "AmService"
+            }
+          },
+          {
+            "type": "CsrfFilter",
+            "config": {
+              "cookieName": "&{SsoTokenCookieOrHeader}",
+              "failureHandler": {
+                "type": "StaticResponseHandler",
+                "config": {
+                  "status": 403,
+                  "headers": {
+                    "Content-Type": [
+                      "text/plain"
+                    ]
+                  },
+                  "entity": "Request forbidden"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "apiProtectionFilter",
+      "type": "CorsFilter",
+      "config": {
+        "policies": [
+          {
+            "acceptedOrigins": ["https://&{as.fqdn}/"],
+            "acceptedMethods": ["GET", "POST", "DELETE"],
+            "acceptedHeaders": ["Content-Type"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "metricsProtectionFilter",
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
@@ -28,5 +102,11 @@
       }
     }
   ],
-  "mode": "DEVELOPMENT"
+  "adminConnector": {
+      "port": 8085
+  },
+  "mode": "DEVELOPMENT",
+  "studioProtectionFilter": "StudioProtectionFilter-SSO",
+  "apiProtectionFilter": "apiProtectionFilter",
+  "metricsProtectionFilter": "metricsProtectionFilter"
 }
