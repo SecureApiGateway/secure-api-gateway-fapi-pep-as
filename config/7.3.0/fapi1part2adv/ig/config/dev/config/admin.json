@@ -1,9 +1,97 @@
 {
+  "properties": {
+    "SsoTokenCookieOrHeader": "&{identity.platform.cookie|iPlanetDirectoryPro}"
+  },
   "heap": [
     {
       "name": "ClientHandler",
       "type": "ClientHandler",
       "capture": "all"
+    },
+    {
+      "name": "SystemAndEnvSecretStore-Admin",
+      "type": "SystemAndEnvSecretStore",
+      "config": {
+        "format": "PLAIN"
+      }
+    },
+    {
+      "name": "AmService",
+      "type": "AmService",
+      "config": {
+        "url": "https://&{identity.platform.fqdn}/am",
+        "realm": "/&{am.realm}",
+        "agent": {
+          "username": "ig-agent",
+          "passwordSecretId": "ig.agent.password"
+        },
+        "secretsProvider": "SystemAndEnvSecretStore-Admin",
+        "sessionCache": {
+          "enabled": false
+        },
+        "notifications": {
+          "enabled": false
+        }
+      }
+    },
+    {
+      "name": "_StudioProtectionFilter",
+      "type": "ChainOfFilters",
+      "config": {
+        "filters": [
+          {
+            "type": "SingleSignOnFilter",
+            "config": {
+              "amService": "AmService"
+            }
+          },
+          {
+            "type": "CsrfFilter",
+            "config": {
+              "cookieName": "&{SsoTokenCookieOrHeader}",
+              "failureHandler": {
+                "type": "StaticResponseHandler",
+                "config": {
+                  "status": 403,
+                  "headers": {
+                    "Content-Type": [
+                      "text/plain"
+                    ]
+                  },
+                  "entity": "Request forbidden"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "StudioProtectionFilter.tmp",
+      "type": "CorsFilter",
+      "_comment": "Support studio requests from Ping VPN only",
+      "config": {
+        "policies": [
+          {
+            "acceptedOrigins": ["https://18.158.145.64/"],
+            "acceptedMethods": ["GET", "POST", "DELETE"],
+            "acceptedHeaders": ["Content-Type"]
+          }
+        ]
+      }
+    },
+    {
+      "name": "ApiProtectionFilter",
+      "type": "CorsFilter",
+      "config": {
+        "policies": [
+          {
+            "acceptedOrigins": ["https://&{as.fqdn}/"],
+            "acceptedMethods": ["GET", "POST", "DELETE"],
+            "acceptedHeaders": ["Content-Type"]
+          }
+        ]
+      }
     },
     {
       "name": "MetricsProtectionFilter",
@@ -28,5 +116,10 @@
       }
     }
   ],
-  "mode": "DEVELOPMENT"
+  "mode": "DEVELOPMENT",
+  "studioProtectionFilter": "StudioProtectionFilter.tmp",
+  "_studioProtectionFilter.comment": "The referenced filter is temporary only to apply CORS",
+  "apiProtectionFilter": "ApiProtectionFilter",
+  "_metricsProtectionFilter": "MetricsProtectionFilter",
+  "_metricsProtectionFilter.comment": "The referenced script is not found in the pod, so removing for now"
 }
