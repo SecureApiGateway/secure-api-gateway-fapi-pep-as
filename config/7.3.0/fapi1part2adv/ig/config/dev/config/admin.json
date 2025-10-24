@@ -35,7 +35,7 @@
       }
     },
     {
-      "name": "StudioProtectionFilter",
+      "name": "_StudioProtectionFilter",
       "type": "ChainOfFilters",
       "config": {
         "filters": [
@@ -62,6 +62,20 @@
                 }
               }
             }
+          }
+        ]
+      }
+    },
+    {
+      "name": "StudioProtectionFilter.tmp",
+      "type": "CorsFilter",
+      "_comment": "Support studio requests from Ping VPN only",
+      "config": {
+        "policies": [
+          {
+            "acceptedOrigins": ["https://18.158.145.64/"],
+            "acceptedMethods": ["GET", "POST", "DELETE"],
+            "acceptedHeaders": ["Content-Type"]
           }
         ]
       }
@@ -103,7 +117,8 @@
     }
   ],
   "mode": "DEVELOPMENT",
-  "studioProtectionFilter": "StudioProtectionFilter",
+  "studioProtectionFilter": "StudioProtectionFilter.tmp",
+  "_studioProtectionFilter.comment": "The referenced filter is temporary only to apply CORS",
   "apiProtectionFilter": "ApiProtectionFilter",
   "_metricsProtectionFilter": "MetricsProtectionFilter",
   "_metricsProtectionFilter.comment": "The referenced script is not found in the pod, so removing for now"
