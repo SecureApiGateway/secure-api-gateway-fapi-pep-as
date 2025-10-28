@@ -316,17 +316,6 @@
       }
     },
     {
-      "name": "ObJwtReSigner",
-      "type": "JwtReSigner",
-      "config": {
-        "verificationSecretsProvider": "SecretsProvider-AmJWK",
-        "verificationSecretId": "any.value.in.regex.format",
-        "signingKeyId": "&{ig.ob.aspsp.signing.kid}",
-        "signingSecretsProvider": "SecretsProvider-ASPSP",
-        "signingKeySecretId": "jwt.signer"
-      }
-    },
-    {
       "name": "SecretsProvider-ASPSP",
       "type": "SecretsProvider",
       "config": {

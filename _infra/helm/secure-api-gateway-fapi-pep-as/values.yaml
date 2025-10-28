@@ -12,7 +12,6 @@ configmap:
   identityPlatformFQDN: "iam.dev-cdk-core.forgerock.financial"
   igOauth2TokenEndpointAuthMethods: "private_key_jwt,tls_client_auth"
   igOBASPSPSigningKeystoreAlias: "jwtsigner"
-  igOBASPSPSigningKeystorePath: "/secrets/open-banking/ig-ob-signing-key.p12"
   igOBASPSPSigningKeystoreType: "PKCS12"
   igOBASPSPSigningKid: "0QidrUZc2Qk-PHqbYD5VEYGm_og"
   igTestDirectoryEnabled: "true"
