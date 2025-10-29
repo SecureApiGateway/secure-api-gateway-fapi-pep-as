@@ -32,6 +32,7 @@ deployment:
   apiVersion: "apps/v1"
   # Container port exposed by a pod or deployment
   containerPort: 8080
+  containerAdminPort: 8085
   image:
     # Repo And Tag are not provided here as the value for the repo will be unique for each user/customer as they will be building their own docker images and push to their own Container Registries 
     # The tag will use the .AppVersion as the default, meaning that customers who want to install V1 will get V1.0.0 of the software - you may supply a hard coded version if required  
@@ -44,21 +45,18 @@ deployment:
   # See https://kubernetes.io/docs/tasks/configure-pod-container/configure-liveness-readiness-startup-probes/ for further info on Liveness and Readiness Probes
   # Config for the liveness probe
   livenessProbe:
-    initialDelaySeconds: 160
     failureThreshold: 5
-    path: "/kube/liveness"
+    initialDelaySeconds: 120
+    path: "/health/live"
     periodSeconds: 5
     successThreshold: 1
     timeoutSeconds: 5
-  # RS Connects to the mongodb instance
-  mongodb:
-    # Full name of the mongodb deployment
-    host: "mongodb"
   # Config for the readiness probe
   readinessProbe:
     failureThreshold: 3
+    initialDelaySeconds: 60
     periodSeconds: 5
-    path: "/kube/readiness"
+    path: "/health/ready"
     successThreshold: 1
     timeoutSeconds: 5
   # How many pods are to run in the deployment

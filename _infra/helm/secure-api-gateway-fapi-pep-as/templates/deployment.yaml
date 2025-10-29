@@ -41,22 +41,23 @@ spec:
           image: {{ .Values.deployment.image.repo }}:{{ default .Chart.AppVersion .Values.deployment.image.tag }}
           imagePullPolicy: {{ .Values.deployment.image.imagePullPolicy }}
           ports:
-            - containerPort: 8080
+            - containerPort: {{ .Values.deployment.containerPort}}
           readinessProbe:
+            failureThreshold: {{ .Values.deployment.readinessProbe.failureThreshold }}
             httpGet:
               path: {{ .Values.deployment.readinessProbe.path }}
-              port: {{ .Values.deployment.containerPort }}
+              port: {{ .Values.deployment.containerAdminPort }}
+            initialDelaySeconds: {{ .Values.deployment.readinessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.deployment.readinessProbe.periodSeconds }}
-            failureThreshold: {{ .Values.deployment.readinessProbe.failureThreshold }}
             successThreshold: {{ .Values.deployment.readinessProbe.successThreshold }}
             timeoutSeconds: {{ .Values.deployment.readinessProbe.timeoutSeconds }}
           livenessProbe:
+            failureThreshold: {{ .Values.deployment.livenessProbe.failureThreshold }}
             httpGet:
               path: {{ .Values.deployment.livenessProbe.path }}
-              port: {{ .Values.deployment.containerPort }}
+              port: {{ .Values.deployment.containerAdminPort }}
             initialDelaySeconds: {{ .Values.deployment.livenessProbe.initialDelaySeconds }}
             periodSeconds: {{ .Values.deployment.livenessProbe.periodSeconds }}
-            failureThreshold: {{ .Values.deployment.livenessProbe.failureThreshold }}
             successThreshold: {{ .Values.deployment.livenessProbe.successThreshold }}
             timeoutSeconds: {{ .Values.deployment.livenessProbe.timeoutSeconds }}
           volumeMounts:
