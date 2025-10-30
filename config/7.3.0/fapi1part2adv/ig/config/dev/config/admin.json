@@ -136,11 +136,9 @@
       }
     }
   ],
-  "adminConnector": [
-    {
+  "adminConnector": {
       "port": 8085
-    }
-  ],
+  },
   "mode": "DEVELOPMENT",
   "studioProtectionFilter": "StudioProtectionFilter-AOF",
   "_studioProtectionFilter.comment": "The referenced filter is temporary only to apply IP constraints",

@@ -28,10 +28,8 @@
       }
     }
   ],
-  "adminConnector": [
-    {
-      "port": 8085
-    }
-  ],
+  "adminConnector": {
+    "port": 8085
+  },
   "mode": "PRODUCTION"
 }
