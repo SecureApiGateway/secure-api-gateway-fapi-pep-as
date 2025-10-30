@@ -6,7 +6,7 @@
       "capture": "all"
     },
     {
-      "name": "MetricsProtectionFilter",
+      "name": "metricsProtectionFilter",
       "type": "ScriptableFilter",
       "config": {
         "type": "application/x-groovy",
@@ -28,5 +28,8 @@
       }
     }
   ],
+  "adminConnector": {
+    "port": 8085
+  },
   "mode": "PRODUCTION"
 }
