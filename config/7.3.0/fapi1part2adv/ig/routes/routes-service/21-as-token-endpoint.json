@@ -28,6 +28,14 @@
           }
         },
         {
+          "name": "AccessTokenResponseIdTokenReSignFilter",
+          "type": "AccessTokenResponseIdTokenReSignFilter",
+          "comment": "Re-sign the id_token returned by AM (if present) to fix OB keyId issue",
+          "config": {
+            "jwtReSigner": "ObJwtReSigner"
+          }
+        },
+        {
           "comment": "Add gateway access token to request (custom AT modification script checks access token to enforce route via IG)",
           "type": "ClientCredentialsOAuth2ClientFilter",
           "config": {
