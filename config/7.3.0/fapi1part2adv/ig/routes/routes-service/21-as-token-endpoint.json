@@ -28,6 +28,14 @@
           }
         },
         {
+          "name": "AuthorizeResponseJwtReSignFilter",
+          "type": "AuthorizeResponseJwtReSignFilter",
+          "comment": "Re-sign the authorize response data (id_token and/or JARM response) returned by AM to fix OB keyId issue",
+          "config": {
+            "jwtReSigner": "ObJwtReSigner"
+          }
+        },
+        {
           "comment": "Add gateway access token to request (custom AT modification script checks access token to enforce route via IG)",
           "type": "ClientCredentialsOAuth2ClientFilter",
           "config": {
