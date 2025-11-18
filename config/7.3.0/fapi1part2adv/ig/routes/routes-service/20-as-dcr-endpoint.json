@@ -21,13 +21,9 @@
             "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}",
             "apiClientService": "IdmApiClientService",
             "apiClientOrgService": "IdmApiClientOrganisationService",
-            "clientId": "${request.queryParams.client_id[0]}"
+            "clientId": "${request.queryParams.client_id[0]}",
+            "applyOpenBankingRolesBasedScopeValidation" : "${security.enableOpenBankingRolesBasedScopeValidation}"
           }
-        },
-        {
-          "comment": "FAPI/ OB Scope validation versus SSA",
-          "name": "scopeValidationFilter",
-          "type": "RegistrationRequestRoleBasedScopeValidationFilter"
         },
         {
           "name": "AddIgAccessTokenForNewRegistrations",
