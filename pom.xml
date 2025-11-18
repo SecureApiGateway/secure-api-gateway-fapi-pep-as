@@ -35,7 +35,6 @@
     </licenses>
 
     <modules>
-        <module>secure-api-gateway-ig-extensions</module>
         <module>secure-api-gateway-fapi-pep-as-docker</module>
     </modules>
 
