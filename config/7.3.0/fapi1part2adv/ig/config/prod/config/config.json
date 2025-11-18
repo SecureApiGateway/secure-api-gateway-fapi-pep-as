@@ -1,7 +1,8 @@
 {
   "properties": {
     "security": {
-      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"}
+      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"},
+      "enableOpenBankingRolesBasedScopeValidation": {"$bool": "&{ig.ob.roles.based.scope.validation|false}"}
     },
     "oauth2": {
       "tokenEndpointAuthMethodsSupported": {
