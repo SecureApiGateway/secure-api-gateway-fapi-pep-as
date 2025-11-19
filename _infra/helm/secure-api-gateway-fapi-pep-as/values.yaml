@@ -11,6 +11,7 @@ configmap:
   identityGoogleSecretStoreProject: "sbat-dev"
   identityPlatformFQDN: "iam.dev-cdk-core.forgerock.financial"
   igOauth2TokenEndpointAuthMethods: "private_key_jwt,tls_client_auth"
+  igOBRolesBasedScopeValidation: "true"
   igTestDirectoryEnabled: "true"
   igTruststorePath: "/secrets/truststore/igtruststore"
   sapigType: "core"

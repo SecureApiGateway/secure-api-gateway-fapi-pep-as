@@ -23,6 +23,7 @@ data:
   CERT_ISSUER: {{ .Values.configmap.certIssuer }}
   # If this setting is disabled, then the default of private_key_jwt,tls_client_auth will be used
   IG_OAUTH2_TOKEN_ENDPOINT_AUTH_METHODS: {{ .Values.configmap.igOauth2TokenEndpointAuthMethods }}
+  IG_OB_ROLES_BASED_SCOPE_VALIDATION: {{ .Values.configmap.igOBRolesBasedScopeValidation | quote }}
   # Wherever to use additional TTD other than OB
   IG_TEST_DIRECTORY_ENABLED: {{ .Values.configmap.igTestDirectoryEnabled | quote }}
   # Where to store the IG Truststore
