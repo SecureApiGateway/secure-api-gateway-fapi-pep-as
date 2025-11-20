@@ -27,8 +27,3 @@ This build takes the fapi-pep-as and adds support for Open Banking UK API endpoi
 This module manages creating docker images for the gateway builds supported.
 
 See [README.md](secure-api-gateway-core-docker/README.md) for more details.
-
-## secure-api-gateway-ig-extensions module
-This module contains Java code which extends the functionality of the ForgeRock Identity Gateway (IG) product.
-
-See [README.md](secure-api-gateway-ig-extensions/README.md) for more details.

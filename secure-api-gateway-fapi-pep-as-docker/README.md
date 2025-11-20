@@ -17,7 +17,6 @@ make clean docker tag=my-new-image
 - Extension groovy scripts
 - Java libraries required by the groovy scripts and routes
     - These dependencies are captured in the [pom.xml](./pom.xml) in this module
-    - [secure-api-gateway-ig-extensions](../secure-api-gateway-ig-extensions) jar
     - Libraries used by Groovy scripts
 - Helper bash scripts
     - [import-pem-certs.sh](7.3.0/ig/bin/import-pem-certs.sh) used to import PEM certificates into the truststore
