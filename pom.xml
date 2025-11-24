@@ -45,7 +45,7 @@
     </parent>
 
     <properties>
-        <openig.version>2025.11.0-SNAPSHOT</openig.version>
+        <openig.version>2026.3.0-SNAPSHOT</openig.version>
         <nimbus-jose.version>9.40</nimbus-jose.version>
         <bouncy-castle.version>1.78.1</bouncy-castle.version>
         <maven-resources-plugin.version>3.3.1</maven-resources-plugin.version>
