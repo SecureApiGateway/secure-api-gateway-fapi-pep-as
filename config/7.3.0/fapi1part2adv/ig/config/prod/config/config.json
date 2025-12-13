@@ -143,12 +143,9 @@
       "config": {
         "filters": [
           {
-            "type": "ResourceOwnerOAuth2ClientFilter",
+            "type": "ClientCredentialsOAuth2ClientFilter",
             "config": {
               "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
-              "username": "&{ig.idm.user}",
-              "passwordSecretId": "ig.idm.password",
-              "secretsProvider": "SystemAndEnvSecretStore-IAM",
               "scopes": [
                 "fr:idm:*"
               ],
@@ -158,10 +155,10 @@
                   "handler": "ForgeRockClientHandler",
                   "filters": [
                     {
-                      "type": "ClientSecretBasicAuthenticationFilter",
+                      "type": "ClientSecretPostAuthenticationFilter",
                       "config": {
-                        "clientId": "&{ig.client.id}",
-                        "clientSecretId": "ig.client.secret",
+                        "clientId": "fapi-as-ig-client",
+                        "clientSecretId": "ig.as.idm.client.secret",
                         "secretsProvider": "SystemAndEnvSecretStore-IAM"
                       }
                     }
