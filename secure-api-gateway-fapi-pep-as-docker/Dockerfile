@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG base_image=gcr.io/forgerock-io/ig:2025.11.0
+ARG base_image=gcr.io/forgerock-io/ig/pull-requests:2026.3.0-PR-7433-latest-build
 FROM ${base_image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
