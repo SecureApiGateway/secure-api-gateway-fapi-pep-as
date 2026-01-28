@@ -24,7 +24,7 @@
         <version>5.1.1</version>
     </parent>
     <artifactId>secure-api-gateway-fapi-pep-as</artifactId>
-    <version>5.1.1</version>
+    <version>5.1.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <name>secure-api-gateway-fapi-pep-as</name>
     <description>Secure API Gateway FAPI PEP AS components and plain_fapi deployment configuration</description>
@@ -45,7 +45,7 @@
         <connection>scm:git:${project.scm.url}</connection>
         <developerConnection>scm:git:${project.scm.url}</developerConnection>
         <url>https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-as.git</url>
-        <tag>v5.1.1</tag>
+        <tag>HEAD</tag>
     </scm>
 
     <repositories>
