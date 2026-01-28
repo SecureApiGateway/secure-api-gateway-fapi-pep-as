@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+      - sustaining/*
     paths-ignore:
       - '**/README.md'
 jobs:
