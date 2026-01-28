@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG base_image=gcr.io/forgerock-io/ig:2025.11.1
+ARG base_image=gcr.io/forgerock-io/ig:2025.11.2-SNAPSHOT
 FROM ${base_image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
