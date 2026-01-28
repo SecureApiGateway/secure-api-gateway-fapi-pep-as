@@ -1,5 +1,5 @@
 #
-# Copyright © 2020-2025 ForgeRock AS (obst@forgerock.com)
+# Copyright © 2020-2026 ForgeRock AS (obst@forgerock.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
 # limitations under the License.
 #
 
-ARG base_image=gcr.io/forgerock-io/ig:2025.11.0
+ARG base_image=gcr.io/forgerock-io/ig:2026.3.0-SNAPSHOT
 FROM ${base_image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
