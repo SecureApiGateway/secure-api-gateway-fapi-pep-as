@@ -33,7 +33,7 @@ spec:
                 name: {{ .Chart.Name }}
                 port:
                   number: 80
-            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/register
+            path: /am/oauth2/realms/root/realms/{{ .Values.configmap.amRealm }}/fapi/register
             pathType: Prefix
           - backend:
               service:
