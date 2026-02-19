@@ -176,15 +176,20 @@
     },
     {
       "name": "TrustManager-OB",
-      "type": "TrustManager",
+      "type": "SecretsTrustManager",
       "config": {
-        "keystore": {
-          "type": "KeyStore",
+        "certificateVerificationSecretId": "ca.ob.secret.id",
+        "secretsProvider": {
+          "type": "KeyStoreSecretStore",
           "config": {
-            "url": "file://&{ig.instance.dir}&{ig.truststore.path}",
-            "type": "PKCS12",
-            "passwordSecretId": "ig.truststore.password",
-            "secretsProvider": "SystemAndEnvSecretStore-IAM"
+            "file": "&{ig.instance.dir}&{ig.truststore.path}",
+            "storeType": "PKCS12",
+            "storePasswordSecretId": "ig.truststore.password",
+            "secretsProvider": "SystemAndEnvSecretStore-IAM",
+            "mappings": [{
+              "secretId": "ca.ob.secret.id",
+              "aliasesMatching": [".*"]
+            }]
           }
         }
       }
