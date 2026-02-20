@@ -6,13 +6,11 @@ This repo contains the fapi-pep-as Secure API Gateway component, this component 
 ### FAPI 1.0 Part 2 Advanced
 This build creates a gateway capable of enforcing the following FAPI spec: https://openid.net/specs/openid-financial-api-part-2-1_0.html
 
-The [configuration](config/7.3.0/fapi1part2adv) can be used as a starting point for a SAPI-G deployment which protects 
-any API using the aforementioned FAPI spec.
+The [configuration](config/7.3.0/fapi1part2adv) can be used as a starting point for a SAPI-G deployment protecting an OAuth2 Authorization
+Server API using the aforementioned FAPI spec. 
 
-The [01-rs-example-fapi-protected-api.json](config/7.3.0/fapi1part2adv/ig/routes/routes-service/01-rs-example-fapi-protected-api.json)
-route acts as an example API endpoint which provides enough functional to enable the OIDF FAPI conformance suite (https://openid.net/certification/certification-fapi_op_testing/)
-to test a deployment. In a real world deployment, one or more RS (Resource Server) routes will be used in its place 
-which reverse proxy upstream services providing the real functionality.
+The OAuth2 Resource Server(s) API protection is handled independently - see repo:
+https://github.com/SecureApiGateway/secure-api-gateway-fapi-pep-rs-core
 
 ### FAPI 2.0
 Support for [FAPI 2.0](https://openid.bitbucket.io/fapi/fapi-2_0-security-profile.html) is coming soon.
