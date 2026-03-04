@@ -198,8 +198,8 @@ init_config()
     if [ "$_arg_ig_mode" == "development" ]; then
       init_routes_dev "$1"
     else
-      echo "copy ${PROFILE_ROOT}/$1/routes/ to $DOCKER_ROOT/$1/config"
-      cp -r "${PROFILE_ROOT}/$1/routes/" "$DOCKER_ROOT/$1/config"
+      echo "copy ${PROFILE_ROOT}/$1/routes to $DOCKER_ROOT/$1/config"
+      cp -r "${PROFILE_ROOT}/$1/routes" "$DOCKER_ROOT/$1/config"
     fi
   fi
 }
