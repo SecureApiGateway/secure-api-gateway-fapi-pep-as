@@ -205,12 +205,12 @@ init_config()
 }
 
 init_routes_dev(){
-  echo "copy ${PROFILE_ROOT}/$1/routes/ to $DOCKER_ROOT/$1/config"
-  if [ ! -d "$DOCKER_ROOT/ig-local/config/routes" ]; then
-    echo "Creating the Directory $DOCKER_ROOT/$1/config/routes"
-    mkdir "$DOCKER_ROOT/$1/config/routes"
+  echo "copy ${PROFILE_ROOT}/$1/routes to $DOCKER_ROOT/$1/config"
+  if [ ! -d "$DOCKER_ROOT/$1/config/routes" ]; then
+    echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes"
+    mkdir -p "$DOCKER_ROOT/$1/config/routes"
   fi
-  find "${PROFILE_ROOT}/$1/routes/"*/ -type f -print0 | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/"
+  cp -r "${PROFILE_ROOT}/$1/routes" "$DOCKER_ROOT/$1/config"
 }
 
 # Show the differences between the source configuration and the current Docker configuration
