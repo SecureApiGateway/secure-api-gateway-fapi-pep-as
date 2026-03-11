@@ -210,12 +210,17 @@ init_routes_dev(){
     echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes/services"
     mkdir -p "$DOCKER_ROOT/$1/config/routes/services"
   fi
-  echo "XXX"
+  echo "XXX routes"
   ls "${PROFILE_ROOT}/$1/routes"
+  echo "XXX routes/services"
   ls "${PROFILE_ROOT}/$1/routes/services"
-  echo "YYY"
+  echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/services"
+  ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/services/
+  echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services"
+  ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services/
+  echo "XXX copying"
   (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/{}")
-  echo "ZZZ"
+  echo "XXX done"
 }
 
 # Show the differences between the source configuration and the current Docker configuration
