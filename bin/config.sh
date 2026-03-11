@@ -206,13 +206,13 @@ init_config()
 
 init_routes_dev(){
   echo "copy ${PROFILE_ROOT}/$1/routes to $DOCKER_ROOT/$1/config"
-  if [ ! -d "$DOCKER_ROOT/ig-local/config/routes" ]; then
+  if [ ! -d "$DOCKER_ROOT/$1/config/routes" ]; then
     echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes/services"
     mkdir -p "$DOCKER_ROOT/$1/config/routes/services"
   fi
   echo "XXX"
-  ls "$PROFILE_ROOT/ig-local/config/routes"
-  ls "$PROFILE_ROOT/ig-local/config/routes/services"
+  ls "${PROFILE_ROOT}/$1/routes"
+  ls "${PROFILE_ROOT}/$1/routes/services"
   echo "YYY"
   (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/{}")
   echo "ZZZ"
