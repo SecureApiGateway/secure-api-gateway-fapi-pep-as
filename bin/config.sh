@@ -210,7 +210,12 @@ init_routes_dev(){
     echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes/services"
     mkdir -p "$DOCKER_ROOT/$1/config/routes/services"
   fi
+  echo "XXX"
+  ls "$PROFILE_ROOT/ig-local/config/routes"
+  ls "$PROFILE_ROOT/ig-local/config/routes/services"
+  echo "YYY"
   (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/{}")
+  echo "ZZZ"
 }
 
 # Show the differences between the source configuration and the current Docker configuration
