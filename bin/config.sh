@@ -218,7 +218,10 @@ init_routes_dev(){
   ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/services/
   echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services"
   ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services/
+  echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services/22-as-par-endpoint.json"
+  ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services/22-as-par-endpoint.json
   echo "XXX copying"
+  (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} echo "cp {} $DOCKER_ROOT/$1/config/routes/{}")
   (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} cp {} "$DOCKER_ROOT/$1/config/routes/{}")
   echo "XXX done"
 }
