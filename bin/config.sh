@@ -207,21 +207,10 @@ init_config()
 init_routes_dev(){
   echo "copy ${PROFILE_ROOT}/$1/routes to $DOCKER_ROOT/$1/config"
   if [ ! -d "$DOCKER_ROOT/$1/config/routes" ]; then
-    echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes/services"
-    mkdir -p "$DOCKER_ROOT/$1/config/routes/services"
+    echo "Creating Directory structure $DOCKER_ROOT/$1/config/routes"
+    mkdir -p "$DOCKER_ROOT/$1/config/routes"
   fi
-  echo "XXX routes"
-  ls "${PROFILE_ROOT}/$1/routes"
-  echo "XXX routes/services"
-  ls "${PROFILE_ROOT}/$1/routes/services"
-  echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/services"
-  ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/services/
-  echo "XXX ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services"
-  ls secure-api-gateway-fapi-pep-as-docker/7.3.0/ig/config/routes/./services/
-  echo "XXX copying"
-  (cd "${PROFILE_ROOT}/$1/routes"; echo pwd; find . -type f -print0  | xargs -0 -I {} echo "cp ${PROFILE_ROOT}/$1/routes/{} $DOCKER_ROOT/$1/config/routes/{}")
-  (cd "${PROFILE_ROOT}/$1/routes"; find . -type f -print0  | xargs -0 -I {} cp ${PROFILE_ROOT}/$1/routes/{} "$DOCKER_ROOT/$1/config/routes/{}")
-  echo "XXX done"
+  cp -r "${PROFILE_ROOT}/$1/routes" "$DOCKER_ROOT/$1/config/routes"
 }
 
 # Show the differences between the source configuration and the current Docker configuration
