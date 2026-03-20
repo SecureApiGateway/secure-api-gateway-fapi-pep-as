@@ -12,15 +12,12 @@
           "name": "fapiDcrFilterChain",
           "type": "FapiDcrFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{identity.platform.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
             "supportedSigningAlgorithms": ["PS256"],
             "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}",
-            "apiClientService": "IdmApiClientService",
-            "apiClientOrgService": "IdmApiClientOrganisationService",
             "clientId": "${request.queryParams.client_id[0]}",
             "applyOpenBankingRolesBasedScopeValidation" : "${security.enableOpenBankingRolesBasedScopeValidation}"
           }

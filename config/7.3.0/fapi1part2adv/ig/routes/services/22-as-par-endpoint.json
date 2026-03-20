@@ -12,10 +12,8 @@
           "name": "fapiParFilterChain",
           "type": "FapiParFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
-            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
-            "apiClientService": "IdmApiClientService"
+            "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}"
           }
         }
       ],

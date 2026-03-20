@@ -12,10 +12,7 @@
           "name": "fapiAuthorizeFilterChain",
           "type": "FapiAuthorizeFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
-            "forwardedHost" : "&{as.fqdn}",
-            "apiClientService": "IdmApiClientService"
-          }
+            "forwardedHost" : "&{as.fqdn}"}
         }
       ],
       "handler": "FRReverseProxyHandler"

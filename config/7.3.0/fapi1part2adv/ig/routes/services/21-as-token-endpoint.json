@@ -12,10 +12,8 @@
           "name": "fapiTokenFilterChain",
           "type": "FapiTokenFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
-            "apiClientService": "IdmApiClientService",
             "accessTokenResolver": {
               "name": "token-resolver",
               "type": "StatelessAccessTokenResolver",

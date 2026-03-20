@@ -9,9 +9,6 @@
         "$list": "&{ig.oauth2.token.endpoint.auth.methods|private_key_jwt,tls_client_auth}"
       }
     },
-    "urls": {
-      "idmBaseUri": "https://&{identity.platform.fqdn}/openidm"
-    },
     "vertxConfig": {
       "maxHeaderSize": 16384,
       "initialSettings": {
@@ -37,17 +34,17 @@
       }
     },
     {
-      "name": "fapiAuditService",
+      "name": "AuditService",
       "type": "AuditService",
       "config": {
         "eventHandlers": [
           {
             "class": "org.forgerock.audit.handlers.json.stdout.JsonStdoutAuditEventHandler",
             "config": {
-              "name": "jsonstdout",
+              "name": "access",
               "elasticsearchCompatible": false,
               "topics": [
-                "fapi"
+                "access"
               ]
             }
           }
@@ -115,43 +112,6 @@
       "type": "SystemAndEnvSecretStore",
       "config": {
         "format": "PLAIN"
-      }
-    },
-    {
-      "name": "IDMClientHandler",
-      "type": "Chain",
-      "config": {
-        "filters": [
-          {
-            "type": "ResourceOwnerOAuth2ClientFilter",
-            "config": {
-              "tokenEndpoint": "https://&{identity.platform.fqdn}/am/oauth2/realms/root/realms/&{am.realm}/access_token",
-              "username": "&{ig.idm.user}",
-              "passwordSecretId": "ig.idm.password",
-              "secretsProvider": "SystemAndEnvSecretStore-IAM",
-              "scopes": [
-                "fr:idm:*"
-              ],
-              "endpointHandler": {
-                "type": "Chain",
-                "config": {
-                  "handler": "ForgeRockClientHandler",
-                  "filters": [
-                    {
-                      "type": "ClientSecretBasicAuthenticationFilter",
-                      "config": {
-                        "clientId": "&{ig.client.id}",
-                        "clientSecretId": "ig.client.secret",
-                        "secretsProvider": "SystemAndEnvSecretStore-IAM"
-                      }
-                    }
-                  ]
-                }
-              }
-            }
-          }
-        ],
-        "handler": "ForgeRockClientHandler"
       }
     },
     {
@@ -264,29 +224,6 @@
             ]
           }
         }
-      }
-    },
-    {
-      "name": "IdmService",
-      "type": "IdmService",
-      "config": {
-        "baseEndpoint": "&{urls.idmBaseUri}",
-        "endpointHandler": "IDMClientHandler"
-      }
-    },
-    {
-      "name": "IdmApiClientService",
-      "type": "IdmApiClientService",
-      "config": {
-        "idmService": "IdmService",
-        "jwkSetService": "JwkSetService"
-      }
-    },
-    {
-      "name": "IdmApiClientOrganisationService",
-      "type": "IdmApiClientOrganisationService",
-      "config": {
-        "idmService": "IdmService"
       }
     },
     {
