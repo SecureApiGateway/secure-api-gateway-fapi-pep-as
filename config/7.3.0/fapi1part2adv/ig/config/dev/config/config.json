@@ -8,7 +8,7 @@
       "name": "_router",
       "type": "Router",
       "config": {
-        "scanInterval": "30 seconds",
+        "scanInterval": "&{routesServiceScanInterval}",
         "directory": "${openig.configDirectory}/routes",
         "defaultHandler": {
           "type": "DispatchHandler",
