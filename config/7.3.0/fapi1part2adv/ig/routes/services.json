@@ -9,9 +9,6 @@
         "$list": "&{ig.oauth2.token.endpoint.auth.methods|private_key_jwt,tls_client_auth}"
       }
     },
-    "urls": {
-      "idmBaseUri": "https://&{identity.platform.fqdn}/openidm"
-    },
     "vertxConfig": {
       "maxHeaderSize": 16384,
       "initialSettings": {
