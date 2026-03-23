@@ -1,5 +1,5 @@
 #
-# Copyright © 2020-2026 ForgeRock AS (obst@forgerock.com)
+# Copyright © 2020-2026 Ping Identity Corporation (obst@forgerock.com)
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -14,18 +14,14 @@
 # limitations under the License.
 #
 
-ARG base_image=gcr.io/forgerock-io/ig/docker-build:2026.3.0-latest-postcommit
-FROM ${base_image}
+FROM ${docker.openig-image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
 # Create dir where secrets can be mounted into
 RUN mkdir /var/ig/secrets
-COPY --chown=forgerock:root 7.3.0/ig/bin/import-pem-certs.sh /home/forgerock
 
 # Copy all config files into the docker image.
-COPY --chown=forgerock:root 7.3.0/ig/lib /opt/ig/lib
-# Removing the bouncy castle jar that exists in the docker image as it clashes with the version used by SAPI-G.
-# This version clash results in the JwkmsIssueCert.groovy script hanging
-RUN rm -f /opt/ig/lib/bcprov-jdk18on-1.74.jar
-COPY --chown=forgerock:root 7.3.0/ig/scripts /var/ig/scripts/
-COPY --chown=forgerock:root 7.3.0/ig/config /var/ig/config/
+COPY --chown=forgerock:root configuration/bin/import-pem-certs.sh /home/forgerock
+COPY --chown=forgerock:root dependencies ${IG_INSTANCE_DIR}/extra
+COPY --chown=forgerock:root configuration/scripts ${IG_INSTANCE_DIR}/scripts
+COPY --chown=forgerock:root configuration/config ${IG_INSTANCE_DIR}/config
