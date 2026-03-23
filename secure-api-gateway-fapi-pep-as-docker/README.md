@@ -19,7 +19,7 @@ make clean docker tag=my-new-image
     - These dependencies are captured in the [pom.xml](./pom.xml) in this module
     - Libraries used by Groovy scripts
 - Helper bash scripts
-    - [import-pem-certs.sh](7.3.0/ig/bin/import-pem-certs.sh) used to import PEM certificates into the truststore
+    - [import-pem-certs.sh](src/main/resources/bin/import-pem-certs.sh) used to import PEM certificates into the truststore
 
 ### import-pem-certs.sh
 
