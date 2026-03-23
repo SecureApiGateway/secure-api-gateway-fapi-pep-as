@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
 
-    Copyright © 2020-2026 ForgeRock AS (obst@forgerock.com)
+    Copyright © 2020-2026 Ping Identity Corporation (obst@forgerock.com)
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
@@ -27,11 +27,13 @@
 
     <artifactId>secure-api-gateway-fapi-pep-as-docker</artifactId>
     <packaging>pom</packaging>
-
     <properties>
-        <legal.path.header>../legal/LICENSE-HEADER.txt</legal.path.header>
+        <target.env>prod</target.env>
+        <!-- Docker properties -->
+        <docker.image.name>fapi-pep-as</docker.image.name>
+        <docker.resources.directory>${project.build.directory}/generated-config</docker.resources.directory>
+        <docker.lib.directory>${project.build.directory}/generated-lib</docker.lib.directory>
     </properties>
-
     <dependencies>
         <!-- Dependencies Required by Groovy scripts -->
         <dependency>
@@ -42,10 +44,63 @@
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcpkix-jdk18on</artifactId>
         </dependency>
-        <dependency>
-            <groupId>com.nimbusds</groupId>
-            <artifactId>nimbus-jose-jwt</artifactId>
-        </dependency>
     </dependencies>
 
+    <profiles>
+        <profile>
+            <id>docker-build</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>io.fabric8</groupId>
+                        <artifactId>docker-maven-plugin</artifactId>
+                        <extensions>true</extensions>
+                        <executions>
+                            <execution>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>build</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <verbose>true</verbose>
+                            <retries>3</retries>
+                            <images>
+                                <image>
+                                    <name>${docker.image.repo}/${docker.image.name}:${docker.image.tag}</name>
+                                    <external>
+                                        <type>properties</type>
+                                        <prefix>docker</prefix>
+                                        <mode>override</mode>
+                                    </external>
+                                    <build>
+                                        <dockerFile>Dockerfile</dockerFile>
+                                        <assemblies>
+                                            <assembly>
+                                                <name>dependencies</name>
+                                                <descriptorRef>artifact-with-dependencies</descriptorRef>
+                                                <user>forgerock</user>
+                                            </assembly>
+                                            <assembly>
+                                                <name>configuration</name>
+                                                <descriptor>docker-assembly.xml</descriptor>
+                                                <user>forgerock</user>
+                                            </assembly>
+                                        </assemblies>
+                                        <buildx>
+                                            <platforms>
+                                                <platform>${docker.platforms}</platform>
+                                            </platforms>
+                                        </buildx>
+                                        <imagePullPolicy>${docker.imagePullPolicy}</imagePullPolicy>
+                                    </build>
+                                </image>
+                            </images>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
