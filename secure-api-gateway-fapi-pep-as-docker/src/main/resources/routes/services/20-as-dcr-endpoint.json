@@ -12,7 +12,6 @@
           "name": "fapiDcrFilterChain",
           "type": "FapiDcrFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{identity.platform.fqdn}",
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
