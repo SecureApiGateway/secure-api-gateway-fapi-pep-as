@@ -12,7 +12,6 @@
           "name": "fapiAuthorizeFilterChain",
           "type": "FapiAuthorizeFilterChain",
           "config": {
-            "auditService" : "fapiAuditService",
             "forwardedHost" : "&{as.fqdn}",
             "apiClientService": "IdmApiClientService"
           }
