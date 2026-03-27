@@ -18,7 +18,7 @@ FROM ${docker.openig-image}
 # Switching back to forgerock user, app will run as this
 USER forgerock
 # Create dir where secrets can be mounted into
-RUN mkdir /var/ig/secrets
+RUN mkdir ${IG_INSTANCE_DIR}/secrets
 
 # Copy all config files into the docker image.
 COPY --chown=forgerock:root configuration/bin/import-pem-certs.sh /home/forgerock

@@ -21,7 +21,6 @@ configmap:
     identityDefaultUserAuthenticationService: "PasswordGrant"
     identityGoogleSecretStoreName: "ESV"
     identityGoogleSecretStoreOAuth2CACertsSecretName: "esv-sapig-core-am-oauth2-ca-certs"
-
 deployment:
   # Affinity Configuration
   affinity: {}
@@ -73,7 +72,8 @@ deployment:
     maxSurge: "50%"
     maxUnavailable: "25%"
   strategyType: "RollingUpdate"
-
+  ig:
+    instanceDir: "/var/gateway"
 ingress:
   asMtls:
     annotations:
