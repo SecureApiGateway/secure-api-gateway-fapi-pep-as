@@ -1,4 +1,5 @@
 {
+  "_comment": "TESTING bouncycastle 1.84",
   "properties": {
     "routesServiceScanInterval": "30 seconds"
   },
