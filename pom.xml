@@ -21,7 +21,7 @@
     <parent>
         <groupId>com.forgerock.sapi.gateway</groupId>
         <artifactId>secure-api-gateway-parent</artifactId>
-        <version>5.2.0-SNAPSHOT</version>
+        <version>5.2.1-SNAPSHOT</version>
     </parent>
     <artifactId>secure-api-gateway-fapi-pep-as</artifactId>
     <packaging>pom</packaging>
