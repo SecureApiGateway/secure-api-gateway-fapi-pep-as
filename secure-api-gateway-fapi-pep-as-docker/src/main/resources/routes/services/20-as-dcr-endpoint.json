@@ -16,12 +16,14 @@
             "clientCertificate": "${pemCertificate(urlDecode(request.headers['ssl-client-cert'][0]))}",
             "trustedDirectoryService": "TrustedDirectoryService",
             "jwkSetService": "JwkSetService",
-            "supportedSigningAlgorithms": ["PS256"],
-            "supportedTokenEndpointAuthMethods": "${oauth2.tokenEndpointAuthMethodsSupported}",
+            "supportedSigningAlgorithms": "&{supportedSigningAlgorithms}",
+            "supportedTokenEndpointAuthMethods": {
+              "$list": "&{oauth2TokenEndpointAuthMethods}"
+            },
             "apiClientService": "IdmApiClientService",
             "apiClientOrgService": "IdmApiClientOrganisationService",
             "clientId": "${request.queryParams.client_id[0]}",
-            "applyOpenBankingRolesBasedScopeValidation" : "${security.enableOpenBankingRolesBasedScopeValidation}"
+            "applyOpenBankingRolesBasedScopeValidation" : "&{enableOpenBankingRolesBasedScopeValidation}"
           }
         },
         {

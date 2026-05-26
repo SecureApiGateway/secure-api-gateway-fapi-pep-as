@@ -1,0 +1,6 @@
+{
+  "oauth2TokenEndpointAuthMethods": "private_key_jwt,tls_client_auth",
+  "supportedSigningAlgorithms": "PS256,ES256",
+  "enableOpenBankingRolesBasedScopeValidation": false,
+  "trustedDirectories": "OpenBankingTestDirectory,SecureAPIGatewayTestDirectory"
+}

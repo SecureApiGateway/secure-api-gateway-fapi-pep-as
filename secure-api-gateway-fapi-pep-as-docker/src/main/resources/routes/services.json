@@ -1,14 +1,6 @@
 {
   "properties": {
-    "security": {
-      "enableTestTrustedDirectory": {"$bool": "&{ig.test.directory.enabled|true}"},
-      "enableOpenBankingRolesBasedScopeValidation": {"$bool": "&{ig.ob.roles.based.scope.validation|false}"}
-    },
-    "oauth2": {
-      "tokenEndpointAuthMethodsSupported": {
-        "$list": "&{ig.oauth2.token.endpoint.auth.methods|private_key_jwt,tls_client_auth}"
-      }
-    },
+    "$location:primary": "${openig.configDirectory}/service-properties.json",
     "urls": {
       "idmBaseUri": "https://&{identity.platform.fqdn}/openidm"
     },
@@ -26,7 +18,8 @@
       "type": "Router",
       "config": {
         "scanInterval": "&{routesServiceScanInterval}",
-        "directory": "${openig.configDirectory}/routes/services"
+        "directory": "${openig.configDirectory}/routes/services",
+        "failOnRouteError": true
       }
     },
     {
@@ -200,10 +193,9 @@
       "name": "TrustedDirectoryService",
       "type": "TrustedDirectoryService",
       "config": {
-        "trustedDirectories": [
-          "OpenBankingTestDirectory",
-          "SecureAPIGatewayTestDirectory"
-        ]
+        "trustedDirectories": {
+          "$list": "&{trustedDirectories}"
+        }
       }
     },
     {
