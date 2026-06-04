@@ -26,8 +26,6 @@ data:
   IG_OB_ROLES_BASED_SCOPE_VALIDATION: {{ .Values.configmap.igOBRolesBasedScopeValidation | quote }}
   # Wherever to use additional TTD other than OB
   IG_TEST_DIRECTORY_ENABLED: {{ .Values.configmap.igTestDirectoryEnabled | quote }}
-  # Where to store the IG Truststore
-  IG_TRUSTSTORE_PATH: {{ .Values.configmap.igTruststorePath }}
   TEST_DIRECTORY_FQDN: {{ .Values.configmap.testDirectoryFQDN }}
   USER_OBJECT: {{ .Values.configmap.userObject }}
   # What Google Cloud project to pull secrets from - internal fidc initialiser use
