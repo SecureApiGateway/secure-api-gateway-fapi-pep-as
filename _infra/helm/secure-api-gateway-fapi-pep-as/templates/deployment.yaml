@@ -62,7 +62,7 @@ spec:
             timeoutSeconds: {{ .Values.deployment.livenessProbe.timeoutSeconds }}
           volumeMounts:
             - mountPath: {{ .Values.deployment.ig.instanceDir }}/secrets/truststore
-              name: new-truststore
+              name: ig-ob-truststore
               readOnly: true
           env:
             - name: NAMESPACE
@@ -84,27 +84,6 @@ spec:
             {{ end }}
           resources:
             {{- toYaml .Values.deployment.resources | nindent 12 }}
-      initContainers:
-        - name: truststore-init
-          image: {{ .Values.deployment.image.repo }}:{{ default .Chart.AppVersion .Values.deployment.image.tag }}
-          imagePullPolicy: {{ .Values.deployment.image.imagePullPolicy }}
-          command:
-            - /home/forgerock/import-pem-certs.sh
-          volumeMounts:
-            - mountPath: /truststore
-              name: new-truststore
-            - mountPath: /var/run/secrets/truststore
-              name: ig-truststore-pem
-          env:
-            - name: TRUSTSTORE_PATH
-              value: /truststore/igtruststore
-            - name: TRUSTSTORE_PASSWORD
-              valueFrom:
-                secretKeyRef:
-                  key: IG_TRUSTSTORE_PASSWORD
-                  name: as-sapig-secrets
-            - name: IG_PEM_TRUSTSTORE
-              value: /var/run/secrets/truststore/ig-truststore.pem
       securityContext:
         runAsGroup: 0
         runAsUser: 11111
@@ -113,9 +92,10 @@ spec:
           key: kubernetes.io/arch
           operator: Exists
       volumes:
-        - emptyDir: {}
-          name: new-truststore
-        - name: ig-truststore-pem
+        - name: ig-ob-truststore
           secret:
             optional: false
             secretName: ig-truststore-pem
+            items:
+            - key: ig-truststore.pem
+              path: ig.ob.truststore.pem # - is not allowed in secret id
