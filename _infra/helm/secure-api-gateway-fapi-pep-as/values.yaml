@@ -13,7 +13,6 @@ configmap:
   igOauth2TokenEndpointAuthMethods: "private_key_jwt,tls_client_auth"
   igOBRolesBasedScopeValidation: "true"
   igTestDirectoryEnabled: "true"
-  igTruststorePath: "/secrets/truststore/igtruststore"
   sapigType: "core"
   testDirectoryFQDN: "test-trusted-directory.dev-cdk-core.forgerock.financial"
   userObject: "user"
@@ -98,7 +97,6 @@ secrets:
   igIDMUser: "replace-me"
   igMetricsPassword: "replace-me"
   igMetricsUsername: "replace-me"
-  igTruststorePassword: "replace-me"
 
 service:
   # Version of the Kubernetes API to use
