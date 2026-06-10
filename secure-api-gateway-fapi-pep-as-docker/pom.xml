@@ -28,7 +28,6 @@
     <artifactId>secure-api-gateway-fapi-pep-as-docker</artifactId>
     <packaging>pom</packaging>
     <properties>
-        <target.env>prod</target.env>
         <!-- Docker properties -->
         <docker.image.name>fapi-pep-as</docker.image.name>
         <docker.resources.directory>${project.build.directory}/generated-config</docker.resources.directory>
