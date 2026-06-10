@@ -21,23 +21,14 @@
           xsi:schemaLocation="http://maven.apache.org/ASSEMBLY/2.2.0 https://maven.apache.org/xsd/assembly-2.2.0.xsd">
   <fileSets>
     <fileSet>
-      <directory>src/main/resources/config/${target.env}</directory>
-      <outputDirectory>./</outputDirectory>
+      <directory>src/main/resources/config</directory>
+      <outputDirectory>./config</outputDirectory>
       <filtered>true</filtered>
     </fileSet>
     <fileSet>
       <directory>src/main/resources/routes</directory>
       <outputDirectory>./config/routes</outputDirectory>
       <filtered>true</filtered>
-    </fileSet>
-    <fileSet>
-      <directory>src/main/resources/routes</directory>
-      <outputDirectory>./config/routes</outputDirectory>
-      <filtered>true</filtered>
-    </fileSet>
-    <fileSet>
-      <directory>src/main/resources/scripts</directory>
-      <outputDirectory>./scripts</outputDirectory>
     </fileSet>
   </fileSets>
 </assembly>

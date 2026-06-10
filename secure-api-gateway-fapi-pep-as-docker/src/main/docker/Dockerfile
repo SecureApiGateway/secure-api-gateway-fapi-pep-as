@@ -22,5 +22,4 @@ RUN mkdir ${IG_INSTANCE_DIR}/secrets
 
 # Copy all config files into the docker image.
 COPY --chown=forgerock:root dependencies ${IG_INSTANCE_DIR}/extra
-COPY --chown=forgerock:root configuration/scripts ${IG_INSTANCE_DIR}/scripts
 COPY --chown=forgerock:root configuration/config ${IG_INSTANCE_DIR}/config
