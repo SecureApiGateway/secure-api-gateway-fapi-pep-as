@@ -25,7 +25,7 @@
       "name": "_router",
       "type": "Router",
       "config": {
-        "scanInterval": "&{routesServiceScanInterval}",
+        "scanInterval": "disabled",
         "directory": "${openig.configDirectory}/routes/services"
       }
     },

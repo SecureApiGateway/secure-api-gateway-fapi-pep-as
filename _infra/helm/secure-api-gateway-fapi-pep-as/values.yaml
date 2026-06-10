@@ -86,7 +86,6 @@ ingress:
     tls:
       host: "replace-me"
       secretName: fapi-pep-as-tls-cert
-  enableStudio: true
 
 secrets:
   igAgentID: "replace-me"
@@ -95,8 +94,6 @@ secrets:
   igClientSecret: "replace-me"
   igIDMPassword: "replace-me"
   igIDMUser: "replace-me"
-  igMetricsPassword: "replace-me"
-  igMetricsUsername: "replace-me"
 
 service:
   # Version of the Kubernetes API to use

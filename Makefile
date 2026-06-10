@@ -22,14 +22,10 @@ ifndef mavenArgs
 	$(warning no mavenArgs supplied;)
 	$(eval mavenArgs=)
 endif
-ifndef env
-	$(warning no env supplied; prod assumed)
-	$(eval env=prod)
-endif
 	@if [ "${setlatest}" = "true" ]; then \
-  		mvn package docker:push -Pdocker-build -Ddocker.image.repo=${repo}/securebanking -Ddocker.image.name=${service} -Ddocker.image.tag=${TAG} -Ddocker.tags.1=${latesttagversion} -Dtarget.env=${env} ${mavenArgs};\
+  		mvn package docker:push -Pdocker-build -Ddocker.image.repo=${repo}/securebanking -Ddocker.image.name=${service} -Ddocker.image.tag=${TAG} -Ddocker.tags.1=${latesttagversion} ${mavenArgs};\
     else \
-        mvn package docker:push -Pdocker-build -Ddocker.image.repo=${repo}/securebanking -Ddocker.image.name=${service} -Ddocker.image.tag=${TAG} -Dtarget.env=${env} ${mavenArgs};\
+        mvn package docker:push -Pdocker-build -Ddocker.image.repo=${repo}/securebanking -Ddocker.image.name=${service} -Ddocker.image.tag=${TAG} ${mavenArgs};\
    	fi;
 
 package_helm:
