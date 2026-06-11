@@ -67,40 +67,6 @@
       }
     },
     {
-      "name": "StudioProtectionFilter-AOF",
-      "type": "ChainOfFilters",
-      "config": {
-        "filters": [
-          {
-            "type": "ScriptableFilter",
-            "config": {
-              "type": "application/x-groovy",
-              "source": [
-                "import org.forgerock.services.context.ClientContext",
-                "def clientContext = context.asContext(ClientContext.class)",
-                "logger.debug('Studio access from client {}, forwarded for {}', clientContext.getRemoteAddress(), request.headers['X-Forwarded-For'].getClientIpAddress())",
-                "return next.handle(context, request)"
-              ]
-            }
-          },
-          {
-            "type": "AllowOnlyFilter",
-            "config": {
-              "rules": [ {
-                "from": [ {
-                  "ip": {
-                    "_comment": "Ping Identity VPNs only",
-                    "list": ["212.59.72.207", "18.158.145.64", "78.33.22.162", "188.39.235.130", "37.71.148.92"],
-                    "resolver": "${request.headers['X-Forwarded-For'][0]}"
-                  }
-                } ]
-              } ]
-            }
-          }
-        ]
-      }
-    },
-    {
       "name": "apiProtectionFilter",
       "type": "CorsFilter",
       "config": {
@@ -139,9 +105,7 @@
   "adminConnector": {
       "port": 8085
   },
-  "mode": "DEVELOPMENT",
-  "studioProtectionFilter": "StudioProtectionFilter-AOF",
-  "_studioProtectionFilter.comment": "The referenced filter is temporary only to apply IP constraints",
+  "mode": "PRODUCTION",
   "apiProtectionFilter": "apiProtectionFilter",
   "metricsProtectionFilter": "metricsProtectionFilter"
 }
