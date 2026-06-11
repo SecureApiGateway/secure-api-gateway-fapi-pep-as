@@ -1,0 +1,21 @@
+{
+  "heap": [
+    {
+      "name": "ClientHandler",
+      "type": "ClientHandler",
+      "capture": "all"
+    }
+  ],
+  "connectors": [
+    {
+      "port": 8080,
+      "vertx": {
+        "maxInitialLineLength": 8192,
+        "maxTotalHeadersSize": 24576
+      }
+    }
+  ],
+  "adminConnector": {
+    "port": 8085
+  }
+}
